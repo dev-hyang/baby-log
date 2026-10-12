@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>小月亮 · 母婴记录</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F2F4F7; --surface:#FFFFFF; --ink:#1D2733; --muted:#5A6676; --line:#DCE1E8;
+  --slate:#45658F; --slate-soft:#E3EAF4; --honey:#E9B83A; --honey-soft:#FFF5D1;
+  --sage:#4F8D6A; --sage-soft:#E2F0E7; --rose:#B44B60; --rose-soft:#FBE6EA; --sky:#5F95CC;
+  --radius-lg:22px; --radius:12px; --radius-sm:8px;
+  --f-body:"Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --f-num:"Outfit","Noto Sans SC",system-ui,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --bg:#131921; --surface:#1B232E; --ink:#E7ECF2; --muted:#9BA7B6; --line:#2C3644;
+  --slate:#93B3DC; --slate-soft:#243245; --honey:#F0C75A; --honey-soft:#3A321E;
+  --sage:#7EBC98; --sage-soft:#1E3328; --rose:#E58A9C; --rose-soft:#3A2228; --sky:#8DB8E4;
+}}
+:root[data-theme="dark"]{
+  --bg:#131921; --surface:#1B232E; --ink:#E7ECF2; --muted:#9BA7B6; --line:#2C3644;
+  --slate:#93B3DC; --slate-soft:#243245; --honey:#F0C75A; --honey-soft:#3A321E;
+  --sage:#7EBC98; --sage-soft:#1E3328; --rose:#E58A9C; --rose-soft:#3A2228; --sky:#8DB8E4;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--slate);outline-offset:2px;border-radius:6px}
+.wrap{max-width:720px;margin:0 auto;padding:0 16px 120px}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 0 8px}
+.brand{display:flex;flex-direction:column}
+.brand b{font-size:20px;letter-spacing:.02em}
+.brand span{font-size:13px;color:var(--muted)}
+.iconbtn{border:1px solid var(--line);background:var(--surface);border-radius:999px;min-width:44px;height:44px;padding:0 14px;cursor:pointer;font-size:14px}
+.status{font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--muted)}
+.dot.ok{background:var(--sage)}
+h2{font-size:18px;margin:28px 0 10px}
+h3{font-size:16px;margin:0 0 6px}
+p{margin:0 0 8px}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+
+/* Hero: the one bold element — the "since last feed" clock */
+.hero{background:var(--honey);color:#1D2733;border-radius:var(--radius-lg);padding:22px 22px 18px;margin-top:8px;position:relative;overflow:hidden}
+.hero .lbl{font-size:15px;font-weight:500}
+.hero .big{font-family:var(--f-num);font-weight:700;font-size:clamp(52px,15vw,84px);line-height:1;letter-spacing:-.02em;margin:6px 0 10px}
+.hero .big small{font-size:.38em;font-weight:600;margin-left:2px;margin-right:8px}
+.hero .meta{font-size:14px;display:flex;flex-wrap:wrap;gap:6px 16px}
+.hero .side{display:inline-block;background:#1D2733;color:#FFF5D1;border-radius:999px;padding:2px 12px;font-weight:700}
+.hero.sleeping{background:#2D3F5E;color:#E7ECF2}
+.hero.sleeping .side{background:#E7ECF2;color:#2D3F5E}
+.hero .moon{position:absolute;right:-30px;top:-30px;width:140px;height:140px;border-radius:50%;box-shadow:-22px 16px 0 0 rgba(29,39,51,.10);pointer-events:none}
+.hero.sleeping .moon{box-shadow:-22px 16px 0 0 rgba(255,245,209,.25)}
+.hero .act{margin-top:14px}
+.hero .act button{background:#1D2733;color:#fff;border:0;border-radius:999px;padding:10px 18px;font-weight:700;cursor:pointer;min-height:44px}
+.hero.sleeping .act button{background:#FFF5D1;color:#1D2733}
+
+/* Quick add */
+.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+.quick button{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 4px;min-height:72px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:13px}
+.quick button i{font-style:normal;font-size:22px;line-height:1}
+@media (max-width:380px){.quick{grid-template-columns:repeat(3,1fr)}}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.panel + .panel{margin-top:10px}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.stat{background:var(--surface);padding:12px 14px}
+.stat:last-child:nth-child(odd){grid-column:1/-1}
+@media (min-width:600px){.stats{grid-template-columns:repeat(3,1fr)}.stat:last-child:nth-child(odd){grid-column:auto}}
+.stat .v{font-family:var(--f-num);font-weight:600;font-size:26px;line-height:1.1}
+.stat .v small{font-size:14px;font-weight:400;color:var(--muted);margin-left:2px}
+.stat .k{font-size:13px;color:var(--muted)}
+.stat .ref{font-size:12px;color:var(--muted);margin-top:2px}
+.stat .ref.warn{color:var(--rose);font-weight:500}
+
+.alert{border-radius:var(--radius);padding:12px 14px;margin-top:10px;font-size:14px;border:1px solid}
+.alert.red{background:var(--rose-soft);border-color:var(--rose);}
+.alert.red b{color:var(--rose)}
+.alert.info{background:var(--slate-soft);border-color:transparent}
+
+/* entries */
+.day{font-size:13px;color:var(--muted);margin:18px 0 6px;font-weight:500}
+.entry{display:grid;grid-template-columns:52px 10px 1fr;gap:10px;align-items:start;padding:10px 4px;border-bottom:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-top:0;width:100%;text-align:left}
+.entry:hover{background:var(--slate-soft)}
+.entry .t{font-family:var(--f-num);font-size:15px;padding-top:1px}
+.entry .c{width:10px;height:10px;border-radius:3px;margin-top:7px}
+.entry .s{font-size:15px}
+.entry .n{font-size:13px;color:var(--muted)}
+.empty{padding:28px 8px;text-align:center;color:var(--muted)}
+.empty button{margin-top:10px}
+
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:14px;cursor:pointer;min-height:36px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.search{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:var(--radius);padding:12px 14px;font-size:16px}
+
+/* med timers */
+.medrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.medrow:last-child{border-bottom:0}
+.pill{font-size:12px;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.pill.ok{background:var(--sage-soft);color:var(--sage)}
+.pill.wait{background:var(--honey-soft);color:var(--ink)}
+
+/* stage track */
+.stages{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:6px}
+.stage{padding:10px 8px 8px;border-top:4px solid var(--line);font-size:13px}
+.stage b{display:block;font-size:14px}
+.stage.now{border-top-color:var(--slate)}
+.stage.now b{color:var(--slate)}
+.stage ul{margin:6px 0 0;padding-left:16px;color:var(--muted);font-size:12px}
+
+.scroll-x{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:8px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:500;color:var(--muted);font-size:13px}
+.check{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.check input{width:20px;height:20px}
+
+svg text{fill:var(--muted);font-family:var(--f-num);font-size:11px}
+
+/* bottom nav */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:10}
+nav.tabs .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
+nav.tabs button{background:none;border:0;padding:8px 0 10px;min-height:56px;cursor:pointer;font-size:12px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px}
+nav.tabs button i{font-style:normal;font-size:20px}
+nav.tabs button[aria-current="page"]{color:var(--ink);font-weight:700}
+nav.tabs button[aria-current="page"] i{transform:translateY(-1px)}
+
+/* sheet */
+dialog.sheet{border:0;padding:0;margin:auto auto 0;width:100%;max-width:720px;max-height:92vh;border-radius:var(--radius-lg) var(--radius-lg) 0 0;background:var(--surface);color:var(--ink)}
+dialog.sheet::backdrop{background:rgba(10,15,22,.45)}
+.sheet-in{padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px));overflow:auto;max-height:92vh}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.sheet-head h3{font-size:18px;margin:0}
+.field{margin:12px 0}
+.field > label,.field > .lab{display:block;font-size:14px;color:var(--muted);margin-bottom:6px}
+.field input[type=text],.field input[type=number],.field input[type=datetime-local],.field input[type=date],.field textarea,.field select{width:100%;border:1px solid var(--line);background:var(--honey-soft);border-radius:var(--radius-sm);padding:11px 12px;font-size:16px;min-height:46px}
+.field textarea{min-height:70px;resize:vertical}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-sm);padding:9px 12px;cursor:pointer;min-height:42px;font-size:15px}
+.seg button[aria-pressed="true"]{background:var(--slate);border-color:var(--slate);color:#fff}
+:root[data-theme="dark"] .seg button[aria-pressed="true"]{color:#131921}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .seg button[aria-pressed="true"]{color:#131921}}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.range{display:flex;align-items:center;gap:10px}
+.range input{flex:1}
+.btns{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:11px 18px;cursor:pointer;font-weight:500;min-height:46px}
+.btn.primary{background:var(--ink);color:var(--surface);border-color:var(--ink);flex:1}
+.btn.danger{color:var(--rose);border-color:var(--rose)}
+.warnline{font-size:13px;color:var(--rose);margin-top:6px}
+
+.toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:999px;font-size:14px;z-index:30;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw}
+.toast.on{opacity:1}
+.ask textarea{width:100%;border:1px solid var(--line);background:var(--honey-soft);border-radius:var(--radius-sm);padding:12px;min-height:80px;font-size:16px}
+.answer{white-space:pre-wrap;font-size:15px;margin-top:10px}
+ul.plain{margin:6px 0 0;padding-left:18px}
+ul.plain li{margin:4px 0}
+a{color:var(--slate)}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;background:var(--c)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><b id="bname">小月亮</b><span id="bage">先在设置里填宝宝生日</span></div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="status" id="status"><span class="dot"></span>本机保存</span>
+      <button class="iconbtn" data-act="settings" aria-label="设置">设置</button>
+    </div>
+  </header>
+  <main id="main"></main>
+</div>
+
+<nav class="tabs" aria-label="主导航"><div class="in">
+  <button data-tab="today"><i aria-hidden="true">☀︎</i>今天</button>
+  <button data-tab="log"><i aria-hidden="true">≡</i>记录</button>
+  <button data-tab="mom"><i aria-hidden="true">♡</i>妈妈</button>
+  <button data-tab="grow"><i aria-hidden="true">↗</i>成长</button>
+  <button data-tab="learn"><i aria-hidden="true">?</i>问答</button>
+</div></nav>
+
+<dialog class="sheet" id="sheet" aria-labelledby="sheetTitle"><div class="sheet-in" id="sheetIn"></div></dialog>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<input type="file" id="importFile" accept="application/json,.json" hidden>
+
+<script>
+/* ============ helpers ============ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const H = 3600e3, D = 86400e3;
+const pad = n => String(n).padStart(2, "0");
+const hm = ts => { const d = new Date(ts); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
+const dayKey = ts => { const d = new Date(ts); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); };
+const startOfDay = ts => { const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime(); };
+const toInput = ts => { const d = new Date(ts); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes()); };
+const fromInput = v => v ? new Date(v).getTime() : null;
+function dur(ms){ if (ms < 0) ms = 0; const m = Math.floor(ms / 60000), h = Math.floor(m / 60); return h ? `${h}小时${m % 60}分` : `${m}分钟`; }
+function weekday(ts){ return "周" + "日一二三四五六"[new Date(ts).getDay()]; }
+function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("on"), 2400); }
+const num = v => (v === "" || v == null || isNaN(+v)) ? null : +v;
+
+/* ============ state & storage ============ */
+const LS_KEY = "xiaoyueliang.v1";
+const S = {
+  entries: [],
+  settings: { babyName: "", birth: "", medIntervals: [{ name: "布洛芬", hours: "" }, { name: "泰诺", hours: "" }], checkups: {} },
+  mode: "local", col: null, prof: null, sample: null,
+  tab: "today", filter: "all", q: ""
+};
+function loadLocal(){
+  try { const o = JSON.parse(localStorage.getItem(LS_KEY) || "null");
+    if (o) { S.entries = Array.isArray(o.entries) ? o.entries : []; S.settings = { ...S.settings, ...(o.settings || {}) }; }
+  } catch (e) { /* storage may be unavailable; start empty */ }
+}
+function saveLocal(){ try { localStorage.setItem(LS_KEY, JSON.stringify({ entries: S.entries, settings: S.settings })); } catch (e) {} }
+function cloudFail(){ S.mode = "local"; S.col = null; S.prof = null; renderStatus(); toast("云端保存失败，记录已存在本设备"); }
+
+async function waitForClaude(){
+  for (let i = 0; i < 30; i++) { if (window.claude && typeof window.claude.use === "function") return true; await new Promise(r => setTimeout(r, 100)); }
+  return false;
+}
+async function initCloud(){
+  if (!(await waitForClaude())) return;
+  claude.use("sample").then(s => { S.sample = s; if (S.tab === "learn") render(); }).catch(() => {});
+  try {
+    const [db, user] = await Promise.all([claude.use("db"), claude.use("user")]);
+    if (!db || !user) return;
+    const uid = await user.id(); if (!uid) return;
+    const prof = db.doc("data/users/" + uid + "/profile");
+    const col = prof.collection("entries");
+    const [ps, qs] = await Promise.all([prof.get(), col.limit(1000).get()]);
+    const map = new Map(qs.docs.map(d => { const v = { ...d.data() }; return [v.id, v]; }));
+    const toUpload = [];
+    for (const e of S.entries) { const c = map.get(e.id); if (!c || (e.updated || 0) > (c.updated || 0)) { map.set(e.id, e); toUpload.push(e); } }
+    if (ps.exists && ps.data().settings) S.settings = { ...S.settings, ...ps.data().settings };
+    S.entries = [...map.values()]; S.col = col; S.prof = prof; S.mode = "cloud";
+    saveLocal(); render();
+    for (const e of toUpload) await col.doc(e.id).set(JSON.parse(JSON.stringify(e)));
+    if (!ps.exists) await prof.set({ settings: S.settings });
+  } catch (err) { S.mode = "local"; S.col = null; S.prof = null; renderStatus(); }
+}
+async function putEntry(e){
+  e.updated = Date.now();
+  const i = S.entries.findIndex(x => x.id === e.id);
+  if (i >= 0) S.entries[i] = e; else S.entries.push(e);
+  saveLocal(); render();
+  if (S.col) { try { await S.col.doc(e.id).set(JSON.parse(JSON.stringify(e))); } catch (err) { cloudFail(); } }
+}
+async function removeEntry(id){
+  S.entries = S.entries.filter(x => x.id !== id); saveLocal(); render();
+  if (S.col) { try { await S.col.doc(id).delete(); } catch (err) { cloudFail(); } }
+}
+async function saveSettings(){
+  saveLocal(); render();
+  if (S.prof) { try { await S.prof.set({ settings: JSON.parse(JSON.stringify(S.settings)) }); } catch (err) { cloudFail(); } }
+}
+
+/* ============ record types ============ */
+const TYPES = {
+  feed:  { label: "喂奶", icon: "🍼", color: "var(--honey)", fields: [
+    { k: "method", label: "方式", type: "seg", opts: ["亲喂", "母乳瓶喂", "配方奶", "混合", "吸奶"], def: "亲喂" },
+    { k: "left", label: "左侧时长（分钟）", type: "num", show: m => ["亲喂", "混合"].includes(m.method), half: 1 },
+    { k: "right", label: "右侧时长（分钟）", type: "num", show: m => ["亲喂", "混合"].includes(m.method), half: 1 },
+    { k: "ml", label: "奶量（ml）", type: "num", show: m => m.method !== "亲喂" },
+    { k: "note", label: "备注", type: "text", ph: "吐奶、拒奶、含乳情况…" } ] },
+  diaper:{ label: "尿布", icon: "🧷", color: "var(--sky)", fields: [
+    { k: "pee", label: "尿", type: "check", def: true },
+    { k: "poop", label: "便", type: "check" },
+    { k: "color", label: "大便颜色", type: "seg", opts: ["黄", "绿", "褐", "黑（胎便）", "白/灰白", "带血"], show: m => m.poop },
+    { k: "note", label: "备注", type: "text", ph: "性状：稀、糊状、有奶瓣…" } ] },
+  sleep: { label: "睡眠", icon: "🌙", color: "var(--slate)", fields: [
+    { k: "end", label: "醒来时间（还在睡就留空）", type: "datetime" },
+    { k: "where", label: "在哪儿睡", type: "seg", opts: ["婴儿床", "怀里", "推车/安全座椅", "大床"] },
+    { k: "how", label: "怎么入睡", type: "seg", opts: ["自主入睡", "奶睡", "抱睡", "拍睡/摇睡"] },
+    { k: "note", label: "备注", type: "text", ph: "夜醒次数、哭闹…" } ] },
+  baby:  { label: "宝宝健康", icon: "🌡", color: "var(--rose)", fields: [
+    { k: "temp", label: "体温（℃）", type: "num", step: .1, half: 1 },
+    { k: "weight", label: "体重（kg）", type: "num", step: .01, half: 1 },
+    { k: "length", label: "身长（cm）", type: "num", step: .1, half: 1 },
+    { k: "head", label: "头围（cm）", type: "num", step: .1, half: 1 },
+    { k: "note", label: "症状 / 看诊记录", type: "area", ph: "黄疸、皮疹、咳嗽、医生说了什么…" } ] },
+  bmed:  { label: "宝宝用药", icon: "💧", color: "var(--sage)", fields: [
+    { k: "cat", label: "类别", type: "seg", opts: ["维生素D", "铁剂", "益生菌", "药物", "疫苗"], def: "维生素D" },
+    { k: "name", label: "名称", type: "text" },
+    { k: "dose", label: "剂量（按医嘱/说明书）", type: "text" },
+    { k: "note", label: "备注", type: "text" } ] },
+  mmed:  { label: "妈妈用药", icon: "💊", color: "var(--rose)", fields: [
+    { k: "cat", label: "类别", type: "seg", opts: ["止疼药", "维生素", "铁剂", "其他"], def: "止疼药" },
+    { k: "name", label: "药名", type: "text", list: "medlist", ph: "布洛芬 / 泰诺…" },
+    { k: "dose", label: "剂量", type: "text", ph: "如 1片" },
+    { k: "note", label: "备注", type: "text" } ] },
+  mbody: { label: "妈妈身体", icon: "♡", color: "#9B7BB8", fields: [
+    { k: "weight", label: "体重（kg）", type: "num", step: .1, half: 1 },
+    { k: "sleepHrs", label: "昨晚睡了（小时）", type: "num", step: .5, half: 1 },
+    { k: "lochia", label: "恶露量", type: "seg", opts: ["无", "少", "中", "多", "1小时浸透1片"] },
+    { k: "lcolor", label: "恶露颜色", type: "seg", opts: ["鲜红", "粉/褐", "黄白"] },
+    { k: "pain", label: "疼痛（0 无痛 – 10 最痛）", type: "range", min: 0, max: 10 },
+    { k: "mood", label: "心情（1 很低落 – 5 很好）", type: "range", min: 1, max: 5 },
+    { k: "exercise", label: "恢复运动（分钟）", type: "num", half: 1, ph: "凯格尔、散步…" },
+    { k: "bp", label: "血压（选填）", type: "text", half: 1, ph: "120/80" },
+    { k: "note", label: "备注", type: "area", ph: "伤口、乳房胀痛、情绪…" } ] }
+};
+
+function summary(e){
+  const p = [];
+  switch (e.type) {
+    case "feed":
+      p.push(e.method || "喂奶");
+      if (e.left) p.push(`左${e.left}分`); if (e.right) p.push(`右${e.right}分`); if (e.ml) p.push(`${e.ml}ml`); break;
+    case "diaper": if (e.pee) p.push("尿"); if (e.poop) p.push("便" + (e.color ? `（${e.color}）` : "")); break;
+    case "sleep": p.push(e.end ? `睡到 ${hm(e.end)} · ${dur(e.end - e.ts)}` : "正在睡"); if (e.where) p.push(e.where); if (e.how) p.push(e.how); break;
+    case "baby": if (e.temp) p.push(`体温 ${e.temp}℃`); if (e.weight) p.push(`体重 ${e.weight}kg`); if (e.length) p.push(`身长 ${e.length}cm`); if (e.head) p.push(`头围 ${e.head}cm`); if (!p.length) p.push("健康记录"); break;
+    case "bmed": p.push(e.cat || "", e.name || "", e.dose || ""); break;
+    case "mmed": p.push(e.cat || "", e.name || "", e.dose || ""); break;
+    case "mbody": if (e.weight) p.push(`体重 ${e.weight}kg`); if (e.lochia) p.push(`恶露 ${e.lochia}`); if (e.pain != null) p.push(`疼痛 ${e.pain}`); if (e.mood != null) p.push(`心情 ${e.mood}/5`); if (e.sleepHrs) p.push(`睡 ${e.sleepHrs}h`); break;
+  }
+  return p.filter(Boolean).join(" · ");
+}
+function flags(e){
+  const f = [];
+  const ageDays = babyAgeDays(e.ts);
+  if (e.type === "baby" && e.temp >= 38) f.push(ageDays != null && ageDays < 90 ? "3个月内宝宝体温≥38℃：请立即联系儿科医生或急诊" : "发热：留意精神状态，按医生建议处理");
+  if (e.type === "diaper" && e.poop && e.color === "白/灰白") f.push("灰白色大便可能提示肝胆问题，请尽快就医");
+  if (e.type === "diaper" && e.poop && e.color === "带血") f.push("大便带血：请联系儿科医生");
+  if (e.type === "diaper" && e.poop && e.color === "黑（胎便）" && ageDays != null && ageDays > 5) f.push("出生5天后仍为黑色大便：请咨询医生");
+  if (e.type === "mbody" && e.lochia === "1小时浸透1片") f.push("出血量大（约1小时浸透1片卫生巾）：属于紧急警示信号，请立即就医");
+  if (e.type === "mbody" && e.mood != null && e.mood <= 1) f.push("如果持续低落或有伤害自己/宝宝的念头，请马上联系医生或身边可信任的人");
+  return f;
+}
+
+/* ============ baby age & stages ============ */
+function birthTs(){ return S.settings.birth ? new Date(S.settings.birth + "T00:00:00").getTime() : null; }
+function babyAgeDays(at = Date.now()){ const b = birthTs(); return b == null ? null : Math.floor((startOfDay(at) - b) / D); }
+function ageText(){
+  const d = babyAgeDays(); if (d == null) return "先在设置里填宝宝生日";
+  if (d < 0) return `距预产期还有 ${-d} 天`;
+  const b = new Date(birthTs()), n = new Date();
+  let m = (n.getFullYear() - b.getFullYear()) * 12 + n.getMonth() - b.getMonth(); if (n.getDate() < b.getDate()) m--;
+  const stage = STAGES.find(s => d < s.untilDays) || STAGES[STAGES.length - 1];
+  const age = d < 60 ? `出生第 ${d + 1} 天` : m < 24 ? `${m} 个月` : `${Math.floor(m / 12)} 岁 ${m % 12} 个月`;
+  return `${age} · ${stage.name}`;
+}
+const STAGES = [
+  { name: "新生儿期", range: "0–3 个月", untilDays: 91, items: ["喂奶 / 尿布 / 睡眠", "妈妈产后恢复", "黄疸与体重"] },
+  { name: "婴儿期", range: "3–12 个月", untilDays: 366, items: ["作息与睡眠引导", "辅食记录（约6月起）", "大运动里程碑"] },
+  { name: "幼儿期", range: "1–3 岁", untilDays: 1096, items: ["语言发展", "饮食与过敏", "如厕训练"] },
+  { name: "学前期", range: "3–5 岁 PreK", untilDays: 1e9, items: ["入园准备", "社交与情绪", "阅读与早期学习"] }
+];
+// AAP Bright Futures well-child visit schedule
+const CHECKUPS = [
+  { k: "d4", label: "出生后 3–5 天", days: 4 }, { k: "m1", label: "1 月龄", m: 1 }, { k: "m2", label: "2 月龄", m: 2 },
+  { k: "m4", label: "4 月龄", m: 4 }, { k: "m6", label: "6 月龄", m: 6 }, { k: "m9", label: "9 月龄", m: 9 },
+  { k: "m12", label: "12 月龄", m: 12 }, { k: "m15", label: "15 月龄", m: 15 }, { k: "m18", label: "18 月龄", m: 18 },
+  { k: "m24", label: "2 岁", m: 24 }, { k: "m30", label: "2 岁半", m: 30 }, { k: "y3", label: "3 岁", m: 36 },
+  { k: "y4", label: "4 岁", m: 48 }, { k: "y5", label: "5 岁", m: 60 }
+];
+function checkupDate(c){ const b = birthTs(); if (b == null) return null; if (c.days) return b + c.days * D; const d = new Date(b); d.setMonth(d.getMonth() + c.m); return d.getTime(); }
+function nextCheckup(){ const done = S.settings.checkups || {}; return CHECKUPS.map(c => ({ ...c, at: checkupDate(c) })).find(c => c.at && !done[c.k] && c.at > Date.now() - 14 * D); }
+
+/* ============ derived data ============ */
+const byTime = (a, b) => b.ts - a.ts;
+const last = (pred) => S.entries.filter(pred).sort(byTime)[0];
+const within = (ms) => S.entries.filter(e => e.ts >= Date.now() - ms && e.ts <= Date.now() + 60e3);
+
+function suggestSide(f){
+  if (!f || !["亲喂", "混合"].includes(f.method)) return null;
+  const l = +f.left || 0, r = +f.right || 0;
+  if (!l && !r) return null;
+  if (l && !r) return "右侧"; if (r && !l) return "左侧";
+  return l < r ? "左侧" : "右侧";
+}
+function expectedDiapers(dayIdx){ // common lactation guidance for the first week
+  if (dayIdx == null || dayIdx > 30) return { wet: 6, poop: null };
+  const d = dayIdx + 1;
+  if (d <= 5) return { wet: d, poop: Math.min(d, 3) };
+  return { wet: 6, poop: 3 };
+}
+function sleepMsIn(fromTs, toTs){
+  let t = 0;
+  for (const e of S.entries) if (e.type === "sleep") {
+    const s = e.ts, en = e.end || Date.now();
+    const a = Math.max(s, fromTs), b = Math.min(en, toTs); if (b > a) t += b - a;
+  }
+  return t;
+}
+function medStatus(){
+  const out = [];
+  const meds = S.entries.filter(e => e.type === "mmed" && e.ts > Date.now() - 2 * D).sort(byTime);
+  const seen = new Set();
+  for (const m of meds) {
+    const name = (m.name || m.cat || "").trim(); if (!name || seen.has(name)) continue; seen.add(name);
+    const rule = (S.settings.medIntervals || []).find(r => r.name && name.includes(r.name) && num(r.hours));
+    const next = rule ? m.ts + num(rule.hours) * H : null;
+    out.push({ name, at: m.ts, next, count24: meds.filter(x => (x.name || x.cat || "").trim() === name && x.ts > Date.now() - D).length });
+  }
+  return out;
+}
+
+/* ============ rendering ============ */
+function renderStatus(){
+  $("#status").innerHTML = S.mode === "cloud" ? `<span class="dot ok"></span>已同步到你的账号` : `<span class="dot"></span>保存在本设备`;
+  $("#bname").textContent = S.settings.babyName ? `${S.settings.babyName}的记录` : "小月亮";
+  $("#bage").textContent = ageText();
+}
+function render(){
+  renderStatus();
+  document.querySelectorAll("nav.tabs button").forEach(b => { if (b.dataset.tab === S.tab) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
+  const v = { today: viewToday, log: viewLog, mom: viewMom, grow: viewGrow, learn: viewLearn }[S.tab];
+  $("#main").innerHTML = v();
+  if (S.tab === "log") { const s = $("#q"); if (s && document.activeElement !== s && renderLogFocus) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); renderLogFocus = false; } }
+}
+let renderLogFocus = false;
+
+function heroHTML(){
+  const sl = last(e => e.type === "sleep" && !e.end);
+  if (sl) return `<section class="hero sleeping" aria-live="polite"><div class="moon"></div>
+    <div class="lbl">宝宝已经睡了</div>
+    <div class="big num">${bigDur(Date.now() - sl.ts)}</div>
+    <div class="meta"><span>${hm(sl.ts)} 入睡</span>${sl.where ? `<span>${esc(sl.where)}</span>` : ""}</div>
+    <div class="act"><button data-act="wake" data-id="${sl.id}">醒了，记录结束</button></div></section>`;
+  const f = last(e => e.type === "feed" && e.method !== "吸奶");
+  if (!f) return `<section class="hero"><div class="moon"></div><div class="lbl">距上次喂奶</div>
+    <div class="big num">--<small>:</small>--</div><div class="meta">点下面的按钮记录第一次喂奶</div></section>`;
+  const side = suggestSide(f);
+  return `<section class="hero"><div class="moon"></div>
+    <div class="lbl">距上次喂奶</div>
+    <div class="big num">${bigDur(Date.now() - f.ts)}</div>
+    <div class="meta"><span>${hm(f.ts)} · ${esc(summary(f))}</span>${side ? `<span>这次建议先喂 <span class="side">${side}</span></span>` : ""}</div></section>`;
+}
+function bigDur(ms){ const m = Math.max(0, Math.floor(ms / 60000)); const h = Math.floor(m / 60); return h ? `${h}<small>小时</small>${m % 60}<small>分</small>` : `${m}<small>分钟</small>`; }
+
+function viewToday(){
+  const day = within(D);
+  const feeds = day.filter(e => e.type === "feed" && e.method !== "吸奶");
+  const ml = feeds.reduce((a, e) => a + (+e.ml || 0), 0);
+  const L = feeds.reduce((a, e) => a + (+e.left || 0), 0), R = feeds.reduce((a, e) => a + (+e.right || 0), 0);
+  const wet = day.filter(e => e.type === "diaper" && e.pee).length, poop = day.filter(e => e.type === "diaper" && e.poop).length;
+  const exp = expectedDiapers(babyAgeDays());
+  const sleep = sleepMsIn(Date.now() - D, Date.now());
+  const alerts = within(2 * D).flatMap(e => flags(e).map(t => ({ t, e })));
+  const nc = nextCheckup();
+  const meds = medStatus();
+  const today = S.entries.filter(e => e.ts >= startOfDay(Date.now())).sort(byTime);
+  const newborn = (babyAgeDays() ?? 0) < 91;
+
+  return `
+  ${heroHTML()}
+  <div class="quick" role="group" aria-label="快速记录">
+    <button data-add="feed" data-preset='{"method":"亲喂"}'><i>🤱</i>亲喂</button>
+    <button data-add="feed" data-preset='{"method":"母乳瓶喂"}'><i>🍼</i>瓶喂母乳</button>
+    <button data-add="feed" data-preset='{"method":"配方奶"}'><i>🥛</i>配方奶</button>
+    <button data-add="diaper"><i>🧷</i>换尿布</button>
+    <button data-act="sleepnow"><i>🌙</i>开始睡</button>
+    <button data-add="mmed"><i>💊</i>妈妈用药</button>
+    <button data-add="mbody"><i>♡</i>妈妈身体</button>
+    <button data-add="baby"><i>🌡</i>宝宝健康</button>
+  </div>
+  ${alerts.map(a => `<div class="alert red" role="alert"><b>需要留意</b> · ${hm(a.e.ts)} ${esc(a.t)}</div>`).join("")}
+
+  <h2>最近 24 小时</h2>
+  <div class="stats">
+    <div class="stat"><div class="k">喂奶次数</div><div class="v num">${feeds.length}<small>次</small></div>
+      ${newborn ? `<div class="ref ${feeds.length && feeds.length < 8 ? "warn" : ""}">新生儿通常 8–12 次</div>` : ""}</div>
+    <div class="stat"><div class="k">瓶喂总量</div><div class="v num">${ml}<small>ml</small></div></div>
+    <div class="stat"><div class="k">亲喂 左 / 右</div><div class="v num">${L}<small>分</small> ${R}<small>分</small></div></div>
+    <div class="stat"><div class="k">湿尿布 / 大便</div><div class="v num">${wet}<small>次</small> ${poop}<small>次</small></div>
+      ${birthTs() && newborn ? `<div class="ref ${wet < exp.wet ? "warn" : ""}">参考：至少 ${exp.wet} 次湿尿布${exp.poop ? `、${exp.poop} 次大便` : ""}</div>` : ""}</div>
+    <div class="stat"><div class="k">宝宝睡眠</div><div class="v num">${Math.round(sleep / H * 10) / 10}<small>小时</small></div></div>
+  </div>
+
+  ${meds.length ? `<h2>妈妈用药</h2><div class="panel">${meds.map(medRow).join("")}
+     <p class="small muted" style="margin-top:8px">间隔来自你在设置里填写的医嘱。没有填写的只显示距上次服药多久。</p></div>` : ""}
+
+  ${nc ? `<div class="alert info" style="margin-top:14px">${nc.at < Date.now() ? "儿科体检" : "下次儿科体检"}：<b>${nc.label}</b>，${nc.at < Date.now() ? "应在" : "约"} ${dayKey(nc.at)}（${weekday(nc.at)}）${nc.at < Date.now() ? "，去过了记得在成长页勾选" : ""}。<button class="chip" data-tab="grow" style="margin-left:6px">查看全部</button></div>` : ""}
+
+  <h2>今天</h2>
+  ${today.length ? today.map(entryRow).join("") : `<div class="empty">今天还没有记录。</div>`}
+  ${!S.entries.length ? `<div class="empty">想先看看效果？<br><button class="btn" data-act="demo">载入演示数据</button></div>` : ""}`;
+}
+function medRow(m){
+  let pill = "";
+  if (m.next) pill = m.next > Date.now() ? `<span class="pill wait">${hm(m.next)} 后可再服</span>` : `<span class="pill ok">已过医嘱间隔</span>`;
+  return `<div class="medrow"><div><b>${esc(m.name)}</b><div class="small muted">上次 ${hm(m.at)} · ${dur(Date.now() - m.at)}前 · 24小时内 ${m.count24} 次</div></div>${pill}</div>`;
+}
+function entryRow(e){
+  const T = TYPES[e.type] || { color: "var(--muted)", label: e.type };
+  const fl = flags(e);
+  return `<button class="entry" data-edit="${e.id}">
+    <span class="t">${hm(e.ts)}</span><span class="c" style="background:${T.color}" aria-hidden="true"></span>
+    <span><span class="s">${esc(T.label)} · ${esc(summary(e))}</span>${e.note ? `<br><span class="n">${esc(e.note)}</span>` : ""}${fl.map(f => `<br><span class="n" style="color:var(--rose)">${esc(f)}</span>`).join("")}</span></button>`;
+}
+
+function viewLog(){
+  const q = S.q.trim().toLowerCase();
+  let list = S.entries.slice().sort(byTime);
+  if (S.filter !== "all") list = list.filter(e => S.filter === "momall" ? ["mmed", "mbody"].includes(e.type) : e.type === S.filter);
+  if (q) list = list.filter(e => (TYPES[e.type]?.label + " " + summary(e) + " " + (e.note || "") + " " + dayKey(e.ts)).toLowerCase().includes(q));
+  const groups = {};
+  for (const e of list) (groups[dayKey(e.ts)] ||= []).push(e);
+  const chips = [["all", "全部"], ["feed", "喂奶"], ["diaper", "尿布"], ["sleep", "睡眠"], ["baby", "宝宝健康"], ["bmed", "宝宝用药"], ["momall", "妈妈"]];
+  return `<h2>全部记录</h2>
+  <label for="q" class="small muted">搜索备注、药名、日期（如 2026-10-11）</label>
+  <input id="q" class="search" type="search" value="${esc(S.q)}" placeholder="搜索…" autocomplete="off">
+  <div class="chips" role="group" aria-label="按类型筛选">${chips.map(([k, l]) => `<button class="chip" data-filter="${k}" aria-pressed="${S.filter === k}">${l}</button>`).join("")}</div>
+  <div class="btns" style="margin-top:0"><button class="btn" data-act="addpick">＋ 补记一条</button></div>
+  ${Object.keys(groups).length ? Object.entries(groups).map(([d, es]) => `<div class="day">${d} ${weekday(es[0].ts)} · ${es.length} 条</div>${es.map(entryRow).join("")}`).join("")
+   : `<div class="empty">${q || S.filter !== "all" ? "没有符合条件的记录，换个关键词试试。" : "还没有记录。回到“今天”开始记第一条。"}</div>`}`;
+}
+
+/* ---- charts ---- */
+function lineChart(points, opts){
+  const W = 360, Hh = 150, P = { l: 34, r: 10, t: 12, b: 22 };
+  if (points.length < 2) return `<p class="small muted">至少记录两次后会显示趋势图。</p>`;
+  const xs = points.map(p => p.t), ys = points.map(p => p.v);
+  let y0 = Math.min(...ys), y1 = Math.max(...ys); if (opts.min != null) y0 = Math.min(y0, opts.min); if (opts.max != null) y1 = Math.max(y1, opts.max);
+  if (y1 === y0) { y1 += 1; y0 -= 1; }
+  const x0 = Math.min(...xs), x1 = Math.max(...xs) || x0 + 1;
+  const X = t => P.l + (t - x0) / ((x1 - x0) || 1) * (W - P.l - P.r), Y = v => Hh - P.b - (v - y0) / (y1 - y0) * (Hh - P.t - P.b);
+  const path = points.map((p, i) => (i ? "L" : "M") + X(p.t).toFixed(1) + " " + Y(p.v).toFixed(1)).join(" ");
+  const fmt = v => Math.round(v * 10) / 10;
+  return `<div class="scroll-x"><svg viewBox="0 0 ${W} ${Hh}" width="100%" role="img" aria-label="${esc(opts.label)}：从 ${fmt(ys[0])} 到 ${fmt(ys[ys.length - 1])}${esc(opts.unit)}">
+    <line x1="${P.l}" x2="${W - P.r}" y1="${Y(y1)}" y2="${Y(y1)}" stroke="var(--line)"/><line x1="${P.l}" x2="${W - P.r}" y1="${Y(y0)}" y2="${Y(y0)}" stroke="var(--line)"/>
+    <text x="4" y="${Y(y1) + 4}">${fmt(y1)}</text><text x="4" y="${Y(y0) + 4}">${fmt(y0)}</text>
+    <text x="${P.l}" y="${Hh - 6}">${dayKey(x0).slice(5)}</text><text x="${W - P.r}" y="${Hh - 6}" text-anchor="end">${dayKey(x1).slice(5)}</text>
+    <path d="${path}" fill="none" stroke="${opts.color}" stroke-width="2.5" stroke-linejoin="round"/>
+    ${points.map(p => `<circle cx="${X(p.t)}" cy="${Y(p.v)}" r="3.5" fill="${opts.color}"/>`).join("")}</svg></div>`;
+}
+function sleepBarcode(){
+  const W = 360, rowH = 20, gap = 6, L = 42, days = 7, now = Date.now();
+  const rows = []; for (let i = 0; i < days; i++) rows.push(startOfDay(now) - i * D);
+  const sleeps = S.entries.filter(e => e.type === "sleep");
+  const feeds = S.entries.filter(e => e.type === "feed" && e.method !== "吸奶");
+  const scale = (W - L - 8) / D;
+  let body = "";
+  rows.forEach((d0, i) => {
+    const y = 18 + i * (rowH + gap);
+    body += `<text x="0" y="${y + 15}">${dayKey(d0).slice(5)}</text><rect x="${L}" y="${y}" width="${W - L - 8}" height="${rowH}" rx="4" fill="var(--slate-soft)"/>`;
+    for (const s of sleeps) { const a = Math.max(s.ts, d0), b = Math.min(s.end || now, d0 + D); if (b > a) body += `<rect x="${(L + (a - d0) * scale).toFixed(1)}" y="${y}" width="${Math.max(1.5, (b - a) * scale).toFixed(1)}" height="${rowH}" rx="3" fill="var(--slate)"/>`; }
+    for (const f of feeds) if (f.ts >= d0 && f.ts < d0 + D) body += `<rect x="${(L + (f.ts - d0) * scale - 1).toFixed(1)}" y="${y + rowH - 6}" width="3" height="6" fill="var(--honey)"/>`;
+  });
+  [0, 6, 12, 18, 24].forEach(h => body += `<text x="${L + h * H * scale}" y="12" text-anchor="${h === 0 ? "start" : h === 24 ? "end" : "middle"}">${h}点</text>`);
+  const total = 18 + days * (rowH + gap);
+  return `<div class="scroll-x"><svg viewBox="0 0 ${W} ${total}" width="100%" role="img" aria-label="最近7天睡眠时间分布图，深色为睡眠，黄色刻度为喂奶">${body}</svg></div>
+  <div class="legend"><span style="--c:var(--slate)">睡眠</span><span style="--c:var(--honey)">喂奶</span></div>`;
+}
+
+function viewMom(){
+  const meds = medStatus();
+  const bodies = S.entries.filter(e => e.type === "mbody").sort((a, b) => a.ts - b.ts);
+  const wpts = bodies.filter(e => num(e.weight) != null).map(e => ({ t: e.ts, v: +e.weight }));
+  const ppts = bodies.filter(e => num(e.pain) != null).map(e => ({ t: e.ts, v: +e.pain }));
+  const mpts = bodies.filter(e => num(e.mood) != null).map(e => ({ t: e.ts, v: +e.mood }));
+  const lowMood = mpts.slice(-5).filter(p => p.v <= 2).length >= 3;
+  return `<h2>妈妈的恢复</h2>
+  <div class="btns" style="margin-top:0"><button class="btn primary" data-add="mbody">记录今天的身体状况</button><button class="btn" data-add="mmed">记录用药</button></div>
+  ${lowMood ? `<div class="alert info">最近几次心情记录偏低。产后情绪波动很常见，但如果低落持续超过两周，或影响到吃饭、睡觉、照顾宝宝，值得和医生聊聊产后抑郁筛查（如 EPDS 量表）。</div>` : ""}
+  <h2>用药计时</h2>
+  <div class="panel">${meds.length ? meds.map(medRow).join("") : `<p class="muted">最近 48 小时没有用药记录。</p>`}
+    <p class="small muted" style="margin-top:8px">在“设置”里给每种药填上医生或说明书给的最短间隔，这里就会显示下次可以服用的时间。哺乳期用药请先确认医生的意见。</p></div>
+  <h2>体重</h2><div class="panel">${lineChart(wpts, { color: "#9B7BB8", unit: "kg", label: "妈妈体重" })}</div>
+  <h2>疼痛与心情</h2>
+  <div class="panel"><h3 class="small muted">疼痛 0–10</h3>${lineChart(ppts, { color: "var(--rose)", unit: "", label: "疼痛评分", min: 0, max: 10 })}
+    <h3 class="small muted" style="margin-top:10px">心情 1–5</h3>${lineChart(mpts, { color: "var(--sage)", unit: "", label: "心情评分", min: 1, max: 5 })}</div>
+  <h2>需要立即就医的警示信号</h2>
+  <div class="panel"><p class="small muted">参考美国 CDC “Hear Her” 产后紧急警示信号。出现任何一项，请马上联系医生或去急诊。</p>
+  <ul class="plain">
+    <li>持续不缓解或越来越重的头痛，头晕、晕厥</li>
+    <li>视力变化（看东西模糊、眼前闪光）</li>
+    <li>体温 38℃（100.4℉）或以上</li>
+    <li>面部、手部严重肿胀</li>
+    <li>有伤害自己或宝宝的想法</li>
+    <li>呼吸困难、胸痛、心跳很快</li>
+    <li>剧烈腹痛、持续恶心呕吐</li>
+    <li>出血量大（约 1 小时浸透一片卫生巾）或排出大血块</li>
+    <li>一侧腿部肿胀、发红、疼痛</li>
+    <li>极度疲惫、无法照顾自己</li>
+  </ul></div>`;
+}
+
+function viewGrow(){
+  const ad = babyAgeDays();
+  const cur = ad == null ? -1 : STAGES.findIndex(s => ad < s.untilDays);
+  const w = S.entries.filter(e => e.type === "baby" && num(e.weight) != null).sort((a, b) => a.ts - b.ts).map(e => ({ t: e.ts, v: +e.weight }));
+  const done = S.settings.checkups || {};
+  return `<h2>成长阶段</h2>
+  <div class="stages">${STAGES.map((s, i) => `<div class="stage ${i === cur ? "now" : ""}"><b>${s.name}</b>${s.range}${i > 0 ? `<ul>${s.items.map(x => `<li>${x}</li>`).join("")}</ul>` : `<ul>${s.items.map(x => `<li>${x}</li>`).join("")}</ul>`}</div>`).join("")}</div>
+  <p class="small muted" style="margin-top:6px">${cur >= 0 ? `现在是「${STAGES[cur].name}」。后面阶段的记录模块会陆续加上。` : "在设置里填写宝宝生日后，会自动定位到当前阶段。"}</p>
+
+  <h2>最近 7 天睡眠</h2>
+  <div class="panel">${sleepBarcode()}
+    <p class="small muted" style="margin-top:8px">每一行是一天，从 0 点到 24 点。看得出白天和夜里的睡眠慢慢分开，就是作息在形成。</p></div>
+
+  <h2>睡眠参考</h2>
+  <div class="panel scroll-x"><table>
+    <thead><tr><th>月龄</th><th>24小时总睡眠</th><th>常见清醒时长</th></tr></thead>
+    <tbody>
+      <tr><td>0–3 个月</td><td>14–17 小时</td><td>45–90 分钟</td></tr>
+      <tr><td>4–12 个月</td><td>12–16 小时（含小睡）</td><td>1.5–3.5 小时</td></tr>
+      <tr><td>1–2 岁</td><td>11–14 小时（含小睡）</td><td>3–5 小时</td></tr>
+      <tr><td>3–5 岁</td><td>10–13 小时（含小睡）</td><td>多数逐渐不午睡</td></tr>
+    </tbody></table>
+    <p class="small muted" style="margin-top:8px">总睡眠：4个月以上为美国睡眠医学会（AASM）建议、AAP 认可；0–3 个月为美国国家睡眠基金会建议。清醒时长是常见经验范围，个体差异很大。安全睡眠：仰睡、独自睡在婴儿床、床里不放枕头被子毛绒玩具。多数专家建议约 4–6 个月后再考虑睡眠训练。</p></div>
+
+  <h2>宝宝体重</h2><div class="panel">${lineChart(w, { color: "var(--sky)", unit: "kg", label: "宝宝体重" })}
+    <p class="small muted">新生儿出生后几天体重下降常见；通常约 10–14 天回到出生体重。是否正常请以儿科医生对照生长曲线的判断为准。</p>
+    <div class="btns"><button class="btn" data-add="baby">记录体重 / 身长 / 头围</button></div></div>
+
+  <h2>儿科体检提醒</h2>
+  <div class="panel scroll-x">${birthTs() ? `<table><thead><tr><th>时间点</th><th>约在</th><th>完成</th></tr></thead><tbody>
+    ${CHECKUPS.map(c => { const at = checkupDate(c); const soon = !done[c.k] && at > Date.now() - 14 * D && at < Date.now() + 21 * D;
+      return `<tr><td>${soon ? "<b>" : ""}${c.label}${soon ? "</b>" : ""}</td><td class="num">${dayKey(at)}</td>
+      <td><label class="check"><input type="checkbox" data-checkup="${c.k}" ${done[c.k] ? "checked" : ""}><span class="small">已去</span></label></td></tr>`; }).join("")}
+    </tbody></table>
+    <p class="small muted" style="margin-top:8px">时间点参考美国儿科学会 Bright Futures 体检时间表。疫苗按当地（中国 / 美国等）免疫规划和医生安排，二者时间不完全相同。</p>`
+    : `<p class="muted">在设置里填写宝宝生日后，会自动算出每次体检的大概日期。</p><button class="btn" data-act="settings">去填写</button>`}</div>`;
+}
+
+function viewLearn(){
+  const ad = babyAgeDays();
+  return `<h2>什么时候要联系儿科医生</h2>
+  <div class="panel"><ul class="plain">
+    <li><b>3 个月以内</b>体温 ≥ 38℃（100.4℉）：立即联系医生或去急诊，不要先自行用退烧药。</li>
+    <li>呼吸急促、费力，嘴唇发青，或很难叫醒、异常软。</li>
+    <li>湿尿布明显变少（出生第 5 天后 24 小时少于 6 次），嘴唇干、哭时无泪。</li>
+    <li>皮肤或眼白越来越黄，尤其蔓延到腹部和腿，或出生 24 小时内就发黄。</li>
+    <li>大便灰白色、带血，或持续喷射性呕吐、呕吐物呈绿色。</li>
+    <li>连续几次拒奶，或体重没有按医生预期回升。</li>
+    <li>脐带周围红肿、有臭味或流脓。</li>
+  </ul><p class="small muted">整理自美国儿科学会家长网站 HealthyChildren.org 的常见建议。不确定时，打电话问医生总是对的。</p></div>
+
+  <h2>问一个问题</h2>
+  <div class="panel ask">${S.sample ? `
+    <label for="askq" class="small muted">比如：“宝宝打嗝很多正常吗？”“产后多久可以开始运动？”</label>
+    <textarea id="askq" placeholder="输入你的问题…"></textarea>
+    <div class="btns"><button class="btn primary" data-act="ask">提问</button></div>
+    <div class="answer" id="answer" aria-live="polite"></div>
+    <p class="small muted" style="margin-top:8px">回答由 AI 生成，只作一般信息参考，不能代替医生诊断。</p>`
+    : `<p class="muted">在线问答在当前打开方式下不可用。可以先查看下方的权威网站。</p>`}</div>
+
+  <h2>权威资料</h2>
+  <div class="panel"><ul class="plain">
+    <li><a href="https://www.healthychildren.org" target="_blank" rel="noopener">HealthyChildren.org</a>（美国儿科学会家长站，有中文版部分内容）</li>
+    <li><a href="https://www.cdc.gov/ncbddd/actearly/milestones/index.html" target="_blank" rel="noopener">CDC 发育里程碑 Learn the Signs. Act Early.</a></li>
+    <li><a href="https://www.cdc.gov/hearher/" target="_blank" rel="noopener">CDC Hear Her 产后警示信号</a></li>
+    <li><a href="https://www.who.int/health-topics/breastfeeding" target="_blank" rel="noopener">WHO 母乳喂养</a></li>
+    <li><a href="https://www.who.int/tools/child-growth-standards" target="_blank" rel="noopener">WHO 儿童生长标准曲线</a></li>
+  </ul></div>
+
+  <h2>微信公众号</h2>
+  <div class="panel"><p class="small muted">网页无法直接搜索公众号。点“复制”后到微信里搜索。内容质量请自行判断，医疗问题以医生意见为准。</p>
+    ${["丁香妈妈", "崔玉涛育学园", "年糕妈妈"].map(n => `<div class="medrow"><span>${n}</span><button class="chip" data-copy="${n}">复制名称</button></div>`).join("")}</div>`;
+}
+
+/* ============ form sheet ============ */
+let draft = null;
+function openForm(type, existing, preset){
+  const T = TYPES[type];
+  draft = existing ? { ...existing } : { id: newId(), type, ts: Date.now(), ...preset };
+  if (!existing) for (const f of T.fields) if (f.def !== undefined && draft[f.k] === undefined) draft[f.k] = f.def;
+  drawForm(); const d = $("#sheet"); if (!d.open) d.showModal();
+}
+function drawForm(focusKey){
+  const T = TYPES[draft.type], isNew = !S.entries.some(e => e.id === draft.id);
+  const fieldsHTML = T.fields.filter(f => !f.show || f.show(draft)).map(f => {
+    const v = draft[f.k], id = "f_" + f.k;
+    let inner = "";
+    if (f.type === "seg") inner = `<div class="lab" id="${id}">${f.label}</div><div class="seg" role="group" aria-labelledby="${id}">${f.opts.map(o => `<button type="button" data-seg="${f.k}" data-v="${esc(o)}" aria-pressed="${v === o}">${esc(o)}</button>`).join("")}</div>`;
+    else if (f.type === "check") inner = `<label class="check"><input type="checkbox" data-f="${f.k}" ${v ? "checked" : ""}>${f.label}</label>`;
+    else if (f.type === "num") inner = `<label for="${id}">${f.label}</label><input id="${id}" type="number" inputmode="decimal" step="${f.step || 1}" min="0" data-f="${f.k}" value="${v ?? ""}" placeholder="${esc(f.ph || "")}">`;
+    else if (f.type === "datetime") inner = `<label for="${id}">${f.label}</label><input id="${id}" type="datetime-local" data-f="${f.k}" data-kind="dt" value="${v ? toInput(v) : ""}">`;
+    else if (f.type === "range") inner = `<label for="${id}">${f.label}</label><div class="range"><input id="${id}" type="range" min="${f.min}" max="${f.max}" data-f="${f.k}" value="${v ?? Math.round((f.min + f.max) / 2)}"><output class="num" style="min-width:24px">${v ?? "–"}</output></div>`;
+    else if (f.type === "area") inner = `<label for="${id}">${f.label}</label><textarea id="${id}" data-f="${f.k}" placeholder="${esc(f.ph || "")}">${esc(v || "")}</textarea>`;
+    else inner = `<label for="${id}">${f.label}</label><input id="${id}" type="text" data-f="${f.k}" value="${esc(v || "")}" ${f.list ? `list="${f.list}"` : ""} placeholder="${esc(f.ph || "")}">`;
+    return `<div class="field" ${f.half ? 'data-half="1"' : ""}>${inner}</div>`;
+  });
+  // pair half-width fields
+  const out = []; for (let i = 0; i < fieldsHTML.length; i++) {
+    if (fieldsHTML[i].includes('data-half="1"') && fieldsHTML[i + 1]?.includes('data-half="1"')) { out.push(`<div class="row2">${fieldsHTML[i]}${fieldsHTML[i + 1]}</div>`); i++; } else out.push(fieldsHTML[i]);
+  }
+  const fl = flags(draft);
+  $("#sheetIn").innerHTML = `<div class="sheet-head"><h3 id="sheetTitle">${T.icon} ${isNew ? "记录" : "修改"}${T.label}</h3><button class="iconbtn" data-act="close" aria-label="关闭">关闭</button></div>
+    <div class="field"><label for="f_ts">${draft.type === "sleep" ? "入睡时间" : "时间"}</label><input id="f_ts" type="datetime-local" data-f="ts" data-kind="dt" value="${toInput(draft.ts)}"></div>
+    ${out.join("")}
+    ${fl.map(f => `<div class="warnline" role="alert">${esc(f)}</div>`).join("")}
+    <datalist id="medlist"><option value="布洛芬"><option value="泰诺（对乙酰氨基酚）"><option value="复合维生素"><option value="铁剂"><option value="钙片"></datalist>
+    <div class="btns"><button class="btn primary" data-act="save">保存</button>${isNew ? "" : `<button class="btn danger" data-act="del">删除</button>`}</div>`;
+  if (focusKey) { const el = $("#sheetIn").querySelector(`[data-seg="${focusKey}"][aria-pressed="true"]`); el && el.focus(); }
+}
+function readDraftInputs(){
+  $("#sheetIn").querySelectorAll("[data-f]").forEach(el => {
+    const k = el.dataset.f;
+    if (el.type === "checkbox") draft[k] = el.checked;
+    else if (el.dataset.kind === "dt") draft[k] = fromInput(el.value);
+    else if (el.type === "number" || el.type === "range") draft[k] = num(el.value);
+    else draft[k] = el.value.trim();
+  });
+  if (!draft.ts) draft.ts = Date.now();
+}
+function pickType(){
+  draft = null;
+  $("#sheetIn").innerHTML = `<div class="sheet-head"><h3 id="sheetTitle">补记哪一类？</h3><button class="iconbtn" data-act="close" aria-label="关闭">关闭</button></div>
+  <div class="quick">${Object.entries(TYPES).map(([k, t]) => `<button data-add="${k}"><i>${t.icon}</i>${t.label}</button>`).join("")}</div>`;
+  const d = $("#sheet"); if (!d.open) d.showModal();
+}
+
+/* ============ settings sheet ============ */
+function openSettings(){
+  const st = S.settings;
+  $("#sheetIn").innerHTML = `<div class="sheet-head"><h3 id="sheetTitle">设置</h3><button class="iconbtn" data-act="close" aria-label="关闭">关闭</button></div>
+  <div class="row2"><div class="field"><label for="s_name">宝宝小名</label><input id="s_name" type="text" value="${esc(st.babyName)}"></div>
+  <div class="field"><label for="s_birth">出生日期</label><input id="s_birth" type="date" value="${esc(st.birth)}"></div></div>
+  <div class="field"><div class="lab">妈妈用药的最短间隔（按医嘱或说明书填写）</div>
+    <div id="medRules">${(st.medIntervals || []).map((r, i) => `<div class="row2" style="margin-bottom:6px"><input type="text" aria-label="药名" data-mr="${i}" data-mk="name" value="${esc(r.name)}" placeholder="药名"><input type="number" inputmode="decimal" aria-label="间隔小时" data-mr="${i}" data-mk="hours" value="${esc(r.hours)}" placeholder="间隔（小时）"></div>`).join("")}</div>
+    <button class="chip" data-act="addrule">＋ 添加一种药</button></div>
+  <div class="btns"><button class="btn primary" data-act="savesettings">保存设置</button></div>
+
+  <h2>数据</h2>
+  <p class="small muted">${S.mode === "cloud" ? "记录已同步到你的 Claude 账号，同时在本设备留有副本。" : "记录目前只保存在这台设备的浏览器里。换手机或清理浏览器数据会丢失，建议每周导出一次备份。"}</p>
+  <div class="btns"><button class="btn" data-act="export">导出备份（JSON）</button><button class="btn" data-act="csv">导出表格（CSV）</button><button class="btn" data-act="import">从备份恢复</button></div>
+  <div class="btns"><button class="btn" data-act="demo">载入演示数据</button><button class="btn" data-act="cleardemo">清除演示数据</button><button class="btn danger" data-act="clearall">清空全部记录</button></div>
+  <h2>显示</h2>
+  <div class="seg" role="group" aria-label="外观">${[["", "跟随系统"], ["light", "浅色"], ["dark", "深色（夜里喂奶）"]].map(([v, l]) => `<button data-theme-set="${v}" aria-pressed="${(document.documentElement.dataset.theme || "") === v}">${l}</button>`).join("")}</div>`;
+  const d = $("#sheet"); if (!d.open) d.showModal();
+}
+function readSettingsInputs(){
+  S.settings.babyName = $("#s_name")?.value.trim() ?? S.settings.babyName;
+  S.settings.birth = $("#s_birth")?.value ?? S.settings.birth;
+  const rules = []; document.querySelectorAll("[data-mr]").forEach(el => { const i = +el.dataset.mr; (rules[i] ||= { name: "", hours: "" })[el.dataset.mk] = el.value.trim(); });
+  S.settings.medIntervals = rules.filter(r => r && (r.name || r.hours));
+}
+
+/* ============ import / export ============ */
+async function offerFile(filename, text, mime){
+  let dl = null;
+  if (window.claude?.use) dl = await claude.use("downloads").catch(() => null);
+  if (dl) { try { await dl.save({ filename, data: text }); return; } catch (e) { if (e && e.code !== "unavailable") { toast("没有保存文件"); return; } } }
+  try { const url = URL.createObjectURL(new Blob([text], { type: mime })); const a = document.createElement("a"); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000); }
+  catch (e) { toast("当前环境无法下载文件"); }
+}
+function toCSV(){
+  const rows = [["日期", "时间", "类型", "内容", "结束时间", "备注"]];
+  for (const e of S.entries.slice().sort((a, b) => a.ts - b.ts)) rows.push([dayKey(e.ts), hm(e.ts), TYPES[e.type]?.label || e.type, summary(e), e.end ? dayKey(e.end) + " " + hm(e.end) : "", e.note || ""]);
+  return "\ufeff" + rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+}
+async function importJSON(file){
+  try {
+    const o = JSON.parse(await file.text());
+    if (!Array.isArray(o.entries)) throw new Error("bad");
+    const valid = o.entries.filter(e => e && typeof e.id === "string" && TYPES[e.type] && typeof e.ts === "number");
+    const ids = new Set(S.entries.map(e => e.id));
+    const added = valid.filter(e => !ids.has(e.id));
+    if (o.settings && typeof o.settings === "object") S.settings = { ...S.settings, ...o.settings };
+    for (const e of added) { S.entries.push(e); if (S.col) { try { await S.col.doc(e.id).set(JSON.parse(JSON.stringify(e))); } catch (err) { cloudFail(); break; } } }
+    await saveSettings(); toast(`已恢复 ${added.length} 条记录`);
+  } catch (e) { toast("文件格式不对：请选择从这里导出的 JSON 备份"); }
+}
+async function loadDemo(){
+  const now = Date.now(), list = [];
+  if (!S.settings.birth) { const b = new Date(now - 12 * D); S.settings.birth = dayKey(b.getTime()); }
+  let t = now - 3 * D, side = 0;
+  while (t < now - 40 * 60e3) {
+    const bottle = Math.random() < .2;
+    list.push(bottle ? { type: "feed", ts: t, method: Math.random() < .5 ? "配方奶" : "母乳瓶喂", ml: 40 + Math.round(Math.random() * 4) * 10 }
+                     : { type: "feed", ts: t, method: "亲喂", [side ? "right" : "left"]: 8 + Math.round(Math.random() * 10) });
+    side ^= 1;
+    list.push({ type: "diaper", ts: t + 10 * 60e3, pee: true, poop: Math.random() < .35, color: "黄" });
+    const s = t + 25 * 60e3, len = (new Date(s).getHours() < 7 || new Date(s).getHours() > 21) ? 120 + Math.random() * 60 : 40 + Math.random() * 70;
+    list.push({ type: "sleep", ts: s, end: s + len * 60e3, where: "婴儿床", how: Math.random() < .5 ? "奶睡" : "抱睡" });
+    t += (2.2 + Math.random() * 1.2) * H;
+  }
+  for (let i = 3; i >= 0; i--) {
+    const d0 = startOfDay(now) - i * D;
+    list.push({ type: "mbody", ts: d0 + 9 * H, weight: +(64.5 - (3 - i) * .3).toFixed(1), lochia: i > 1 ? "中" : "少", lcolor: "粉/褐", pain: 5 - (3 - i), mood: 2 + (3 - i) % 3, sleepHrs: 4 + (3 - i) * .5 });
+    if (d0 + 10 * H < now) list.push({ type: "mmed", ts: d0 + 10 * H, cat: "止疼药", name: "布洛芬", dose: "1片" });
+    if (d0 + 16 * H < now) list.push({ type: "mmed", ts: d0 + 16 * H, cat: "止疼药", name: "泰诺", dose: "1片" });
+    if (d0 + 10 * H < now) list.push({ type: "mmed", ts: d0 + 10 * H + 60e3, cat: "维生素", name: "复合维生素、铁" });
+    if (d0 + 11 * H < now) list.push({ type: "bmed", ts: d0 + 11 * H, cat: "维生素D", name: "维生素D滴剂", dose: "1滴" });
+  }
+  list.push({ type: "baby", ts: now - 2 * D, weight: 3.42, temp: 36.8 }, { type: "baby", ts: now - 9 * D, weight: 3.18 }, { type: "baby", ts: now - 12 * D, weight: 3.35, length: 50, head: 34 });
+  const items = list.filter(e => e.ts < now).map(e => ({ ...e, id: newId() + Math.random().toString(36).slice(2, 4), demo: true, updated: now }));
+  S.entries.push(...items); await saveSettings();
+  if (S.col) { for (const e of items) { try { await S.col.doc(e.id).set(e); } catch (err) { cloudFail(); break; } } }
+  toast(`已载入 ${items.length} 条演示记录`);
+}
+async function removeWhere(pred){
+  const gone = S.entries.filter(pred); S.entries = S.entries.filter(e => !pred(e)); saveLocal(); render();
+  if (S.col) for (const e of gone) { try { await S.col.doc(e.id).delete(); } catch (err) { cloudFail(); break; } }
+  return gone.length;
+}
+
+/* ============ AI ask (sample capability) ============ */
+let askCtl = null;
+async function ask(){
+  const q = $("#askq")?.value.trim(); if (!q || !S.sample) return;
+  const out = $("#answer"); out.textContent = "正在思考…";
+  askCtl?.abort(); askCtl = new AbortController();
+  const ad = babyAgeDays();
+  const prompt = `你是一位谨慎、温和的母婴健康科普助手，用简体中文回答新手父母的问题。
+要求：依据美国儿科学会（AAP）、WHO、ACOG、CDC 等权威机构的公开建议给出一般性信息；
+控制在 250 字以内，分 2–4 个短段落；不做诊断，不给具体药物剂量；
+若问题涉及以下危险信号（3个月内发热≥38℃、呼吸困难、嗜睡难叫醒、脱水、产后大出血、胸痛、伤害自己或宝宝的念头等），第一句就明确建议立即就医。
+最后一句提醒具体情况以医生意见为准。
+${ad != null && ad >= 0 ? `宝宝目前出生 ${ad} 天。` : ""}
+问题：${q}`;
+  try {
+    const r = await S.sample(prompt, { signal: askCtl.signal, cache: false, onText: ({ text }) => { out.textContent = text; } });
+    out.textContent = r.text;
+  } catch (e) {
+    out.textContent = e?.code === "not_granted" ? "需要允许这个页面使用 Claude 才能提问。" : e?.code === "rate_limited" ? "提问太频繁了，请稍后再试。" : (e?.text || "暂时没能得到回答，请稍后再试。");
+  }
+}
+
+/* ============ events ============ */
+document.addEventListener("click", async ev => {
+  const t = ev.target.closest("button,[data-checkup]"); if (!t) return;
+  if (t.dataset.tab) { S.tab = t.dataset.tab; render(); window.scrollTo(0, 0); return; }
+  if (t.dataset.add) { openForm(t.dataset.add, null, t.dataset.preset ? JSON.parse(t.dataset.preset) : {}); return; }
+  if (t.dataset.edit) { const e = S.entries.find(x => x.id === t.dataset.edit); e && openForm(e.type, e); return; }
+  if (t.dataset.filter) { S.filter = t.dataset.filter; render(); return; }
+  if (t.dataset.copy) { try { await navigator.clipboard.writeText(t.dataset.copy); toast("已复制：" + t.dataset.copy); } catch (e) { toast("请手动搜索：" + t.dataset.copy); } return; }
+  if (t.dataset.seg) { readDraftInputs(); draft[t.dataset.seg] = draft[t.dataset.seg] === t.dataset.v ? null : t.dataset.v; drawForm(t.dataset.seg); return; }
+  if (t.dataset.themeSet !== undefined) { const v = t.dataset.themeSet; if (v) document.documentElement.dataset.theme = v; else delete document.documentElement.dataset.theme; try { localStorage.setItem(LS_KEY + ".theme", v); } catch (e) {} openSettings(); return; }
+  switch (t.dataset.act) {
+    case "close": $("#sheet").close(); break;
+    case "save": { readDraftInputs(); const e = { ...draft };
+      if (e.type === "sleep" && e.end && e.end < e.ts) { toast("醒来时间要晚于入睡时间"); return; }
+      $("#sheet").close(); await putEntry(e); toast("已保存"); break; }
+    case "del": if (confirm("删除这条记录？")) { $("#sheet").close(); await removeEntry(draft.id); toast("已删除"); } break;
+    case "sleepnow": { if (last(e => e.type === "sleep" && !e.end)) { toast("已经在记录睡眠了"); return; } await putEntry({ id: newId(), type: "sleep", ts: Date.now() }); toast("开始记录睡眠"); break; }
+    case "wake": { const e = S.entries.find(x => x.id === t.dataset.id); if (e) { await putEntry({ ...e, end: Date.now() }); toast(`这一觉睡了 ${dur(Date.now() - e.ts)}`); } break; }
+    case "addpick": pickType(); break;
+    case "settings": openSettings(); break;
+    case "addrule": readSettingsInputs(); S.settings.medIntervals.push({ name: "", hours: "" }); openSettings(); break;
+    case "savesettings": readSettingsInputs(); $("#sheet").close(); await saveSettings(); toast("设置已保存"); break;
+    case "export": offerFile(`母婴记录备份-${dayKey(Date.now())}.json`, JSON.stringify({ app: "xiaoyueliang", version: 1, exported: Date.now(), settings: S.settings, entries: S.entries }, null, 1), "application/json"); break;
+    case "csv": offerFile(`母婴记录-${dayKey(Date.now())}.csv`, toCSV(), "text/csv"); break;
+    case "import": $("#importFile").click(); break;
+    case "demo": $("#sheet").open && $("#sheet").close(); await loadDemo(); break;
+    case "cleardemo": { const n = await removeWhere(e => e.demo); toast(`已清除 ${n} 条演示记录`); break; }
+    case "clearall": if (confirm("确定清空全部记录？建议先导出备份。此操作无法撤销。")) { $("#sheet").close(); const n = await removeWhere(() => true); toast(`已清空 ${n} 条`); } break;
+    case "ask": ask(); break;
+  }
+});
+document.addEventListener("change", async ev => {
+  const c = ev.target.closest("[data-checkup]");
+  if (c) { S.settings.checkups = { ...(S.settings.checkups || {}), [c.dataset.checkup]: c.checked }; await saveSettings(); return; }
+  if (ev.target.id === "importFile" && ev.target.files[0]) { await importJSON(ev.target.files[0]); ev.target.value = ""; return; }
+  if (draft && ev.target.closest("#sheetIn") && ev.target.type === "checkbox") { readDraftInputs(); drawForm(); }
+});
+document.addEventListener("input", ev => {
+  if (ev.target.id === "q") { S.q = ev.target.value; renderLogFocus = true; render(); return; }
+  if (ev.target.type === "range") { const o = ev.target.parentElement.querySelector("output"); if (o) o.textContent = ev.target.value; }
+});
+$("#sheet").addEventListener("click", e => { if (e.target.id === "sheet") e.target.close(); });
+
+/* ============ boot ============ */
+try { const th = localStorage.getItem(LS_KEY + ".theme"); if (th) document.documentElement.dataset.theme = th; } catch (e) {}
+loadLocal(); render();
+setInterval(() => { if (S.tab === "today" && !$("#sheet").open) { const h = document.querySelector(".hero"); if (h) h.outerHTML = heroHTML(); } }, 30e3);
+initCloud();
+</script>
+</body>
+</html>
