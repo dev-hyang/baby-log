@@ -97,6 +97,38 @@ p{margin:0 0 8px}
 .entry .s{font-size:15px}
 .entry .n{font-size:13px;color:var(--muted)}
 .empty{padding:28px 8px;text-align:center;color:var(--muted)}
+/* view switcher */
+.vtabs{display:grid;grid-template-columns:repeat(3,1fr);background:var(--slate-soft);border-radius:999px;padding:4px;margin:14px 0 4px}
+.vtabs button{border:0;background:none;border-radius:999px;min-height:40px;cursor:pointer;font-size:15px;color:var(--muted)}
+.vtabs button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.daynav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:12px 0 8px}
+.daynav b{font-size:17px}
+.daynav .iconbtn{min-width:44px;padding:0 12px}
+/* meal grid: fixed columns, one row per feeding */
+.meal-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+table.meal{border-collapse:separate;border-spacing:0;min-width:640px;font-size:14px}
+table.meal th,table.meal td{padding:0;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
+table.meal th{background:var(--slate-soft);color:var(--ink);font-weight:500;font-size:12px;padding:8px 6px;position:sticky;top:0;line-height:1.3}
+table.meal td{height:46px;vertical-align:middle;padding:0 4px}
+table.meal td .cellbtn{display:block}
+table.meal td.t,table.meal th.t{position:sticky;left:0;z-index:1;background:var(--surface);text-align:left;padding-left:10px;border-right:1px solid var(--line)}
+table.meal th.t{background:var(--slate-soft);z-index:2}
+table.meal td.left{text-align:left;padding:0 8px;white-space:normal;min-width:120px;font-size:13px;color:var(--muted)}
+table.meal td .cellbtn{width:100%;height:46px;border:0;background:none;cursor:pointer;font-family:var(--f-num);font-size:15px;color:var(--ink)}
+table.meal td .cellbtn:hover{background:var(--honey-soft)}
+table.meal td.ck .cellbtn{font-size:18px;color:var(--muted)}
+table.meal td.ck .cellbtn.on{color:var(--sage);font-weight:700}
+table.meal td.gap.long{color:var(--rose);font-weight:500}
+table.meal tfoot td{font-weight:700;background:var(--honey-soft);font-family:var(--f-num);border-bottom:0}
+table.meal tfoot td.t{background:var(--honey-soft)}
+.cmp{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;font-size:14px}
+.cmp > div{padding:9px 6px;border-bottom:1px solid var(--line)}
+.cmp .h{color:var(--muted);font-size:12px}
+.cmp .up,.cmp .down{color:var(--ink);font-weight:700}
+.cmp button{border:0;background:none;padding:0;cursor:pointer;text-align:left;color:var(--slate);font-size:14px;text-decoration:underline;text-underline-offset:3px}
+.kpi{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:4px 0 8px}
+.kpi .v{font-family:var(--f-num);font-size:34px;font-weight:700;line-height:1}
+.kpi .d{font-size:14px}
 .empty button{margin-top:10px}
 
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
@@ -202,8 +234,8 @@ a{color:var(--slate)}
    只能填 anon / publishable 公开 key（设计上就是给浏览器用的，安全靠数据库的行级权限 RLS）。
    绝对不要填 service_role / secret key —— 它能绕过所有权限。
    保持占位符不改，网站就以“仅本机保存”模式运行。 */
-const SUPABASE_URL = "https://YOUR-PROJECT-ID.supabase.co";
-const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
+const SUPABASE_URL = "https://gbhvqlraimmignhoczww.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdiaHZxbHJhaW1taWduaG9jend3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3ODY5MzAsImV4cCI6MjEwNzM2MjkzMH0.Y9ZzQKGChGqnLj-69Bnljgb8BVgXbOEuHbbKt6Z5bBE";
 // 国内若 jsDelivr 不稳定：把这个文件下载下来放进仓库，改成 "./supabase.js"
 const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js";
 
@@ -229,7 +261,8 @@ const S = {
   entries: [],
   settings: { babyName: "", birth: "", medIntervals: [{ name: "布洛芬", hours: "" }, { name: "泰诺", hours: "" }], checkups: {} },
   mode: "local", col: null, prof: null, sample: null,
-  tab: "today", filter: "all", q: ""
+  tab: "today", filter: "all", q: "",
+  logView: "meal", mealDay: null, gran: "day", metric: "sleep"
 };
 function loadLocal(){
   try { const o = JSON.parse(localStorage.getItem(LS_KEY) || "null");
@@ -697,6 +730,167 @@ function entryRow(e){
 }
 
 function viewLog(){
+  const views = [["meal", "按餐表格"], ["trend", "趋势对比"], ["list", "时间线"]];
+  const sw = `<div class="vtabs" role="group" aria-label="记录视图">${views.map(([k, l]) => `<button data-logview="${k}" aria-pressed="${S.logView === k}">${l}</button>`).join("")}</div>`;
+  if (S.logView === "meal") return sw + viewMeal();
+  if (S.logView === "trend") return sw + viewTrend();
+  return sw + viewList();
+}
+
+/* ---------- 按餐表格：每次喂奶一行，固定列，尿/便可直接打勾 ---------- */
+function mealRows(){
+  const feeds = S.entries.filter(e => e.type === "feed" && e.method !== "吸奶").sort((a, b) => a.ts - b.ts);
+  return feeds.map((f, i) => {
+    const from = f.ts, to = feeds[i + 1] ? feeds[i + 1].ts : Date.now() + 60e3;
+    const inWin = e => e.ts >= from && e.ts < to;
+    const diapers = S.entries.filter(e => e.type === "diaper" && inWin(e)).sort((a, b) => a.ts - b.ts);
+    const sleeps = S.entries.filter(e => e.type === "sleep" && inWin(e));
+    const meds = S.entries.filter(e => (e.type === "mmed" || e.type === "bmed") && inWin(e));
+    return {
+      f, gap: i ? f.ts - feeds[i - 1].ts : null,
+      pee: diapers.filter(d => d.pee), poop: diapers.filter(d => d.poop), diapers,
+      sleepMs: sleeps.reduce((a, e) => a + ((e.end || Date.now()) - e.ts), 0), sleeps,
+      meds: meds.map(m => (m.type === "bmed" ? "宝宝 " : "") + (m.name || m.cat)).filter(Boolean)
+    };
+  });
+}
+function viewMeal(){
+  const d0 = S.mealDay ?? startOfDay(Date.now());
+  const rows = mealRows().filter(r => r.f.ts >= d0 && r.f.ts < d0 + D);
+  const isToday = d0 === startOfDay(Date.now());
+  const sum = (k) => rows.reduce((a, r) => a + (+r.f[k] || 0), 0);
+  const newborn = (babyAgeDays(d0) ?? 999) < 91;
+  const ck = (r, kind) => {
+    const n = r[kind].length;
+    return `<td class="ck"><button class="cellbtn ${n ? "on" : ""}" data-mealcheck="${kind}" data-feed="${r.f.id}" aria-label="${hm(r.f.ts)} 这一餐${kind === "pee" ? "尿" : "便"}：${n ? "已记录" + n + "次，点开修改" : "未记录，点一下打勾"}">${n ? "✓" + (n > 1 ? n : "") : "○"}</button></td>`;
+  };
+  const cell = (r, txt, label) => `<td><button class="cellbtn" data-edit="${r.f.id}" aria-label="${label}">${txt}</button></td>`;
+  const body = rows.map(r => {
+    const f = r.f, poopColors = r.poop.map(p => p.color).filter(Boolean).join("、");
+    const longGap = newborn && r.gap && r.gap >= 4 * H;
+    return `<tr>
+      <td class="t"><button class="cellbtn" style="text-align:left" data-edit="${f.id}" aria-label="修改 ${hm(f.ts)} 的喂奶">${hm(f.ts)}</button></td>
+      <td class="gap ${longGap ? "long" : ""}">${r.gap ? (r.gap / H).toFixed(1) + "h" : "–"}</td>
+      ${cell(r, esc(f.method || ""), "方式")}
+      ${cell(r, f.left || "", "左侧分钟")}
+      ${cell(r, f.right || "", "右侧分钟")}
+      ${cell(r, f.ml || "", "奶量")}
+      ${ck(r, "pee")}${ck(r, "poop")}
+      <td class="num">${r.sleepMs ? (r.sleepMs / H).toFixed(1) + "h" : ""}</td>
+      <td class="left">${esc([poopColors && "便" + poopColors, ...r.meds, f.note].filter(Boolean).join(" · "))}</td></tr>`;
+  }).join("");
+  const peeN = rows.reduce((a, r) => a + r.pee.length, 0), poopN = rows.reduce((a, r) => a + r.poop.length, 0);
+  const sleepT = rows.reduce((a, r) => a + r.sleepMs, 0);
+  return `
+  <div class="daynav">
+    <button class="iconbtn" data-mealday="-1" aria-label="前一天">‹</button>
+    <div style="text-align:center"><b class="num">${dayKey(d0)}</b> <span class="muted">${weekday(d0)}${isToday ? " · 今天" : ""}</span></div>
+    <button class="iconbtn" data-mealday="1" aria-label="后一天" ${isToday ? "disabled" : ""}>›</button>
+  </div>
+  ${rows.length ? `<div class="meal-wrap"><table class="meal">
+    <caption class="small muted" style="caption-side:bottom;text-align:left;padding:8px 10px">每行是一餐：尿布、睡眠、用药按“这一餐到下一餐之间”归到该行。点 ○ 直接打勾，点其他格子修改这一餐。</caption>
+    <thead><tr><th class="t">时间</th><th>距上餐</th><th>方式</th><th>左<br>分钟</th><th>右<br>分钟</th><th>奶量<br>ml</th><th>尿</th><th>便</th><th>之后<br>睡眠</th><th style="text-align:left">备注 / 用药</th></tr></thead>
+    <tbody>${body}</tbody>
+    <tfoot><tr><td class="t">${rows.length} 餐</td><td></td><td></td><td>${sum("left") || ""}</td><td>${sum("right") || ""}</td><td>${sum("ml") || ""}</td><td>${peeN}</td><td>${poopN}</td><td>${sleepT ? (sleepT / H).toFixed(1) + "h" : ""}</td><td></td></tr></tfoot>
+  </table></div>
+  ${newborn ? `<p class="small muted" style="margin-top:8px">距上餐 ≥ 4 小时标红，方便发现间隔偏长的时段。新生儿一般 24 小时喂 8–12 次，具体以医生建议为准。</p>` : ""}`
+  : `<div class="empty">这一天没有喂奶记录。${isToday ? `<br><button class="btn" data-add="feed" data-preset='{"method":"亲喂"}'>记录一次喂奶</button>` : ""}</div>`}`;
+}
+
+/* ---------- 趋势对比：日 / 周 ---------- */
+const METRICS = {
+  sleep:   { label: "睡眠时长", unit: "小时", dec: 1, color: "var(--slate)", day: (a, b) => sleepMsIn(a, b) / H },
+  longest: { label: "最长一觉", unit: "小时", dec: 1, color: "var(--slate)", max: true,
+             day: (a, b) => Math.max(0, ...S.entries.filter(e => e.type === "sleep" && e.end && e.ts >= a && e.ts < b).map(e => (e.end - e.ts) / H)) },
+  ml:      { label: "瓶喂奶量", unit: "ml", dec: 0, color: "var(--honey)", day: (a, b) => inRange(a, b, "feed").reduce((s, e) => s + (+e.ml || 0), 0) },
+  nurse:   { label: "亲喂时长", unit: "分钟", dec: 0, color: "var(--honey)", day: (a, b) => inRange(a, b, "feed").reduce((s, e) => s + (+e.left || 0) + (+e.right || 0), 0) },
+  feeds:   { label: "喂奶次数", unit: "次", dec: 1, color: "var(--honey)", day: (a, b) => inRange(a, b, "feed").filter(e => e.method !== "吸奶").length },
+  wet:     { label: "湿尿布", unit: "次", dec: 1, color: "var(--sky)", day: (a, b) => inRange(a, b, "diaper").filter(e => e.pee).length },
+  poop:    { label: "大便", unit: "次", dec: 1, color: "var(--sky)", day: (a, b) => inRange(a, b, "diaper").filter(e => e.poop).length },
+  pump:    { label: "吸奶量", unit: "ml", dec: 0, color: "#9B7BB8", day: (a, b) => inRange(a, b, "feed").filter(e => e.method === "吸奶").reduce((s, e) => s + (+e.ml || 0), 0) }
+};
+function inRange(a, b, type){ return S.entries.filter(e => e.type === type && e.ts >= a && e.ts < b); }
+function hasData(a, b){ return S.entries.some(e => e.ts >= a && e.ts < b); }
+function weekStart(ts){ const d0 = startOfDay(ts); const wd = (new Date(d0).getDay() + 6) % 7; return d0 - wd * D; }
+// one bucket = a day, or a week reported as average per recorded day
+function buckets(gran, n){
+  const out = [], now = Date.now();
+  for (let i = n - 1; i >= 0; i--) {
+    if (gran === "day") { const a = startOfDay(now) - i * D; out.push({ a, b: a + D, label: dayKey(a).slice(5).replace("-", "/"), partial: i === 0 }); }
+    else { const a = weekStart(now) - i * 7 * D; out.push({ a, b: a + 7 * D, label: dayKey(a).slice(5).replace("-", "/"), partial: i === 0 }); }
+  }
+  return out;
+}
+function metricValue(m, bk){
+  const M = METRICS[m];
+  if (bk.b - bk.a === D) return hasData(bk.a, bk.b) ? M.day(bk.a, bk.b) : null;
+  const vals = [];
+  for (let t = bk.a; t < bk.b && t <= Date.now(); t += D) if (hasData(t, t + D)) vals.push(M.day(t, t + D));
+  if (!vals.length) return null;
+  return M.max ? Math.max(...vals) : vals.reduce((x, y) => x + y, 0) / vals.length;
+}
+function fmtV(m, v){ return v == null ? "–" : (Math.round(v * 10 ** METRICS[m].dec) / 10 ** METRICS[m].dec).toString(); }
+function barChart(m, bks, vals){
+  const W = 360, Hh = 170, P = { l: 8, r: 8, t: 18, b: 22 }, M = METRICS[m];
+  const max = Math.max(1, ...vals.filter(v => v != null));
+  const bw = (W - P.l - P.r) / bks.length;
+  const done = vals.filter((v, i) => v != null && !bks[i].partial);
+  const avg = done.length ? done.reduce((a, b) => a + b, 0) / done.length : null;
+  const Y = v => Hh - P.b - v / max * (Hh - P.t - P.b);
+  let g = "";
+  bks.forEach((bk, i) => {
+    const v = vals[i], x = P.l + i * bw + bw * .15, w = bw * .7;
+    if (v != null) {
+      g += `<rect x="${x.toFixed(1)}" y="${Y(v).toFixed(1)}" width="${w.toFixed(1)}" height="${(Hh - P.b - Y(v)).toFixed(1)}" rx="3" fill="${M.color}" ${bk.partial ? 'fill-opacity=".45"' : ""}/>`;
+      if (bks.length <= 14) g += `<text x="${(x + w / 2).toFixed(1)}" y="${(Y(v) - 4).toFixed(1)}" text-anchor="middle">${fmtV(m, v)}</text>`;
+    }
+    if (bks.length <= 8 || i % 2 === (bks.length - 1) % 2) g += `<text x="${(x + w / 2).toFixed(1)}" y="${Hh - 6}" text-anchor="middle">${bk.label}</text>`;
+  });
+  if (avg != null) g += `<line x1="${P.l}" x2="${W - P.r}" y1="${Y(avg).toFixed(1)}" y2="${Y(avg).toFixed(1)}" stroke="var(--ink)" stroke-dasharray="4 4" stroke-opacity=".5"/>`;
+  return `<div class="scroll-x"><svg viewBox="0 0 ${W} ${Hh}" width="100%" role="img" aria-label="${M.label}${S.gran === "day" ? "每天" : "每周日均"}柱状图，虚线为平均值 ${avg == null ? "无" : fmtV(m, avg)}${M.unit}">${g}</svg></div>
+  <div class="legend"><span style="--c:${M.color}">${S.gran === "day" ? "每天" : "每周日均（日期为周一）"}</span><span style="--c:${M.color};opacity:.5">进行中</span><span style="--c:transparent">┅ 虚线为平均</span></div>`;
+}
+function viewTrend(){
+  const n = S.gran === "day" ? 14 : 8;
+  const bks = buckets(S.gran, n);
+  const vals = bks.map(bk => metricValue(S.metric, bk));
+  const M = METRICS[S.metric];
+  const cur = vals[vals.length - 1], prev = vals[vals.length - 2];
+  const delta = (c, p) => (c == null || p == null) ? "" : c - p;
+  const pct = (c, p) => (c == null || p == null || p === 0) ? "" : ` (${c >= p ? "+" : ""}${Math.round((c - p) / p * 100)}%)`;
+  const per = S.gran === "day" ? ["今天", "昨天"] : ["本周", "上周"];
+  const dv = delta(cur, prev);
+  // comparison table across all metrics
+  const cmpRows = Object.keys(METRICS).map(k => {
+    const c = metricValue(k, bks[bks.length - 1]), p = metricValue(k, bks[bks.length - 2]);
+    if (!c && !p) return ""; // hide metrics with no data in either period
+    const d = delta(c, p);
+    return `<div><button data-metric="${k}">${METRICS[k].label}</button> <span class="small muted">${METRICS[k].unit}</span></div>
+      <div class="num">${fmtV(k, c)}</div><div class="num">${fmtV(k, p)}</div>
+      <div class="num ${d === "" || Math.abs(d) < 1e-9 ? "" : d > 0 ? "up" : "down"}">${d === "" ? "–" : (d > 0 ? "↑" : d < 0 ? "↓" : "") + fmtV(k, Math.abs(d))}</div>`;
+  }).join("");
+  if (!S.entries.length) return `<div class="empty">还没有记录。记录几天后这里会显示趋势。</div>`;
+  return `
+  <div class="chips" role="group" aria-label="时间粒度" style="margin-top:12px">
+    <button class="chip" data-gran="day" aria-pressed="${S.gran === "day"}">按天（14 天）</button>
+    <button class="chip" data-gran="week" aria-pressed="${S.gran === "week"}">按周（8 周）</button>
+  </div>
+  <div class="chips" role="group" aria-label="指标">${Object.entries(METRICS).map(([k, x]) => `<button class="chip" data-metric="${k}" aria-pressed="${S.metric === k}">${x.label}</button>`).join("")}</div>
+  <div class="panel">
+    <div class="small muted">${M.label} · ${per[0]}${S.gran === "week" ? (M.max ? "最长" : "日均") : ""}${bks[bks.length - 1].partial ? "（进行中）" : ""}</div>
+    <div class="kpi"><span class="v">${fmtV(S.metric, cur)}</span><span class="muted">${M.unit}</span>
+      ${dv !== "" ? `<span class="d ${dv > 0 ? "up" : dv < 0 ? "down" : ""}" style="color:var(--muted)">比${per[1]} ${dv > 0 ? "+" : dv < 0 ? "−" : "±"}${fmtV(S.metric, Math.abs(dv))}${pct(cur, prev)}</span>` : ""}</div>
+    ${barChart(S.metric, bks, vals)}
+  </div>
+  <h2>${per[0]} vs ${per[1]}</h2>
+  <div class="panel"><div class="cmp">
+    <div class="h">指标</div><div class="h">${per[0]}${S.gran === "week" ? "日均" : ""}</div><div class="h">${per[1]}${S.gran === "week" ? "日均" : ""}</div><div class="h">变化</div>
+    ${cmpRows}
+  </div>
+  <p class="small muted" style="margin-top:8px">${S.gran === "week" ? "周数据按“有记录的天数”求日均（最长一觉取一周内最长），避免漏记的日子拉低平均。" : "今天还没过完，和昨天比会偏低，看趋势更准。"}箭头只表示多或少，不代表好坏：例如喂奶次数随月龄减少是正常的。点指标名可切换上方图表。</p></div>`;
+}
+
+function viewList(){
   const q = S.q.trim().toLowerCase();
   let list = S.entries.slice().sort(byTime);
   if (S.filter !== "all") list = list.filter(e => S.filter === "momall" ? ["mmed", "mbody"].includes(e.type) : e.type === S.filter);
@@ -704,8 +898,7 @@ function viewLog(){
   const groups = {};
   for (const e of list) (groups[dayKey(e.ts)] ||= []).push(e);
   const chips = [["all", "全部"], ["feed", "喂奶"], ["diaper", "尿布"], ["sleep", "睡眠"], ["baby", "宝宝健康"], ["bmed", "宝宝用药"], ["momall", "妈妈"]];
-  return `<h2>全部记录</h2>
-  <label for="q" class="small muted">搜索备注、药名、日期（如 2026-10-11）</label>
+  return `<label for="q" class="small muted">搜索备注、药名、日期（如 2026-10-11）</label>
   <input id="q" class="search" type="search" value="${esc(S.q)}" placeholder="搜索…" autocomplete="off">
   <div class="chips" role="group" aria-label="按类型筛选">${chips.map(([k, l]) => `<button class="chip" data-filter="${k}" aria-pressed="${S.filter === k}">${l}</button>`).join("")}</div>
   <div class="btns" style="margin-top:0"><button class="btn" data-act="addpick">＋ 补记一条</button></div>
@@ -964,15 +1157,16 @@ async function importJSON(file){
 }
 async function loadDemo(){
   const now = Date.now(), list = [];
-  if (!S.settings.birth) { const b = new Date(now - 12 * D); S.settings.birth = dayKey(b.getTime()); }
-  let t = now - 3 * D, side = 0;
+  if (!S.settings.birth) { const b = new Date(now - 24 * D); S.settings.birth = dayKey(b.getTime()); }
+  const span = 16; let t = now - span * D, side = 0;
   while (t < now - 40 * 60e3) {
     const bottle = Math.random() < .2;
-    list.push(bottle ? { type: "feed", ts: t, method: Math.random() < .5 ? "配方奶" : "母乳瓶喂", ml: 40 + Math.round(Math.random() * 4) * 10 }
+    const grow = 1 - (now - t) / (span * D); // 0 → 1 across the demo period
+    list.push(bottle ? { type: "feed", ts: t, method: Math.random() < .5 ? "配方奶" : "母乳瓶喂", ml: 40 + Math.round(grow * 4 + Math.random() * 3) * 10 }
                      : { type: "feed", ts: t, method: "亲喂", [side ? "right" : "left"]: 8 + Math.round(Math.random() * 10) });
     side ^= 1;
     list.push({ type: "diaper", ts: t + 10 * 60e3, pee: true, poop: Math.random() < .35, color: "黄" });
-    const s = t + 25 * 60e3, len = (new Date(s).getHours() < 7 || new Date(s).getHours() > 21) ? 120 + Math.random() * 60 : 40 + Math.random() * 70;
+    const s = t + 25 * 60e3, len = (new Date(s).getHours() < 7 || new Date(s).getHours() > 21) ? 100 + grow * 70 + Math.random() * 50 : 40 + Math.random() * 70;
     list.push({ type: "sleep", ts: s, end: s + len * 60e3, where: "婴儿床", how: Math.random() < .5 ? "奶睡" : "抱睡" });
     t += (2.2 + Math.random() * 1.2) * H;
   }
@@ -1018,6 +1212,16 @@ ${ad != null && ad >= 0 ? `宝宝目前出生 ${ad} 天。` : ""}
   }
 }
 
+/* tap ○ to tick 尿/便 for this meal; tap ✓ to open that diaper record */
+async function mealCheck(feedId, kind){
+  const r = mealRows().find(x => x.f.id === feedId); if (!r) return;
+  if (r[kind].length) { openForm("diaper", r[kind][r[kind].length - 1]); return; }
+  const other = r.diapers.find(d => !d[kind]);
+  if (other) await putEntry({ ...other, [kind]: true });
+  else await putEntry({ id: newId(), type: "diaper", ts: r.f.ts + 60e3, pee: kind === "pee", poop: kind === "poop" });
+  toast(kind === "poop" ? "已打勾，点 ✓ 可补充大便颜色" : "已打勾");
+}
+
 /* ============ events ============ */
 document.addEventListener("click", async ev => {
   const t = ev.target.closest("button,[data-checkup]"); if (!t) return;
@@ -1025,6 +1229,15 @@ document.addEventListener("click", async ev => {
   if (t.dataset.add) { openForm(t.dataset.add, null, t.dataset.preset ? JSON.parse(t.dataset.preset) : {}); return; }
   if (t.dataset.edit) { const e = S.entries.find(x => x.id === t.dataset.edit); e && openForm(e.type, e); return; }
   if (t.dataset.filter) { S.filter = t.dataset.filter; render(); return; }
+  if (t.dataset.logview) { S.logView = t.dataset.logview; render(); return; }
+  if (t.dataset.gran) { S.gran = t.dataset.gran; render(); return; }
+  if (t.dataset.metric) { S.metric = t.dataset.metric; render(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+  if (t.dataset.mealday) {
+    const cur = S.mealDay ?? startOfDay(Date.now());
+    const next = startOfDay(cur + (+t.dataset.mealday) * D + 2 * H); // +2h guards against DST shifts
+    S.mealDay = Math.min(next, startOfDay(Date.now())); render(); return;
+  }
+  if (t.dataset.mealcheck) { await mealCheck(t.dataset.feed, t.dataset.mealcheck); return; }
   if (t.dataset.copy) { try { await navigator.clipboard.writeText(t.dataset.copy); toast("已复制：" + t.dataset.copy); } catch (e) { toast("请手动搜索：" + t.dataset.copy); } return; }
   if (t.dataset.seg) { readDraftInputs(); draft[t.dataset.seg] = draft[t.dataset.seg] === t.dataset.v ? null : t.dataset.v; drawForm(t.dataset.seg); return; }
   if (t.dataset.themeSet !== undefined) { const v = t.dataset.themeSet; if (v) document.documentElement.dataset.theme = v; else delete document.documentElement.dataset.theme; try { localStorage.setItem(LS_KEY + ".theme", v); } catch (e) {} openSettings(); return; }
