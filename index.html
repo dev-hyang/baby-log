@@ -169,10 +169,11 @@ nav.tabs button[aria-current="page"]{color:var(--ink);font-weight:700}
 nav.tabs button[aria-current="page"] i{transform:translateY(-1px)}
 
 /* sheet */
-dialog.sheet{border:0;padding:0;margin:auto auto 0;width:100%;max-width:720px;max-height:92vh;border-radius:var(--radius-lg) var(--radius-lg) 0 0;background:var(--surface);color:var(--ink)}
+dialog.sheet{border:0;padding:0;margin:auto auto 0;width:100%;max-width:720px;max-height:85vh;max-height:calc(100dvh - env(safe-area-inset-top,0px) - 16px);overflow:hidden;border-radius:var(--radius-lg) var(--radius-lg) 0 0;background:var(--surface);color:var(--ink)}
 dialog.sheet::backdrop{background:rgba(10,15,22,.45)}
-.sheet-in{padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px));overflow:auto;max-height:92vh}
-.sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+dialog.sheet[open]{display:flex;flex-direction:column}
+.sheet-in{padding:0 18px calc(18px + env(safe-area-inset-bottom,0px));overflow:auto;flex:1;min-height:0;overscroll-behavior:contain}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;margin:0 -18px 8px;padding:14px 18px 10px;position:sticky;top:0;z-index:3;background:var(--surface);border-bottom:1px solid var(--line)}
 .sheet-head h3{font-size:18px;margin:0}
 .field{margin:12px 0}
 .field > label,.field > .lab{display:block;font-size:14px;color:var(--muted);margin-bottom:6px}
@@ -254,6 +255,48 @@ function dur(ms){ if (ms < 0) ms = 0; const m = Math.floor(ms / 60000), h = Math
 function weekday(ts){ return "周" + "日一二三四五六"[new Date(ts).getDay()]; }
 function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("on"), 2400); }
 const num = v => (v === "" || v == null || isNaN(+v)) ? null : +v;
+
+/* ============ units ============
+   Data is always stored in metric (kg, cm, ml, ℃) so old records, charts and family members on
+   other unit systems stay consistent. Only display and input are converted. Per-device setting. */
+const UNIT_KEY = "xiaoyueliang.v1.units";
+function unitPref(){ try { return localStorage.getItem(UNIT_KEY) || "auto"; } catch (e) { return "auto"; } }
+function isUS(){
+  const p = unitPref(); if (p !== "auto") return p === "us";
+  let tz = ""; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (e) {}
+  return /^en-US/i.test(navigator.language || "") || /^America\//.test(tz);
+}
+const KG_LB = 2.2046226, CM_IN = 2.54, OZ_ML = 29.5735;
+const trim = (x, d) => String(Math.round(x * 10 ** d) / 10 ** d);
+function unitOf(dim){
+  const us = isUS();
+  return { wbaby: us ? "lb" : "kg", wmom: us ? "lb" : "kg", len: us ? "in" : "cm", temp: us ? "℉" : "℃", vol: us ? "fl oz" : "ml" }[dim];
+}
+// canonical metric → number in display unit
+function toDisp(dim, v){
+  if (v == null || v === "") return null; v = +v; if (!isUS()) return v;
+  if (dim === "wbaby" || dim === "wmom") return v * KG_LB;
+  if (dim === "len") return v / CM_IN;
+  if (dim === "temp") return v * 9 / 5 + 32;
+  if (dim === "vol") return v / OZ_ML;
+  return v;
+}
+function fromDisp(dim, x){
+  if (x == null || x === "" || isNaN(+x)) return null; x = +x; if (!isUS()) return x;
+  if (dim === "wbaby" || dim === "wmom") return +(x / KG_LB).toFixed(4);
+  if (dim === "len") return +(x * CM_IN).toFixed(2);
+  if (dim === "temp") return +((x - 32) * 5 / 9).toFixed(2);
+  if (dim === "vol") return +(x * OZ_ML).toFixed(1);
+  return x;
+}
+const DISP_DEC = { wbaby: 2, wmom: 1, len: 2, temp: 1, vol: 1 };
+// formatted string with unit, e.g. "7 lb 8.6 oz", "3.42kg", "2 fl oz"
+function fmtU(dim, v){
+  if (v == null || v === "") return "";
+  if (!isUS()) return trim(+v, { wbaby: 2, wmom: 1, len: 1, temp: 1, vol: 0 }[dim]) + unitOf(dim);
+  if (dim === "wbaby") { const tot = +v * KG_LB * 16; let lb = Math.floor(tot / 16), oz = Math.round((tot - lb * 16) * 10) / 10; if (oz >= 16) { lb++; oz = 0; } return `${lb} lb ${trim(oz, 1)} oz`; }
+  return trim(toDisp(dim, v), DISP_DEC[dim]) + " " + unitOf(dim);
+}
 
 /* ============ state & storage ============ */
 const LS_KEY = "xiaoyueliang.v1";
@@ -338,6 +381,12 @@ const saveJSON = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); }
 const loadTombs = () => loadJSON(TOMB_KEY, []), saveTombs = v => saveJSON(TOMB_KEY, v);
 
 function initSupabase(){
+  const hp = new URLSearchParams(location.hash.slice(1));
+  if (hp.get("error_code")) {
+    const code = hp.get("error_code");
+    setTimeout(() => toast(code === "otp_expired" ? "确认链接已失效：请直接用邮箱和密码登录试试，不行再重新注册" : "登录链接有问题：" + (hp.get("error_description") || code)), 300);
+    history.replaceState(null, "", location.pathname + location.search);
+  }
   SB.configured = /^https:\/\/.+/.test(SUPABASE_URL) && !SUPABASE_URL.includes("YOUR-") && !SUPABASE_ANON_KEY.includes("YOUR-");
   if (!SB.configured) return false;
   const tag = document.createElement("script");
@@ -445,7 +494,7 @@ async function sbAuth(kind){
   const email = $("#sb_email")?.value.trim(), password = $("#sb_pw")?.value || "";
   if (!email || password.length < 6) { toast("请填写邮箱和至少 6 位的密码"); return; }
   if (kind === "signup") {
-    const { data, error } = await SB.client.auth.signUp({ email, password });
+    const { data, error } = await SB.client.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + location.pathname } });
     if (error) { toast("注册失败：" + (/registered/i.test(error.message) ? "这个邮箱已注册，直接登录" : error.message)); return; }
     if (!data.session) toast("已注册。请先到邮箱点确认链接，再回来登录");
     else toast("注册成功");
@@ -497,7 +546,7 @@ const TYPES = {
     { k: "method", label: "方式", type: "seg", opts: ["亲喂", "母乳瓶喂", "配方奶", "混合", "吸奶"], def: "亲喂" },
     { k: "left", label: "左侧时长（分钟）", type: "num", show: m => ["亲喂", "混合"].includes(m.method), half: 1 },
     { k: "right", label: "右侧时长（分钟）", type: "num", show: m => ["亲喂", "混合"].includes(m.method), half: 1 },
-    { k: "ml", label: "奶量（ml）", type: "num", show: m => m.method !== "亲喂" },
+    { k: "ml", label: "奶量", type: "num", dim: "vol", show: m => m.method !== "亲喂" },
     { k: "note", label: "备注", type: "text", ph: "吐奶、拒奶、含乳情况…" } ] },
   diaper:{ label: "尿布", icon: "🧷", color: "var(--sky)", fields: [
     { k: "pee", label: "尿", type: "check", def: true },
@@ -510,23 +559,31 @@ const TYPES = {
     { k: "how", label: "怎么入睡", type: "seg", opts: ["自主入睡", "奶睡", "抱睡", "拍睡/摇睡"] },
     { k: "note", label: "备注", type: "text", ph: "夜醒次数、哭闹…" } ] },
   baby:  { label: "宝宝健康", icon: "🌡", color: "var(--rose)", fields: [
-    { k: "temp", label: "体温（℃）", type: "num", step: .1, half: 1 },
-    { k: "weight", label: "体重（kg）", type: "num", step: .01, half: 1 },
-    { k: "length", label: "身长（cm）", type: "num", step: .1, half: 1 },
-    { k: "head", label: "头围（cm）", type: "num", step: .1, half: 1 },
+    { k: "temp", label: "体温", type: "num", dim: "temp", step: .1 },
+    { k: "weight", label: "体重", type: "num", dim: "wbaby", step: .01 },
+    { k: "length", label: "身长", type: "num", dim: "len", step: .1, half: 1 },
+    { k: "head", label: "头围", type: "num", dim: "len", step: .1, half: 1 },
     { k: "note", label: "症状 / 看诊记录", type: "area", ph: "黄疸、皮疹、咳嗽、医生说了什么…" } ] },
   bmed:  { label: "宝宝用药", icon: "💧", color: "var(--sage)", fields: [
-    { k: "cat", label: "类别", type: "seg", opts: ["维生素D", "铁剂", "益生菌", "药物", "疫苗"], def: "维生素D" },
+    { k: "cat", label: "类别", type: "seg", opts: ["维生素D", "铁剂", "益生菌", "药物"], def: "维生素D" },
     { k: "name", label: "名称", type: "text" },
     { k: "dose", label: "剂量（按医嘱/说明书）", type: "text" },
     { k: "note", label: "备注", type: "text" } ] },
+  vax:   { label: "疫苗接种", icon: "💉", color: "#3F8F8B", fields: [
+    { k: "name", label: "疫苗名称", type: "text", list: "vaxlist", ph: "如 乙肝疫苗 HepB" },
+    { k: "dose", label: "剂次", type: "seg", opts: ["第1剂", "第2剂", "第3剂", "第4剂", "第5剂", "加强"] },
+    { k: "site", label: "接种部位", type: "seg", opts: ["左大腿", "右大腿", "左上臂", "右上臂", "口服"] },
+    { k: "clinic", label: "接种机构 / 医生", type: "text", half: 1 },
+    { k: "lot", label: "批号（选填）", type: "text", half: 1 },
+    { k: "reaction", label: "接种后反应", type: "seg", opts: ["无", "局部红肿", "发热", "哭闹", "其他"] },
+    { k: "note", label: "备注", type: "area", ph: "下次接种日期、医生交代的注意事项…" } ] },
   mmed:  { label: "妈妈用药", icon: "💊", color: "var(--rose)", fields: [
     { k: "cat", label: "类别", type: "seg", opts: ["止疼药", "维生素", "铁剂", "其他"], def: "止疼药" },
     { k: "name", label: "药名", type: "text", list: "medlist", ph: "布洛芬 / 泰诺…" },
     { k: "dose", label: "剂量", type: "text", ph: "如 1片" },
     { k: "note", label: "备注", type: "text" } ] },
   mbody: { label: "妈妈身体", icon: "♡", color: "#9B7BB8", fields: [
-    { k: "weight", label: "体重（kg）", type: "num", step: .1, half: 1 },
+    { k: "weight", label: "体重", type: "num", dim: "wmom", step: .1, half: 1 },
     { k: "sleepHrs", label: "昨晚睡了（小时）", type: "num", step: .5, half: 1 },
     { k: "lochia", label: "恶露量", type: "seg", opts: ["无", "少", "中", "多", "1小时浸透1片"] },
     { k: "lcolor", label: "恶露颜色", type: "seg", opts: ["鲜红", "粉/褐", "黄白"] },
@@ -542,13 +599,14 @@ function summary(e){
   switch (e.type) {
     case "feed":
       p.push(e.method || "喂奶");
-      if (e.left) p.push(`左${e.left}分`); if (e.right) p.push(`右${e.right}分`); if (e.ml) p.push(`${e.ml}ml`); break;
+      if (e.left) p.push(`左${e.left}分`); if (e.right) p.push(`右${e.right}分`); if (e.ml) p.push(fmtU("vol", e.ml)); break;
     case "diaper": if (e.pee) p.push("尿"); if (e.poop) p.push("便" + (e.color ? `（${e.color}）` : "")); break;
     case "sleep": p.push(e.end ? `睡到 ${hm(e.end)} · ${dur(e.end - e.ts)}` : "正在睡"); if (e.where) p.push(e.where); if (e.how) p.push(e.how); break;
-    case "baby": if (e.temp) p.push(`体温 ${e.temp}℃`); if (e.weight) p.push(`体重 ${e.weight}kg`); if (e.length) p.push(`身长 ${e.length}cm`); if (e.head) p.push(`头围 ${e.head}cm`); if (!p.length) p.push("健康记录"); break;
+    case "baby": if (e.temp) p.push(`体温 ${fmtU("temp", e.temp)}`); if (e.weight) p.push(`体重 ${fmtU("wbaby", e.weight)}`); if (e.length) p.push(`身长 ${fmtU("len", e.length)}`); if (e.head) p.push(`头围 ${fmtU("len", e.head)}`); if (!p.length) p.push("健康记录"); break;
     case "bmed": p.push(e.cat || "", e.name || "", e.dose || ""); break;
     case "mmed": p.push(e.cat || "", e.name || "", e.dose || ""); break;
-    case "mbody": if (e.weight) p.push(`体重 ${e.weight}kg`); if (e.lochia) p.push(`恶露 ${e.lochia}`); if (e.pain != null) p.push(`疼痛 ${e.pain}`); if (e.mood != null) p.push(`心情 ${e.mood}/5`); if (e.sleepHrs) p.push(`睡 ${e.sleepHrs}h`); break;
+    case "vax": p.push(e.name || "疫苗", e.dose || "", e.site || "", e.reaction && e.reaction !== "无" ? "反应：" + e.reaction : ""); break;
+    case "mbody": if (e.weight) p.push(`体重 ${fmtU("wmom", e.weight)}`); if (e.lochia) p.push(`恶露 ${e.lochia}`); if (e.pain != null) p.push(`疼痛 ${e.pain}`); if (e.mood != null) p.push(`心情 ${e.mood}/5`); if (e.sleepHrs) p.push(`睡 ${e.sleepHrs}h`); break;
   }
   return p.filter(Boolean).join(" · ");
 }
@@ -559,6 +617,7 @@ function flags(e){
   if (e.type === "diaper" && e.poop && e.color === "白/灰白") f.push("灰白色大便可能提示肝胆问题，请尽快就医");
   if (e.type === "diaper" && e.poop && e.color === "带血") f.push("大便带血：请联系儿科医生");
   if (e.type === "diaper" && e.poop && e.color === "黑（胎便）" && ageDays != null && ageDays > 5) f.push("出生5天后仍为黑色大便：请咨询医生");
+  if (e.type === "vax" && ["发热", "其他"].includes(e.reaction)) f.push("接种后若出现高热、持续哭闹超过3小时、呼吸困难、面部肿胀或全身荨麻疹，请及时就医");
   if (e.type === "mbody" && e.lochia === "1小时浸透1片") f.push("出血量大（约1小时浸透1片卫生巾）：属于紧急警示信号，请立即就医");
   if (e.type === "mbody" && e.mood != null && e.mood <= 1) f.push("如果持续低落或有伤害自己/宝宝的念头，请马上联系医生或身边可信任的人");
   return f;
@@ -700,7 +759,7 @@ function viewToday(){
   <div class="stats">
     <div class="stat"><div class="k">喂奶次数</div><div class="v num">${feeds.length}<small>次</small></div>
       ${newborn ? `<div class="ref ${feeds.length && feeds.length < 8 ? "warn" : ""}">新生儿通常 8–12 次</div>` : ""}</div>
-    <div class="stat"><div class="k">瓶喂总量</div><div class="v num">${ml}<small>ml</small></div></div>
+    <div class="stat"><div class="k">瓶喂总量</div><div class="v num">${trim(toDisp("vol", ml), isUS() ? 1 : 0)}<small>${unitOf("vol")}</small></div></div>
     <div class="stat"><div class="k">亲喂 左 / 右</div><div class="v num">${L}<small>分</small> ${R}<small>分</small></div></div>
     <div class="stat"><div class="k">湿尿布 / 大便</div><div class="v num">${wet}<small>次</small> ${poop}<small>次</small></div>
       ${birthTs() && newborn ? `<div class="ref ${wet < exp.wet ? "warn" : ""}">参考：至少 ${exp.wet} 次湿尿布${exp.poop ? `、${exp.poop} 次大便` : ""}</div>` : ""}</div>
@@ -774,7 +833,7 @@ function viewMeal(){
       ${cell(r, esc(f.method || ""), "方式")}
       ${cell(r, f.left || "", "左侧分钟")}
       ${cell(r, f.right || "", "右侧分钟")}
-      ${cell(r, f.ml || "", "奶量")}
+      ${cell(r, f.ml ? trim(toDisp("vol", f.ml), isUS() ? 1 : 0) : "", "奶量")}
       ${ck(r, "pee")}${ck(r, "poop")}
       <td class="num">${r.sleepMs ? (r.sleepMs / H).toFixed(1) + "h" : ""}</td>
       <td class="left">${esc([poopColors && "便" + poopColors, ...r.meds, f.note].filter(Boolean).join(" · "))}</td></tr>`;
@@ -789,9 +848,9 @@ function viewMeal(){
   </div>
   ${rows.length ? `<div class="meal-wrap"><table class="meal">
     <caption class="small muted" style="caption-side:bottom;text-align:left;padding:8px 10px">每行是一餐：尿布、睡眠、用药按“这一餐到下一餐之间”归到该行。点 ○ 直接打勾，点其他格子修改这一餐。</caption>
-    <thead><tr><th class="t">时间</th><th>距上餐</th><th>方式</th><th>左<br>分钟</th><th>右<br>分钟</th><th>奶量<br>ml</th><th>尿</th><th>便</th><th>之后<br>睡眠</th><th style="text-align:left">备注 / 用药</th></tr></thead>
+    <thead><tr><th class="t">时间</th><th>距上餐</th><th>方式</th><th>左<br>分钟</th><th>右<br>分钟</th><th>奶量<br>${unitOf("vol")}</th><th>尿</th><th>便</th><th>之后<br>睡眠</th><th style="text-align:left">备注 / 用药</th></tr></thead>
     <tbody>${body}</tbody>
-    <tfoot><tr><td class="t">${rows.length} 餐</td><td></td><td></td><td>${sum("left") || ""}</td><td>${sum("right") || ""}</td><td>${sum("ml") || ""}</td><td>${peeN}</td><td>${poopN}</td><td>${sleepT ? (sleepT / H).toFixed(1) + "h" : ""}</td><td></td></tr></tfoot>
+    <tfoot><tr><td class="t">${rows.length} 餐</td><td></td><td></td><td>${sum("left") || ""}</td><td>${sum("right") || ""}</td><td>${sum("ml") ? trim(toDisp("vol", sum("ml")), isUS() ? 1 : 0) : ""}</td><td>${peeN}</td><td>${poopN}</td><td>${sleepT ? (sleepT / H).toFixed(1) + "h" : ""}</td><td></td></tr></tfoot>
   </table></div>
   ${newborn ? `<p class="small muted" style="margin-top:8px">距上餐 ≥ 4 小时标红，方便发现间隔偏长的时段。新生儿一般 24 小时喂 8–12 次，具体以医生建议为准。</p>` : ""}`
   : `<div class="empty">这一天没有喂奶记录。${isToday ? `<br><button class="btn" data-add="feed" data-preset='{"method":"亲喂"}'>记录一次喂奶</button>` : ""}</div>`}`;
@@ -802,12 +861,12 @@ const METRICS = {
   sleep:   { label: "睡眠时长", unit: "小时", dec: 1, color: "var(--slate)", day: (a, b) => sleepMsIn(a, b) / H },
   longest: { label: "最长一觉", unit: "小时", dec: 1, color: "var(--slate)", max: true,
              day: (a, b) => Math.max(0, ...S.entries.filter(e => e.type === "sleep" && e.end && e.ts >= a && e.ts < b).map(e => (e.end - e.ts) / H)) },
-  ml:      { label: "瓶喂奶量", unit: "ml", dec: 0, color: "var(--honey)", day: (a, b) => inRange(a, b, "feed").reduce((s, e) => s + (+e.ml || 0), 0) },
+  ml:      { label: "瓶喂奶量", get unit(){ return unitOf("vol"); }, get dec(){ return isUS() ? 1 : 0; }, color: "var(--honey)", day: (a, b) => toDisp("vol", inRange(a, b, "feed").reduce((s, e) => s + (+e.ml || 0), 0)) },
   nurse:   { label: "亲喂时长", unit: "分钟", dec: 0, color: "var(--honey)", day: (a, b) => inRange(a, b, "feed").reduce((s, e) => s + (+e.left || 0) + (+e.right || 0), 0) },
   feeds:   { label: "喂奶次数", unit: "次", dec: 1, color: "var(--honey)", day: (a, b) => inRange(a, b, "feed").filter(e => e.method !== "吸奶").length },
   wet:     { label: "湿尿布", unit: "次", dec: 1, color: "var(--sky)", day: (a, b) => inRange(a, b, "diaper").filter(e => e.pee).length },
   poop:    { label: "大便", unit: "次", dec: 1, color: "var(--sky)", day: (a, b) => inRange(a, b, "diaper").filter(e => e.poop).length },
-  pump:    { label: "吸奶量", unit: "ml", dec: 0, color: "#9B7BB8", day: (a, b) => inRange(a, b, "feed").filter(e => e.method === "吸奶").reduce((s, e) => s + (+e.ml || 0), 0) }
+  pump:    { label: "吸奶量", get unit(){ return unitOf("vol"); }, get dec(){ return isUS() ? 1 : 0; }, color: "#9B7BB8", day: (a, b) => toDisp("vol", inRange(a, b, "feed").filter(e => e.method === "吸奶").reduce((s, e) => s + (+e.ml || 0), 0)) }
 };
 function inRange(a, b, type){ return S.entries.filter(e => e.type === type && e.ts >= a && e.ts < b); }
 function hasData(a, b){ return S.entries.some(e => e.ts >= a && e.ts < b); }
@@ -897,7 +956,7 @@ function viewList(){
   if (q) list = list.filter(e => (TYPES[e.type]?.label + " " + summary(e) + " " + (e.note || "") + " " + dayKey(e.ts)).toLowerCase().includes(q));
   const groups = {};
   for (const e of list) (groups[dayKey(e.ts)] ||= []).push(e);
-  const chips = [["all", "全部"], ["feed", "喂奶"], ["diaper", "尿布"], ["sleep", "睡眠"], ["baby", "宝宝健康"], ["bmed", "宝宝用药"], ["momall", "妈妈"]];
+  const chips = [["all", "全部"], ["feed", "喂奶"], ["diaper", "尿布"], ["sleep", "睡眠"], ["baby", "宝宝健康"], ["bmed", "宝宝用药"], ["vax", "疫苗"], ["momall", "妈妈"]];
   return `<label for="q" class="small muted">搜索备注、药名、日期（如 2026-10-11）</label>
   <input id="q" class="search" type="search" value="${esc(S.q)}" placeholder="搜索…" autocomplete="off">
   <div class="chips" role="group" aria-label="按类型筛选">${chips.map(([k, l]) => `<button class="chip" data-filter="${k}" aria-pressed="${S.filter === k}">${l}</button>`).join("")}</div>
@@ -946,7 +1005,7 @@ function sleepBarcode(){
 function viewMom(){
   const meds = medStatus();
   const bodies = S.entries.filter(e => e.type === "mbody").sort((a, b) => a.ts - b.ts);
-  const wpts = bodies.filter(e => num(e.weight) != null).map(e => ({ t: e.ts, v: +e.weight }));
+  const wpts = bodies.filter(e => num(e.weight) != null).map(e => ({ t: e.ts, v: toDisp("wmom", e.weight) }));
   const ppts = bodies.filter(e => num(e.pain) != null).map(e => ({ t: e.ts, v: +e.pain }));
   const mpts = bodies.filter(e => num(e.mood) != null).map(e => ({ t: e.ts, v: +e.mood }));
   const lowMood = mpts.slice(-5).filter(p => p.v <= 2).length >= 3;
@@ -956,7 +1015,7 @@ function viewMom(){
   <h2>用药计时</h2>
   <div class="panel">${meds.length ? meds.map(medRow).join("") : `<p class="muted">最近 48 小时没有用药记录。</p>`}
     <p class="small muted" style="margin-top:8px">在“设置”里给每种药填上医生或说明书给的最短间隔，这里就会显示下次可以服用的时间。哺乳期用药请先确认医生的意见。</p></div>
-  <h2>体重</h2><div class="panel">${lineChart(wpts, { color: "#9B7BB8", unit: "kg", label: "妈妈体重" })}</div>
+  <h2>体重（${unitOf("wmom")}）</h2><div class="panel">${lineChart(wpts, { color: "#9B7BB8", unit: unitOf("wmom"), label: "妈妈体重" })}</div>
   <h2>疼痛与心情</h2>
   <div class="panel"><h3 class="small muted">疼痛 0–10</h3>${lineChart(ppts, { color: "var(--rose)", unit: "", label: "疼痛评分", min: 0, max: 10 })}
     <h3 class="small muted" style="margin-top:10px">心情 1–5</h3>${lineChart(mpts, { color: "var(--sage)", unit: "", label: "心情评分", min: 1, max: 5 })}</div>
@@ -979,7 +1038,7 @@ function viewMom(){
 function viewGrow(){
   const ad = babyAgeDays();
   const cur = ad == null ? -1 : STAGES.findIndex(s => ad < s.untilDays);
-  const w = S.entries.filter(e => e.type === "baby" && num(e.weight) != null).sort((a, b) => a.ts - b.ts).map(e => ({ t: e.ts, v: +e.weight }));
+  const w = S.entries.filter(e => e.type === "baby" && num(e.weight) != null).sort((a, b) => a.ts - b.ts).map(e => ({ t: e.ts, v: toDisp("wbaby", e.weight) }));
   const done = S.settings.checkups || {};
   return `<h2>成长阶段</h2>
   <div class="stages">${STAGES.map((s, i) => `<div class="stage ${i === cur ? "now" : ""}"><b>${s.name}</b>${s.range}${i > 0 ? `<ul>${s.items.map(x => `<li>${x}</li>`).join("")}</ul>` : `<ul>${s.items.map(x => `<li>${x}</li>`).join("")}</ul>`}</div>`).join("")}</div>
@@ -1000,7 +1059,7 @@ function viewGrow(){
     </tbody></table>
     <p class="small muted" style="margin-top:8px">总睡眠：4个月以上为美国睡眠医学会（AASM）建议、AAP 认可；0–3 个月为美国国家睡眠基金会建议。清醒时长是常见经验范围，个体差异很大。安全睡眠：仰睡、独自睡在婴儿床、床里不放枕头被子毛绒玩具。多数专家建议约 4–6 个月后再考虑睡眠训练。</p></div>
 
-  <h2>宝宝体重</h2><div class="panel">${lineChart(w, { color: "var(--sky)", unit: "kg", label: "宝宝体重" })}
+  <h2>宝宝体重（${unitOf("wbaby")}）</h2><div class="panel">${lineChart(w, { color: "var(--sky)", unit: unitOf("wbaby"), label: "宝宝体重" })}
     <p class="small muted">新生儿出生后几天体重下降常见；通常约 10–14 天回到出生体重。是否正常请以儿科医生对照生长曲线的判断为准。</p>
     <div class="btns"><button class="btn" data-add="baby">记录体重 / 身长 / 头围</button></div></div>
 
@@ -1011,7 +1070,22 @@ function viewGrow(){
       <td><label class="check"><input type="checkbox" data-checkup="${c.k}" ${done[c.k] ? "checked" : ""}><span class="small">已去</span></label></td></tr>`; }).join("")}
     </tbody></table>
     <p class="small muted" style="margin-top:8px">时间点参考美国儿科学会 Bright Futures 体检时间表。疫苗按当地（中国 / 美国等）免疫规划和医生安排，二者时间不完全相同。</p>`
-    : `<p class="muted">在设置里填写宝宝生日后，会自动算出每次体检的大概日期。</p><button class="btn" data-act="settings">去填写</button>`}</div>`;
+    : `<p class="muted">在设置里填写宝宝生日后，会自动算出每次体检的大概日期。</p><button class="btn" data-act="settings">去填写</button>`}</div>
+  ${vaxHTML()}`;
+}
+function vaxHTML(){
+  const list = S.entries.filter(e => e.type === "vax" || (e.type === "bmed" && e.cat === "疫苗")).sort((a, b) => a.ts - b.ts);
+  const ageAt = ts => { const d = babyAgeDays(ts); if (d == null) return ""; return d < 60 ? `${d + 1}天` : `${Math.floor(d / 30.44)}月龄`; };
+  return `<h2>疫苗接种记录</h2>
+  <div class="panel">
+    ${list.length ? `<div class="scroll-x"><table><thead><tr><th>日期</th><th>疫苗</th><th>剂次</th><th>部位</th><th>反应</th></tr></thead><tbody>
+      ${list.map(e => `<tr><td class="num"><button class="cellbtn" style="all:unset;cursor:pointer" data-edit="${e.id}" aria-label="修改 ${dayKey(e.ts)} 的接种记录">${dayKey(e.ts)}</button><br><span class="small muted">${ageAt(e.ts)}</span></td>
+        <td>${esc(e.name || e.cat || "")}</td><td>${esc(e.dose || "")}</td><td>${esc(e.site || "")}</td><td>${esc(e.reaction || "")}</td></tr>`).join("")}
+    </tbody></table></div><p class="small muted" style="margin-top:6px">共 ${list.length} 次。点日期可修改。</p>`
+    : `<p class="muted">还没有接种记录。打完疫苗后记一笔，看儿科或办入学时翻出来很方便。</p>`}
+    <div class="btns"><button class="btn" data-add="vax">＋ 记录一次接种</button></div>
+    <p class="small muted" style="margin-top:8px">这里是家庭自己的备份，正式凭证仍以接种本、医院系统或学校要求的官方记录为准。</p>
+  </div>`;
 }
 
 function viewLearn(){
@@ -1065,7 +1139,18 @@ function drawForm(focusKey){
     let inner = "";
     if (f.type === "seg") inner = `<div class="lab" id="${id}">${f.label}</div><div class="seg" role="group" aria-labelledby="${id}">${f.opts.map(o => `<button type="button" data-seg="${f.k}" data-v="${esc(o)}" aria-pressed="${v === o}">${esc(o)}</button>`).join("")}</div>`;
     else if (f.type === "check") inner = `<label class="check"><input type="checkbox" data-f="${f.k}" ${v ? "checked" : ""}>${f.label}</label>`;
-    else if (f.type === "num") inner = `<label for="${id}">${f.label}</label><input id="${id}" type="number" inputmode="decimal" step="${f.step || 1}" min="0" data-f="${f.k}" value="${v ?? ""}" placeholder="${esc(f.ph || "")}">`;
+    else if (f.type === "num" && f.dim === "wbaby" && isUS()) {
+      const tot = v == null || v === "" ? null : +v * KG_LB * 16;
+      let lb = tot == null ? "" : Math.floor(tot / 16), oz = tot == null ? "" : trim(tot - lb * 16, 1);
+      if (oz === "16") { lb++; oz = "0"; }
+      inner = `<div class="lab">${f.label}（lb + oz）</div><div class="row2">
+        <input id="${id}" aria-label="${f.label} 磅 lb" type="number" inputmode="decimal" step="1" min="0" data-wpart="lb" data-orig="${lb}" value="${lb}" placeholder="lb">
+        <input aria-label="${f.label} 盎司 oz" type="number" inputmode="decimal" step="0.1" min="0" max="15.9" data-wpart="oz" data-orig="${oz}" value="${oz}" placeholder="oz"></div>`;
+    }
+    else if (f.type === "num") {
+      const dv = f.dim ? (v == null || v === "" ? "" : trim(toDisp(f.dim, v), DISP_DEC[f.dim])) : (v ?? "");
+      inner = `<label for="${id}">${f.label}${f.dim ? `（${unitOf(f.dim)}）` : ""}</label><input id="${id}" type="number" inputmode="decimal" step="${f.dim && isUS() ? "any" : (f.step || 1)}" min="0" data-f="${f.k}" ${f.dim ? `data-dim="${f.dim}" data-orig="${dv}"` : ""} value="${dv}" placeholder="${esc(f.ph || "")}">`;
+    }
     else if (f.type === "datetime") inner = `<label for="${id}">${f.label}</label><input id="${id}" type="datetime-local" data-f="${f.k}" data-kind="dt" value="${v ? toInput(v) : ""}">`;
     else if (f.type === "range") inner = `<label for="${id}">${f.label}</label><div class="range"><input id="${id}" type="range" min="${f.min}" max="${f.max}" data-f="${f.k}" value="${v ?? Math.round((f.min + f.max) / 2)}"><output class="num" style="min-width:24px">${v ?? "–"}</output></div>`;
     else if (f.type === "area") inner = `<label for="${id}">${f.label}</label><textarea id="${id}" data-f="${f.k}" placeholder="${esc(f.ph || "")}">${esc(v || "")}</textarea>`;
@@ -1081,6 +1166,7 @@ function drawForm(focusKey){
     <div class="field"><label for="f_ts">${draft.type === "sleep" ? "入睡时间" : "时间"}</label><input id="f_ts" type="datetime-local" data-f="ts" data-kind="dt" value="${toInput(draft.ts)}"></div>
     ${out.join("")}
     ${fl.map(f => `<div class="warnline" role="alert">${esc(f)}</div>`).join("")}
+    <datalist id="vaxlist">${["乙肝疫苗 HepB", "卡介苗 BCG", "脊灰疫苗 IPV/OPV", "百白破 DTaP", "Hib 疫苗", "肺炎球菌疫苗 PCV", "轮状病毒疫苗 RV", "麻腮风 MMR", "水痘疫苗 VAR", "甲肝疫苗 HepA", "乙脑疫苗 JE", "流脑疫苗 MenA/MenAC", "流感疫苗 Flu", "新冠疫苗 COVID-19", "RSV 单抗 nirsevimab"].map(v => `<option value="${v}">`).join("")}</datalist>
     <datalist id="medlist"><option value="布洛芬"><option value="泰诺（对乙酰氨基酚）"><option value="复合维生素"><option value="铁剂"><option value="钙片"></datalist>
     <div class="btns"><button class="btn primary" data-act="save">保存</button>${isNew ? "" : `<button class="btn danger" data-act="del">删除</button>`}</div>`;
   if (focusKey) { const el = $("#sheetIn").querySelector(`[data-seg="${focusKey}"][aria-pressed="true"]`); el && el.focus(); }
@@ -1090,9 +1176,15 @@ function readDraftInputs(){
     const k = el.dataset.f;
     if (el.type === "checkbox") draft[k] = el.checked;
     else if (el.dataset.kind === "dt") draft[k] = fromInput(el.value);
+    else if (el.dataset.dim) { if (el.value !== el.dataset.orig) draft[k] = fromDisp(el.dataset.dim, el.value); } // untouched → keep exact stored value
     else if (el.type === "number" || el.type === "range") draft[k] = num(el.value);
     else draft[k] = el.value.trim();
   });
+  const lbEl = $("#sheetIn [data-wpart=lb]"), ozEl = $("#sheetIn [data-wpart=oz]");
+  if (lbEl && (lbEl.value !== lbEl.dataset.orig || ozEl.value !== ozEl.dataset.orig)) {
+    const lb = num(lbEl.value) || 0, oz = num(ozEl.value) || 0;
+    draft.weight = (lbEl.value === "" && ozEl.value === "") ? null : +((lb + oz / 16) / KG_LB).toFixed(4);
+  }
   if (!draft.ts) draft.ts = Date.now();
 }
 function pickType(){
@@ -1119,6 +1211,9 @@ function openSettings(){
   <p class="small muted">${S.mode === "family" ? "记录保存在家庭云端，每台设备都有一份离线副本；没网时照常记录，联网后自动同步。" : S.mode === "cloud" ? "记录已同步到你的 Claude 账号，同时在本设备留有副本。" : "记录目前只保存在这台设备的浏览器里。换手机或清理浏览器数据会丢失，建议每周导出一次备份。"}</p>
   <div class="btns"><button class="btn" data-act="export">导出备份（JSON）</button><button class="btn" data-act="csv">导出表格（CSV）</button><button class="btn" data-act="import">从备份恢复</button></div>
   <div class="btns"><button class="btn" data-act="demo">载入演示数据</button><button class="btn" data-act="cleardemo">清除演示数据</button><button class="btn danger" data-act="clearall">清空全部记录</button></div>
+  <h2>单位</h2>
+  <div class="seg" role="group" aria-label="单位">${[["auto", `自动（当前：${isUS() ? "美制" : "公制"}）`], ["metric", "公制 kg · cm · ml · ℃"], ["us", "美制 lb · in · fl oz · ℉"]].map(([v, l]) => `<button data-units-set="${v}" aria-pressed="${unitPref() === v}">${l}</button>`).join("")}</div>
+  <p class="small muted" style="margin-top:6px">只影响这台设备的显示和输入。数据统一按公制保存，切换不会改动已有记录，家人可以各用各的单位。“自动”按手机的语言和时区判断（北美时区默认美制）。</p>
   <h2>显示</h2>
   <div class="seg" role="group" aria-label="外观">${[["", "跟随系统"], ["light", "浅色"], ["dark", "深色（夜里喂奶）"]].map(([v, l]) => `<button data-theme-set="${v}" aria-pressed="${(document.documentElement.dataset.theme || "") === v}">${l}</button>`).join("")}</div>`;
   const d = $("#sheet"); if (!d.open) d.showModal();
@@ -1240,6 +1335,7 @@ document.addEventListener("click", async ev => {
   if (t.dataset.mealcheck) { await mealCheck(t.dataset.feed, t.dataset.mealcheck); return; }
   if (t.dataset.copy) { try { await navigator.clipboard.writeText(t.dataset.copy); toast("已复制：" + t.dataset.copy); } catch (e) { toast("请手动搜索：" + t.dataset.copy); } return; }
   if (t.dataset.seg) { readDraftInputs(); draft[t.dataset.seg] = draft[t.dataset.seg] === t.dataset.v ? null : t.dataset.v; drawForm(t.dataset.seg); return; }
+  if (t.dataset.unitsSet) { try { localStorage.setItem(UNIT_KEY, t.dataset.unitsSet); } catch (e) {} openSettings(); render(); toast("单位已切换为" + (isUS() ? "美制" : "公制")); return; }
   if (t.dataset.themeSet !== undefined) { const v = t.dataset.themeSet; if (v) document.documentElement.dataset.theme = v; else delete document.documentElement.dataset.theme; try { localStorage.setItem(LS_KEY + ".theme", v); } catch (e) {} openSettings(); return; }
   switch (t.dataset.act) {
     case "close": $("#sheet").close(); break;
