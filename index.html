@@ -172,6 +172,8 @@ nav.tabs button[aria-current="page"] i{transform:translateY(-1px)}
 dialog.sheet{border:0;padding:0;margin:auto auto 0;width:100%;max-width:720px;max-height:85vh;max-height:calc(100dvh - env(safe-area-inset-top,0px) - 16px);overflow:hidden;border-radius:var(--radius-lg) var(--radius-lg) 0 0;background:var(--surface);color:var(--ink)}
 dialog.sheet::backdrop{background:rgba(10,15,22,.45)}
 dialog.sheet[open]{display:flex;flex-direction:column}
+dialog.sheet.center{margin:auto;width:calc(100% - 32px);max-width:480px;border-radius:var(--radius-lg)}
+dialog.sheet.center .sheet-in{padding-bottom:18px}
 .sheet-in{padding:0 18px calc(18px + env(safe-area-inset-bottom,0px));overflow:auto;flex:1;min-height:0;overscroll-behavior:contain}
 .sheet-head{display:flex;justify-content:space-between;align-items:center;margin:0 -18px 8px;padding:14px 18px 10px;position:sticky;top:0;z-index:3;background:var(--surface);border-bottom:1px solid var(--line)}
 .sheet-head h3{font-size:18px;margin:0}
@@ -1130,7 +1132,7 @@ function openForm(type, existing, preset){
   const T = TYPES[type];
   draft = existing ? { ...existing } : { id: newId(), type, ts: Date.now(), ...preset };
   if (!existing) for (const f of T.fields) if (f.def !== undefined && draft[f.k] === undefined) draft[f.k] = f.def;
-  drawForm(); const d = $("#sheet"); if (!d.open) d.showModal();
+  drawForm(); const d = $("#sheet"); d.classList.remove("center"); if (!d.open) d.showModal();
 }
 function drawForm(focusKey){
   const T = TYPES[draft.type], isNew = !S.entries.some(e => e.id === draft.id);
@@ -1191,7 +1193,7 @@ function pickType(){
   draft = null;
   $("#sheetIn").innerHTML = `<div class="sheet-head"><h3 id="sheetTitle">补记哪一类？</h3><button class="iconbtn" data-act="close" aria-label="关闭">关闭</button></div>
   <div class="quick">${Object.entries(TYPES).map(([k, t]) => `<button data-add="${k}"><i>${t.icon}</i>${t.label}</button>`).join("")}</div>`;
-  const d = $("#sheet"); if (!d.open) d.showModal();
+  const d = $("#sheet"); d.classList.add("center"); if (!d.open) d.showModal();
 }
 
 /* ============ settings sheet ============ */
@@ -1216,7 +1218,7 @@ function openSettings(){
   <p class="small muted" style="margin-top:6px">只影响这台设备的显示和输入。数据统一按公制保存，切换不会改动已有记录，家人可以各用各的单位。“自动”按手机的语言和时区判断（北美时区默认美制）。</p>
   <h2>显示</h2>
   <div class="seg" role="group" aria-label="外观">${[["", "跟随系统"], ["light", "浅色"], ["dark", "深色（夜里喂奶）"]].map(([v, l]) => `<button data-theme-set="${v}" aria-pressed="${(document.documentElement.dataset.theme || "") === v}">${l}</button>`).join("")}</div>`;
-  const d = $("#sheet"); if (!d.open) d.showModal();
+  const d = $("#sheet"); d.classList.remove("center"); if (!d.open) d.showModal();
 }
 function readSettingsInputs(){
   S.settings.babyName = $("#s_name")?.value.trim() ?? S.settings.babyName;
