@@ -168,14 +168,14 @@ nav.tabs button i{font-style:normal;font-size:20px}
 nav.tabs button[aria-current="page"]{color:var(--ink);font-weight:700}
 nav.tabs button[aria-current="page"] i{transform:translateY(-1px)}
 
-/* sheet */
-dialog.sheet{border:0;padding:0;margin:auto auto 0;width:100%;max-width:720px;max-height:85vh;max-height:calc(100dvh - env(safe-area-inset-top,0px) - 16px);overflow:hidden;border-radius:var(--radius-lg) var(--radius-lg) 0 0;background:var(--surface);color:var(--ink)}
-dialog.sheet::backdrop{background:rgba(10,15,22,.45)}
-dialog.sheet[open]{display:flex;flex-direction:column}
-dialog.sheet.center{margin:auto;width:calc(100% - 32px);max-width:480px;border-radius:var(--radius-lg)}
-dialog.sheet.center .sheet-in{padding-bottom:18px}
-.sheet-in{padding:0 18px calc(18px + env(safe-area-inset-bottom,0px));overflow:auto;flex:1;min-height:0;overscroll-behavior:contain}
-.sheet-head{display:flex;justify-content:space-between;align-items:center;margin:0 -18px 8px;padding:14px 18px 10px;position:sticky;top:0;z-index:3;background:var(--surface);border-bottom:1px solid var(--line)}
+/* sheet → full-screen page in normal flow.
+   Floating overlays get partly hidden behind iOS 26's floating toolbars in some versions;
+   an in-flow page can always be scrolled fully into view. */
+dialog.sheet{position:static;display:none;inset:auto;transform:none;margin:0 auto;width:100%;max-width:720px;max-height:none;overflow:visible;border:0;padding:0;background:var(--bg);color:var(--ink)}
+dialog.sheet[open]{display:block}
+body.sheet-open .wrap,body.sheet-open nav.tabs{display:none}
+.sheet-in{padding:0 16px calc(140px + env(safe-area-inset-bottom,0px));overflow:visible}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 -16px 8px;padding:12px 16px 10px;position:sticky;top:env(safe-area-inset-top,0px);z-index:3;background:var(--bg);border-bottom:1px solid var(--line)}
 .sheet-head h3{font-size:18px;margin:0}
 .field{margin:12px 0}
 .field > label,.field > .lab{display:block;font-size:14px;color:var(--muted);margin-bottom:6px}
@@ -1126,13 +1126,37 @@ function viewLearn(){
     ${["丁香妈妈", "崔玉涛育学园", "年糕妈妈"].map(n => `<div class="medrow"><span>${n}</span><button class="chip" data-copy="${n}">复制名称</button></div>`).join("")}</div>`;
 }
 
+/* ============ sheet as a page ============
+   The form replaces the page content instead of floating over it, so nothing depends on how a given
+   iOS version sizes the viewport around its toolbars. Back gesture / back button closes it. */
+const APP_VERSION = "2026-10-14.6";
+let sheetScrollY = 0;
+function showSheet(){
+  const d = $("#sheet");
+  if (!d.open) {
+    sheetScrollY = window.scrollY;
+    d.show(); // non-modal: rendered in page flow
+    document.body.classList.add("sheet-open");
+    try { history.pushState({ sheet: 1 }, ""); } catch (e) {}
+  }
+  window.scrollTo(0, 0);
+  const first = d.querySelector(".sheet-head h3"); if (first) { first.tabIndex = -1; first.focus({ preventScroll: true }); }
+}
+$("#sheet").addEventListener("close", () => {
+  document.body.classList.remove("sheet-open");
+  requestAnimationFrame(() => window.scrollTo(0, sheetScrollY));
+  if (history.state && history.state.sheet) { try { history.back(); } catch (e) {} }
+});
+window.addEventListener("popstate", () => { const d = $("#sheet"); if (d.open) d.close(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#sheet").open) $("#sheet").close(); });
+
 /* ============ form sheet ============ */
 let draft = null;
 function openForm(type, existing, preset){
   const T = TYPES[type];
   draft = existing ? { ...existing } : { id: newId(), type, ts: Date.now(), ...preset };
   if (!existing) for (const f of T.fields) if (f.def !== undefined && draft[f.k] === undefined) draft[f.k] = f.def;
-  drawForm(); const d = $("#sheet"); d.classList.remove("center"); if (!d.open) d.showModal();
+  drawForm(); showSheet(false);
 }
 function drawForm(focusKey){
   const T = TYPES[draft.type], isNew = !S.entries.some(e => e.id === draft.id);
@@ -1193,7 +1217,7 @@ function pickType(){
   draft = null;
   $("#sheetIn").innerHTML = `<div class="sheet-head"><h3 id="sheetTitle">补记哪一类？</h3><button class="iconbtn" data-act="close" aria-label="关闭">关闭</button></div>
   <div class="quick">${Object.entries(TYPES).map(([k, t]) => `<button data-add="${k}"><i>${t.icon}</i>${t.label}</button>`).join("")}</div>`;
-  const d = $("#sheet"); d.classList.add("center"); if (!d.open) d.showModal();
+  showSheet(true);
 }
 
 /* ============ settings sheet ============ */
@@ -1216,9 +1240,10 @@ function openSettings(){
   <h2>单位</h2>
   <div class="seg" role="group" aria-label="单位">${[["auto", `自动（当前：${isUS() ? "美制" : "公制"}）`], ["metric", "公制 kg · cm · ml · ℃"], ["us", "美制 lb · in · fl oz · ℉"]].map(([v, l]) => `<button data-units-set="${v}" aria-pressed="${unitPref() === v}">${l}</button>`).join("")}</div>
   <p class="small muted" style="margin-top:6px">只影响这台设备的显示和输入。数据统一按公制保存，切换不会改动已有记录，家人可以各用各的单位。“自动”按手机的语言和时区判断（北美时区默认美制）。</p>
+  <p class="small muted" style="margin-top:24px">版本 ${APP_VERSION}</p>
   <h2>显示</h2>
   <div class="seg" role="group" aria-label="外观">${[["", "跟随系统"], ["light", "浅色"], ["dark", "深色（夜里喂奶）"]].map(([v, l]) => `<button data-theme-set="${v}" aria-pressed="${(document.documentElement.dataset.theme || "") === v}">${l}</button>`).join("")}</div>`;
-  const d = $("#sheet"); d.classList.remove("center"); if (!d.open) d.showModal();
+  showSheet(false);
 }
 function readSettingsInputs(){
   S.settings.babyName = $("#s_name")?.value.trim() ?? S.settings.babyName;
@@ -1376,7 +1401,6 @@ document.addEventListener("input", ev => {
   if (ev.target.id === "q") { S.q = ev.target.value; renderLogFocus = true; render(); return; }
   if (ev.target.type === "range") { const o = ev.target.parentElement.querySelector("output"); if (o) o.textContent = ev.target.value; }
 });
-$("#sheet").addEventListener("click", e => { if (e.target.id === "sheet") e.target.close(); });
 
 /* ============ boot ============ */
 try { const th = localStorage.getItem(LS_KEY + ".theme"); if (th) document.documentElement.dataset.theme = th; } catch (e) {}
