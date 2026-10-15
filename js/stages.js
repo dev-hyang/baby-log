@@ -14,7 +14,7 @@ const Q = {
   nurse:   { add: "feed", preset: { method: "亲喂" }, icon: "🤱", label: "亲喂" },
   bottle:  { add: "feed", preset: { method: "母乳瓶喂" }, icon: "🍼", label: "瓶喂母乳" },
   formula: { add: "feed", preset: { method: "配方奶" }, icon: "🥛", label: "配方奶" },
-  milk:    { add: "feed", preset: { method: "配方奶" }, icon: "🥛", label: "喝奶" },
+  milk:    { add: "feed", icon: "🥛", label: "喝奶" }, // method defaults by age and last choice (see types.js)
   solids:  { add: "food", preset: { meal: "辅食" }, icon: "🥣", label: "辅食" },
   meal:    { add: "food", preset: () => ({ meal: mealByHour() }), icon: "🍚", label: "吃饭" },
   diaper:  { add: "diaper", icon: "🧷", label: "换尿布" },

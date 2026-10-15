@@ -1,11 +1,19 @@
-import { babyAgeDays, childOf } from "./state.js";
+import { S, ageMonths, babyAgeDays, childOf } from "./state.js";
 import { fmtU } from "./units.js";
 import { $, D, dur, hm, num } from "./util.js";
 
 /* ============ record types ============ */
+// Milk options follow the child's age at the time of the record: breast/formula under 1, whole milk
+// from 1 (AAP), lower-fat choices from 2. The default remembers the family's last choice for that child.
+const MILK_BABY = ["亲喂", "母乳瓶喂", "配方奶", "混合", "吸奶"];
+const MILK_1Y = ["全脂牛奶", "亲喂", "配方奶/幼儿奶", "母乳瓶喂", "其他"];
+const MILK_2Y = ["全脂牛奶", "2% 低脂", "1% 低脂", "脱脂", "豆奶/植物奶", "亲喂", "其他"];
+function milkOpts(m){ const mo = ageMonths(childOf(m), m.ts || Date.now()); return mo == null || mo < 12 ? MILK_BABY : mo < 24 ? MILK_1Y : MILK_2Y; }
+function milkDef(m){ const opts = milkOpts(m); const prev = S.entries.filter(e => e.type === "feed" && childOf(e) === childOf(m)).sort((a, b) => b.ts - a.ts)[0]; return prev && opts.includes(prev.method) ? prev.method : opts[0]; }
+function milkHint(m){ const mo = ageMonths(childOf(m), m.ts || Date.now()); if (mo == null || mo < 12) return ""; return mo < 24 ? "AAP：1–2 岁建议全脂牛奶，每天约 2–3 杯（480–720 ml）以内，喝太多会影响吃饭和铁的吸收。" : "2 岁后可按医生建议换低脂或脱脂奶，每天约 2–2.5 杯（480–600 ml）。"; }
 const TYPES = {
   feed:  { label: "喂奶", icon: "🍼", color: "var(--honey)", fields: [
-    { k: "method", label: "方式", type: "seg", opts: ["亲喂", "母乳瓶喂", "配方奶", "混合", "吸奶"], def: "亲喂" },
+    { k: "method", label: "方式", type: "seg", opts: milkOpts, def: milkDef, hint: milkHint },
     { k: "left", label: "左侧时长（分钟）", type: "num", show: m => ["亲喂", "混合"].includes(m.method), half: 1 },
     { k: "right", label: "右侧时长（分钟）", type: "num", show: m => ["亲喂", "混合"].includes(m.method), half: 1 },
     { k: "ml", label: "奶量", type: "num", dim: "vol", show: m => m.method !== "亲喂" },

@@ -31,14 +31,24 @@ document.addEventListener("click", async ev => {
   if (t.dataset.copy) { try { await navigator.clipboard.writeText(t.dataset.copy); toast("已复制：" + t.dataset.copy); } catch (e) { toast("请手动搜索：" + t.dataset.copy); } return; }
   if (t.dataset.kidsel) { setChild(t.dataset.kidsel); S.mealDay = null; render(); $("#bname").focus(); return; }
   if (t.dataset.seg) { readDraftInputs(); const k = t.dataset.seg; draft[k] = (draft[k] === t.dataset.v && k !== "child") ? null : t.dataset.v; drawForm(k); return; }
+  if (t.dataset.who) { // multi-select children for a shared activity; the primary child can be swapped but never emptied
+    readDraftInputs(); const id = t.dataset.who, also = new Set(draft.also || []);
+    if (id === childOf(draft)) { if (also.size) { draft.child = [...also][0]; also.delete(draft.child); } }
+    else if (also.has(id)) also.delete(id); else also.add(id);
+    draft.also = [...also]; drawForm(); return;
+  }
   if (t.dataset.unitsSet) { try { localStorage.setItem(UNIT_KEY, t.dataset.unitsSet); } catch (e) {} openSettings(); render(); toast("单位已切换为" + (isUS() ? "美制" : "公制")); return; }
   if (t.dataset.themeSet !== undefined) { const v = t.dataset.themeSet; if (v) document.documentElement.dataset.theme = v; else delete document.documentElement.dataset.theme; try { localStorage.setItem(LS_KEY + ".theme", v); } catch (e) {} openSettings(); return; }
   switch (t.dataset.act) {
     case "close": $("#sheet").close(); break;
     case "save": { readDraftInputs(); const e = { ...draft };
+      const also = e.also || []; delete e.also; delete e._pick; // form-only state never reaches storage
       if (isKidType(e.type)) e.child = childOf(e); // legacy records become explicit once edited
       if (e.type === "sleep" && e.end && e.end < e.ts) { toast("醒来时间要晚于入睡时间"); return; }
-      $("#sheet").close(); await putEntry(e); toast("已保存"); break; }
+      $("#sheet").close(); await putEntry(e);
+      for (const id of also) await putEntry({ ...e, id: newId(), child: id }); // one copy per extra child
+      toast(also.length ? `已保存 ${also.length + 1} 条` : "已保存"); break; }
+    case "who-change": readDraftInputs(); draft._pick = true; drawForm("child"); break;
     case "del": if (confirm("删除这条记录？")) { $("#sheet").close(); await removeEntry(draft.id); toast("已删除"); } break;
     case "sleepnow": { if (last(e => e.type === "sleep" && !e.end)) { toast("已经在记录睡眠了"); return; } await putEntry({ id: newId(), type: "sleep", ts: Date.now(), child: S.childId }); toast("开始记录睡眠"); break; }
     case "wake": { const e = S.entries.find(x => x.id === t.dataset.id); if (e) { await putEntry({ ...e, end: Date.now() }); toast(`这一觉睡了 ${dur(Date.now() - e.ts)}`); } break; }

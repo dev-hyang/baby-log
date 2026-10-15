@@ -1,4 +1,4 @@
-import { APP_VERSION, S, child, childOf, isKidType } from "./state.js";
+import { APP_VERSION, S, child, childName, childOf, isKidType } from "./state.js";
 import { milestoneNames, stageTypes } from "./stages.js";
 import { familyHTML } from "./sync.js";
 import { TYPES, flags } from "./types.js";
@@ -33,7 +33,7 @@ let draft = null;
 function openForm(type, existing, preset){
   const T = TYPES[type];
   draft = existing ? { ...existing } : { id: newId(), type, ts: Date.now(), ...(isKidType(type) ? { child: S.childId } : {}), ...preset };
-  if (!existing) for (const f of T.fields) if (f.def !== undefined && draft[f.k] === undefined) draft[f.k] = f.def;
+  if (!existing) for (const f of T.fields) { const d = typeof f.def === "function" ? f.def(draft) : f.def; if (d !== undefined && draft[f.k] === undefined) draft[f.k] = d; }
   drawForm(); showSheet(false);
 }
 function drawForm(focusKey){
@@ -41,7 +41,11 @@ function drawForm(focusKey){
   const fieldsHTML = T.fields.filter(f => !f.show || f.show(draft)).map(f => {
     const v = draft[f.k], id = "f_" + f.k;
     let inner = "";
-    if (f.type === "seg") inner = `<div class="lab" id="${id}">${f.label}</div><div class="seg" role="group" aria-labelledby="${id}">${f.opts.map(o => `<button type="button" data-seg="${f.k}" data-v="${esc(o)}" aria-pressed="${v === o}">${esc(o)}</button>`).join("")}</div>`;
+    if (f.type === "seg") {
+      let opts = typeof f.opts === "function" ? f.opts(draft) : f.opts;
+      if (v && !opts.includes(v)) opts = [...opts, v]; // an older record whose option no longer fits the age list stays visible
+      inner = `<div class="lab" id="${id}">${f.label}</div><div class="seg" role="group" aria-labelledby="${id}">${opts.map(o => `<button type="button" data-seg="${f.k}" data-v="${esc(o)}" aria-pressed="${v === o}">${esc(o)}</button>`).join("")}</div>`;
+    }
     else if (f.type === "check") inner = `<label class="check"><input type="checkbox" data-f="${f.k}" ${v ? "checked" : ""}>${f.label}</label>`;
     else if (f.type === "num" && f.dim === "wbaby" && isUS()) {
       const tot = v == null || v === "" ? null : +v * KG_LB * 16;
@@ -59,7 +63,8 @@ function drawForm(focusKey){
     else if (f.type === "range") inner = `<label for="${id}">${f.label}</label><div class="range"><input id="${id}" type="range" min="${f.min}" max="${f.max}" data-f="${f.k}" value="${v ?? Math.round((f.min + f.max) / 2)}"><output class="num" style="min-width:24px">${v ?? "–"}</output></div>`;
     else if (f.type === "area") inner = `<label for="${id}">${f.label}</label><textarea id="${id}" data-f="${f.k}" placeholder="${esc(f.ph || "")}">${esc(v || "")}</textarea>`;
     else inner = `<label for="${id}">${f.label}</label><input id="${id}" type="text" data-f="${f.k}" value="${esc(v || "")}" ${f.list ? `list="${f.list}"` : ""} placeholder="${esc(f.ph || "")}">`;
-    return `<div class="field" ${f.half ? 'data-half="1"' : ""}>${inner}</div>`;
+    const hint = typeof f.hint === "function" ? f.hint(draft) : f.hint;
+    return `<div class="field" ${f.half ? 'data-half="1"' : ""}>${inner}${hint ? `<p class="small muted" style="margin:6px 0 0">${esc(hint)}</p>` : ""}</div>`;
   });
   // pair half-width fields
   const out = []; for (let i = 0; i < fieldsHTML.length; i++) {
@@ -67,7 +72,7 @@ function drawForm(focusKey){
   }
   const fl = flags(draft);
   $("#sheetIn").innerHTML = `<div class="sheet-head"><h3 id="sheetTitle">${T.icon} ${isNew ? "记录" : "修改"}${T.label}</h3><button class="iconbtn" data-act="close" aria-label="关闭">关闭</button></div>
-    ${isKidType(draft.type) && S.settings.children.length > 1 ? `<div class="field"><div class="lab" id="f_child">哪个孩子</div><div class="seg" role="group" aria-labelledby="f_child">${S.settings.children.map(c => `<button type="button" data-seg="child" data-v="${esc(c.id)}" aria-pressed="${childOf(draft) === c.id}">${esc(c.name || "宝宝")}</button>`).join("")}</div></div>` : ""}
+    ${whoHTML(isNew)}
     <div class="field"><label for="f_ts">${draft.type === "sleep" ? "入睡时间" : "时间"}</label><input id="f_ts" type="datetime-local" data-f="ts" data-kind="dt" value="${toInput(draft.ts)}"></div>
     ${out.join("")}
     ${fl.map(f => `<div class="warnline" role="alert">${esc(f)}</div>`).join("")}
@@ -77,6 +82,20 @@ function drawForm(focusKey){
     <datalist id="milestonelist">${milestoneNames().map(v => `<option value="${esc(v)}">`).join("")}</datalist>
     <div class="btns"><button class="btn primary" data-act="save">保存</button>${isNew ? "" : `<button class="btn danger" data-act="del">删除</button>`}</div>`;
   if (focusKey) { const el = $("#sheetIn").querySelector(`[data-seg="${focusKey}"][aria-pressed="true"]`); el && el.focus(); }
+}
+/* Which child the record belongs to. The form opens for the child shown on the page, so by default this is
+   one quiet line; "换一个孩子" expands the choice. A new activity can be shared by several children (reading
+   to both), so it offers multi-select and saves one entry per child. */
+function whoHTML(isNew){
+  const kids = S.settings.children;
+  if (!isKidType(draft.type) || kids.length < 2) return "";
+  const cur = childOf(draft);
+  if (draft.type === "activity" && isNew) {
+    const sel = new Set([cur, ...(draft.also || [])]);
+    return `<div class="field"><div class="lab" id="f_child">哪个孩子（可多选，一起做的活动会各记一条）</div><div class="seg" role="group" aria-labelledby="f_child">${kids.map(c => `<button type="button" data-who="${esc(c.id)}" aria-pressed="${sel.has(c.id)}">${esc(c.name || "宝宝")}</button>`).join("")}</div></div>`;
+  }
+  if (draft._pick) return `<div class="field"><div class="lab" id="f_child">记录给哪个孩子</div><div class="seg" role="group" aria-labelledby="f_child">${kids.map(c => `<button type="button" data-seg="child" data-v="${esc(c.id)}" aria-pressed="${cur === c.id}">${esc(c.name || "宝宝")}</button>`).join("")}</div></div>`;
+  return `<div class="field who"><span class="small muted">记录给</span><b>${esc(childName(cur))}</b><button type="button" class="chip" data-act="who-change">换一个孩子</button></div>`;
 }
 function readDraftInputs(){
   $("#sheetIn").querySelectorAll("[data-f]").forEach(el => {
