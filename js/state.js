@@ -62,11 +62,17 @@ function ageText(cid = S.childId){
   return `${age} · ${stage.name}`;
 }
 const STAGES = [
-  { name: "新生儿期", range: "0–3 个月", untilDays: 91, items: ["喂奶 / 尿布 / 睡眠", "妈妈产后恢复", "黄疸与体重"] },
-  { name: "婴儿期", range: "3–12 个月", untilDays: 366, items: ["作息与睡眠引导", "辅食记录（约6月起）", "大运动里程碑"] },
-  { name: "幼儿期", range: "1–3 岁", untilDays: 1096, items: ["语言发展", "饮食与过敏", "如厕训练"] },
-  { name: "学前期", range: "3–5 岁 PreK", untilDays: 1e9, items: ["入园准备", "社交与情绪", "阅读与早期学习"] }
+  { key: "newborn", name: "新生儿期", range: "0–3 个月", untilDays: 91, items: ["喂奶 / 尿布 / 睡眠", "妈妈产后恢复", "黄疸与体重"] },
+  { key: "infant", name: "婴儿期", range: "3–12 个月", untilDays: 366, items: ["辅食与过敏反应", "作息与睡眠", "发育里程碑"] },
+  { key: "toddler", name: "幼儿期", range: "1–3 岁", untilDays: 1096, items: ["三餐与喝奶", "如厕训练", "语言与情绪"] },
+  { key: "preschool", name: "学前期", range: "3–5 岁 PreK", untilDays: 1e9, items: ["阅读与户外", "幼儿园与社交", "情绪行为"] }
 ];
+// The stage decides which quick buttons, stats, trend metrics and references the pages show.
+// Without a birth date the app behaves as it always did: newborn.
+function stageOf(cid = S.childId){ const d = babyAgeDays(Date.now(), cid); return d == null ? STAGES[0] : STAGES.find(s => d < s.untilDays) || STAGES[STAGES.length - 1]; }
+function ageMonths(cid = S.childId, at = Date.now()){ const b = birthTs(cid); if (b == null) return null; const bd = new Date(b), n = new Date(at); let m = (n.getFullYear() - bd.getFullYear()) * 12 + n.getMonth() - bd.getMonth(); if (n.getDate() < bd.getDate()) m--; return Math.max(0, m); }
+// "26天" / "8月龄" / "2岁3月" for a record's timestamp
+function ageAtText(ts, cid = S.childId){ const d = babyAgeDays(ts, cid); if (d == null || d < 0) return ""; if (d < 60) return `${d + 1}天`; const m = ageMonths(cid, ts); return m < 24 ? `${m}月龄` : `${Math.floor(m / 12)}岁${m % 12 ? `${m % 12}月` : ""}`; }
 // AAP Bright Futures well-child visit schedule
 const CHECKUPS = [
   { k: "d4", label: "出生后 3–5 天", days: 4 }, { k: "m1", label: "1 月龄", m: 1 }, { k: "m2", label: "2 月龄", m: 2 },
@@ -79,6 +85,6 @@ function checkupDate(c){ const b = birthTs(); if (b == null) return null; if (c.
 const checkupsDone = () => (S.settings.checkups || {})[S.childId] || {};
 function nextCheckup(){ const done = checkupsDone(); return CHECKUPS.map(c => ({ ...c, at: checkupDate(c) })).find(c => c.at && !done[c.k] && c.at > Date.now() - 14 * D); }
 
-const APP_VERSION = "2026-10-15.3";
+const APP_VERSION = "2026-10-15.4";
 
-export { LS_KEY, S, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, CHECKUPS, checkupDate, checkupsDone, nextCheckup, APP_VERSION };
+export { LS_KEY, S, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupsDone, nextCheckup, APP_VERSION };

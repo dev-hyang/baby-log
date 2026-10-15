@@ -1,4 +1,5 @@
 import { APP_VERSION, S, child, childOf, isKidType } from "./state.js";
+import { milestoneNames, stageTypes } from "./stages.js";
 import { familyHTML } from "./sync.js";
 import { TYPES, flags } from "./types.js";
 import { DISP_DEC, KG_LB, fromDisp, isUS, toDisp, trim, unitOf, unitPref } from "./units.js";
@@ -72,6 +73,8 @@ function drawForm(focusKey){
     ${fl.map(f => `<div class="warnline" role="alert">${esc(f)}</div>`).join("")}
     <datalist id="vaxlist">${["乙肝疫苗 HepB", "卡介苗 BCG", "脊灰疫苗 IPV/OPV", "百白破 DTaP", "Hib 疫苗", "肺炎球菌疫苗 PCV", "轮状病毒疫苗 RV", "麻腮风 MMR", "水痘疫苗 VAR", "甲肝疫苗 HepA", "乙脑疫苗 JE", "流脑疫苗 MenA/MenAC", "流感疫苗 Flu", "新冠疫苗 COVID-19", "RSV 单抗 nirsevimab"].map(v => `<option value="${v}">`).join("")}</datalist>
     <datalist id="medlist"><option value="布洛芬"><option value="泰诺（对乙酰氨基酚）"><option value="复合维生素"><option value="铁剂"><option value="钙片"></datalist>
+    <datalist id="foodlist">${["高铁米粉", "南瓜泥", "红薯泥", "胡萝卜泥", "土豆泥", "苹果泥", "香蕉", "牛油果", "蛋黄", "鸡蛋", "豆腐", "鱼肉", "鸡肉", "牛肉", "猪肝", "酸奶", "粥", "面条", "花生酱（稀）", "西兰花", "菠菜", "草莓", "橙子"].map(v => `<option value="${v}">`).join("")}</datalist>
+    <datalist id="milestonelist">${milestoneNames().map(v => `<option value="${esc(v)}">`).join("")}</datalist>
     <div class="btns"><button class="btn primary" data-act="save">保存</button>${isNew ? "" : `<button class="btn danger" data-act="del">删除</button>`}</div>`;
   if (focusKey) { const el = $("#sheetIn").querySelector(`[data-seg="${focusKey}"][aria-pressed="true"]`); el && el.focus(); }
 }
@@ -93,8 +96,11 @@ function readDraftInputs(){
 }
 function pickType(){
   draft = null;
+  const first = stageTypes(), rest = Object.keys(TYPES).filter(k => !first.includes(k));
+  const grid = keys => `<div class="quick">${keys.map(k => `<button data-add="${k}"><i>${TYPES[k].icon}</i>${TYPES[k].label}</button>`).join("")}</div>`;
   $("#sheetIn").innerHTML = `<div class="sheet-head"><h3 id="sheetTitle">补记哪一类？</h3><button class="iconbtn" data-act="close" aria-label="关闭">关闭</button></div>
-  <div class="quick">${Object.entries(TYPES).map(([k, t]) => `<button data-add="${k}"><i>${t.icon}</i>${t.label}</button>`).join("")}</div>`;
+  ${grid(first)}
+  ${rest.length ? `<h2>其他</h2>${grid(rest)}` : ""}`;
   showSheet(true);
 }
 

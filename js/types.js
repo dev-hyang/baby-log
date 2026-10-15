@@ -39,6 +39,41 @@ const TYPES = {
     { k: "lot", label: "批号（选填）", type: "text", half: 1 },
     { k: "reaction", label: "接种后反应", type: "seg", opts: ["无", "局部红肿", "发热", "哭闹", "其他"] },
     { k: "note", label: "备注", type: "area", ph: "下次接种日期、医生交代的注意事项…" } ] },
+  /* ---- 婴儿期起 ---- */
+  food:  { label: "饮食", icon: "🥣", color: "#C8743A", fields: [
+    { k: "meal", label: "哪一餐", type: "seg", opts: ["辅食", "早餐", "午餐", "晚餐", "加餐", "奶"], def: "辅食" },
+    { k: "foods", label: "吃了什么", type: "text", list: "foodlist", ph: "米糊、南瓜泥、鸡蛋…" },
+    { k: "amount", label: "吃了多少", type: "seg", opts: ["尝一口", "几口", "一半", "大部分", "吃完"] },
+    { k: "newFood", label: "第一次尝试的新食物", type: "check" },
+    { k: "reaction", label: "吃完后的反应", type: "seg", opts: ["无", "皮疹", "呕吐", "腹泻", "拒绝"], def: "无" },
+    { k: "note", label: "备注", type: "text", ph: "喜欢 / 不喜欢、呛咳…" } ] },
+  milestone: { label: "里程碑", icon: "⭐", color: "#D98E2B", fields: [
+    { k: "cat", label: "类别", type: "seg", opts: ["大运动", "精细动作", "语言", "社交情绪", "认知", "自理"], def: "大运动" },
+    { k: "name", label: "做到了什么", type: "text", list: "milestonelist", ph: "翻身、独坐、扶站、第一次叫妈妈…" },
+    { k: "note", label: "备注", type: "area", ph: "当时的情形、谁看到的…" } ] },
+  /* ---- 幼儿期起 ---- */
+  potty: { label: "如厕", icon: "🚽", color: "var(--sky)", fields: [
+    { k: "what", label: "内容", type: "seg", opts: ["尿", "便", "尿+便", "坐了没出"], def: "尿" },
+    { k: "where", label: "在哪儿", type: "seg", opts: ["小马桶", "马桶", "尿裤里", "裤子湿了"], def: "小马桶" },
+    { k: "self", label: "自己提出要去", type: "check" },
+    { k: "note", label: "备注", type: "text" } ] },
+  speech: { label: "语言", icon: "💬", color: "#5B8E5A", fields: [
+    { k: "kind", label: "类型", type: "seg", opts: ["新词", "短句", "会指认", "听懂指令", "会问问题"], def: "新词" },
+    { k: "words", label: "说了什么", type: "text", ph: "妈妈 / 要抱抱 / 这是什么…" },
+    { k: "lang", label: "语言", type: "seg", opts: ["中文", "英文", "其他"] },
+    { k: "note", label: "备注", type: "text" } ] },
+  activity: { label: "活动", icon: "🎨", color: "#7A6FB5", fields: [
+    { k: "kind", label: "活动", type: "seg", opts: ["阅读", "户外", "游戏", "社交", "音乐运动", "幼儿园", "屏幕"], def: "阅读" },
+    { k: "minutes", label: "时长（分钟）", type: "num", half: 1 },
+    { k: "what", label: "内容", type: "text", half: 1, ph: "书名、公园、和谁一起…" },
+    { k: "note", label: "备注", type: "area", ph: "表现、感受…" } ] },
+  behavior: { label: "情绪行为", icon: "🙂", color: "var(--rose)", fields: [
+    { k: "kind", label: "情况", type: "seg", opts: ["开心", "发脾气", "哭闹", "分离焦虑", "害怕", "打人/咬人", "分享合作"], def: "开心" },
+    { k: "trigger", label: "起因", type: "text", ph: "不让看电视、玩具被抢…" },
+    { k: "how", label: "怎么处理的", type: "text", ph: "抱着安抚、冷静角、转移注意…" },
+    { k: "minutes", label: "持续（分钟）", type: "num" },
+    { k: "note", label: "备注", type: "text" } ] },
+  /* ---- 妈妈（家庭级，不随孩子切换） ---- */
   mmed:  { label: "妈妈用药", icon: "💊", color: "var(--rose)", fields: [
     { k: "cat", label: "类别", type: "seg", opts: ["止疼药", "维生素", "铁剂", "其他"], def: "止疼药" },
     { k: "name", label: "药名", type: "text", list: "medlist", ph: "布洛芬 / 泰诺…" },
@@ -69,6 +104,12 @@ function summary(e){
     case "mmed": p.push(e.cat || "", e.name || "", e.dose || ""); break;
     case "vax": p.push(e.name || "疫苗", e.dose || "", e.site || "", e.reaction && e.reaction !== "无" ? "反应：" + e.reaction : ""); break;
     case "mbody": if (e.weight) p.push(`体重 ${fmtU("wmom", e.weight)}`); if (e.lochia) p.push(`恶露 ${e.lochia}`); if (e.pain != null) p.push(`疼痛 ${e.pain}`); if (e.mood != null) p.push(`心情 ${e.mood}/5`); if (e.sleepHrs) p.push(`睡 ${e.sleepHrs}h`); break;
+    case "food": p.push(e.meal || "", e.foods || "", e.amount || "", e.newFood ? "新食物" : "", e.reaction && e.reaction !== "无" ? "反应：" + e.reaction : ""); break;
+    case "milestone": p.push(e.cat || "", e.name || "里程碑"); break;
+    case "potty": p.push(e.what || "", e.where || "", e.self ? "自己说要去" : ""); break;
+    case "speech": p.push(e.kind || "", e.words ? `「${e.words}」` : "", e.lang && e.lang !== "中文" ? e.lang : ""); break;
+    case "activity": p.push(e.kind || "活动", e.what || "", e.minutes ? `${e.minutes}分钟` : ""); break;
+    case "behavior": p.push(e.kind || "", e.trigger ? "起因：" + e.trigger : "", e.minutes ? `${e.minutes}分钟` : "", e.how ? "处理：" + e.how : ""); break;
   }
   return p.filter(Boolean).join(" · ");
 }
@@ -79,6 +120,7 @@ function flags(e){
   if (e.type === "diaper" && e.poop && e.color === "白/灰白") f.push("灰白色大便可能提示肝胆问题，请尽快就医");
   if (e.type === "diaper" && e.poop && e.color === "带血") f.push("大便带血：请联系儿科医生");
   if (e.type === "diaper" && e.poop && e.color === "黑（胎便）" && ageDays != null && ageDays > 5) f.push("出生5天后仍为黑色大便：请咨询医生");
+  if (e.type === "food" && ["皮疹", "呕吐", "腹泻"].includes(e.reaction)) f.push(`进食后${e.reaction}可能是食物过敏：记下吃了什么并咨询医生；如出现嘴唇或面部肿胀、呼吸困难、全身荨麻疹，请立即就医`);
   if (e.type === "vax" && ["发热", "其他"].includes(e.reaction)) f.push("接种后若出现高热、持续哭闹超过3小时、呼吸困难、面部肿胀或全身荨麻疹，请及时就医");
   if (e.type === "mbody" && e.lochia === "1小时浸透1片") f.push("出血量大（约1小时浸透1片卫生巾）：属于紧急警示信号，请立即就医");
   if (e.type === "mbody" && e.mood != null && e.mood <= 1) f.push("如果持续低落或有伤害自己/宝宝的念头，请马上联系医生或身边可信任的人");

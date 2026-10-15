@@ -167,7 +167,13 @@ svg text{fill:var(--muted);font-family:var(--f-num);font-size:11px}
 
 /* bottom nav */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:10}
-nav.tabs .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
+nav.tabs .in{max-width:720px;margin:0 auto;display:grid;grid-auto-flow:column;grid-auto-columns:1fr}
+nav.tabs button[hidden]{display:none}
+/* milestone reference list on the grow page */
+.ms{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.ms .chip.done{background:var(--sage-soft);border-color:transparent;color:var(--sage)}
+.ms .chip .cat{font-size:11px;color:var(--muted);margin-right:4px}
+.ms .chip.done .cat{color:inherit;opacity:.8}
 nav.tabs button{background:none;border:0;padding:8px 0 10px;min-height:56px;cursor:pointer;font-size:12px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px}
 nav.tabs button i{font-style:normal;font-size:20px}
 nav.tabs button[aria-current="page"]{color:var(--ink);font-weight:700}

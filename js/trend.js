@@ -1,4 +1,5 @@
 import { sleepMsIn } from "./derived.js";
+import { stageMetrics } from "./stages.js";
 import { S, vis } from "./state.js";
 import { isUS, toDisp, unitOf } from "./units.js";
 import { $, D, H, dayKey, num, startOfDay } from "./util.js";
@@ -13,8 +14,17 @@ const METRICS = {
   feeds:   { label: "喂奶次数", unit: "次", dec: 1, color: "var(--honey)", day: (a, b) => inRange(a, b, "feed").filter(e => e.method !== "吸奶").length },
   wet:     { label: "湿尿布", unit: "次", dec: 1, color: "var(--sky)", day: (a, b) => inRange(a, b, "diaper").filter(e => e.pee).length },
   poop:    { label: "大便", unit: "次", dec: 1, color: "var(--sky)", day: (a, b) => inRange(a, b, "diaper").filter(e => e.poop).length },
-  pump:    { label: "吸奶量", get unit(){ return unitOf("vol"); }, get dec(){ return isUS() ? 1 : 0; }, color: "#9B7BB8", day: (a, b) => toDisp("vol", inRange(a, b, "feed").filter(e => e.method === "吸奶").reduce((s, e) => s + (+e.ml || 0), 0)) }
+  pump:    { label: "吸奶量", get unit(){ return unitOf("vol"); }, get dec(){ return isUS() ? 1 : 0; }, color: "#9B7BB8", day: (a, b) => toDisp("vol", inRange(a, b, "feed").filter(e => e.method === "吸奶").reduce((s, e) => s + (+e.ml || 0), 0)) },
+  /* 婴儿期起 */
+  food:    { label: "吃饭 / 辅食", unit: "次", dec: 1, color: "#C8743A", day: (a, b) => inRange(a, b, "food").filter(e => e.meal !== "奶").length },
+  potty:   { label: "如厕成功", unit: "次", dec: 1, color: "var(--sky)", day: (a, b) => inRange(a, b, "potty").filter(e => ["小马桶", "马桶"].includes(e.where) && e.what !== "坐了没出").length },
+  read:    { label: "阅读", unit: "分钟", dec: 0, color: "#7A6FB5", day: (a, b) => actMinutes(a, b, "阅读") },
+  outdoor: { label: "户外", unit: "分钟", dec: 0, color: "var(--sage)", day: (a, b) => actMinutes(a, b, "户外") },
+  screen:  { label: "屏幕时间", unit: "分钟", dec: 0, color: "var(--muted)", day: (a, b) => actMinutes(a, b, "屏幕") },
+  words:   { label: "语言记录", unit: "条", dec: 1, color: "#5B8E5A", day: (a, b) => inRange(a, b, "speech").length },
+  tantrum: { label: "发脾气 / 哭闹", unit: "次", dec: 1, color: "var(--rose)", day: (a, b) => inRange(a, b, "behavior").filter(e => ["发脾气", "哭闹"].includes(e.kind)).length }
 };
+function actMinutes(a, b, kind){ return inRange(a, b, "activity").filter(e => e.kind === kind).reduce((s, e) => s + (+e.minutes || 0), 0); }
 function inRange(a, b, type){ return vis().filter(e => e.type === type && e.ts >= a && e.ts < b); }
 function hasData(a, b){ return vis().some(e => e.ts >= a && e.ts < b); }
 function weekStart(ts){ const d0 = startOfDay(ts); const wd = (new Date(d0).getDay() + 6) % 7; return d0 - wd * D; }
@@ -58,6 +68,8 @@ function barChart(m, bks, vals){
 }
 function viewTrend(){
   const n = S.gran === "day" ? 14 : 8;
+  const keys = stageMetrics();
+  if (!keys.includes(S.metric)) S.metric = keys[0]; // the stage (or the child) changed since the metric was picked
   const bks = buckets(S.gran, n);
   const vals = bks.map(bk => metricValue(S.metric, bk));
   const M = METRICS[S.metric];
@@ -81,7 +93,7 @@ function viewTrend(){
     <button class="chip" data-gran="day" aria-pressed="${S.gran === "day"}">按天（14 天）</button>
     <button class="chip" data-gran="week" aria-pressed="${S.gran === "week"}">按周（8 周）</button>
   </div>
-  <div class="chips" role="group" aria-label="指标">${Object.entries(METRICS).map(([k, x]) => `<button class="chip" data-metric="${k}" aria-pressed="${S.metric === k}">${x.label}</button>`).join("")}</div>
+  <div class="chips" role="group" aria-label="指标">${keys.map(k => `<button class="chip" data-metric="${k}" aria-pressed="${S.metric === k}">${METRICS[k].label}</button>`).join("")}</div>
   <div class="panel">
     <div class="small muted">${M.label} · ${per[0]}${S.gran === "week" ? (M.max ? "最长" : "日均") : ""}${bks[bks.length - 1].partial ? "（进行中）" : ""}</div>
     <div class="kpi"><span class="v">${fmtV(S.metric, cur)}</span><span class="muted">${M.unit}</span>
@@ -93,7 +105,7 @@ function viewTrend(){
     <div class="h">指标</div><div class="h">${per[0]}${S.gran === "week" ? "日均" : ""}</div><div class="h">${per[1]}${S.gran === "week" ? "日均" : ""}</div><div class="h">变化</div>
     ${cmpRows}
   </div>
-  <p class="small muted" style="margin-top:8px">${S.gran === "week" ? "周数据按“有记录的天数”求日均（最长一觉取一周内最长），避免漏记的日子拉低平均。" : "今天还没过完，和昨天比会偏低，看趋势更准。"}箭头只表示多或少，不代表好坏：例如喂奶次数随月龄减少是正常的。点指标名可切换上方图表。</p></div>`;
+  <p class="small muted" style="margin-top:8px">${S.gran === "week" ? "周数据按“有记录的天数”求日均（最长一觉取一周内最长），避免漏记的日子拉低平均。" : "今天还没过完，和昨天比会偏低，看趋势更准。"}箭头只表示多或少，不代表好坏：例如喂奶次数随月龄减少是正常的。点指标名可切换上方图表。上方只列出当前阶段常用的指标，下表会显示所有有数据的指标。</p></div>`;
 }
 
-export { METRICS, inRange, hasData, weekStart, buckets, metricValue, fmtV, barChart, viewTrend };
+export { METRICS, actMinutes, inRange, hasData, weekStart, buckets, metricValue, fmtV, barChart, viewTrend };
