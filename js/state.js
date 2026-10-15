@@ -52,10 +52,10 @@ function saveLocal(){ try { localStorage.setItem(LS_KEY, JSON.stringify({ entrie
 /* ============ baby age & stages ============ */
 function birthTs(cid = S.childId){ const c = child(cid); return c && c.birth ? new Date(c.birth + "T00:00:00").getTime() : null; }
 function babyAgeDays(at = Date.now(), cid = S.childId){ const b = birthTs(cid); return b == null ? null : Math.floor((startOfDay(at) - b) / D); }
-function ageText(){
-  const d = babyAgeDays(); if (d == null) return "先在设置里填宝宝生日";
+function ageText(cid = S.childId){
+  const d = babyAgeDays(Date.now(), cid); if (d == null) return "先在设置里填宝宝生日";
   if (d < 0) return `距预产期还有 ${-d} 天`;
-  const b = new Date(birthTs()), n = new Date();
+  const b = new Date(birthTs(cid)), n = new Date();
   let m = (n.getFullYear() - b.getFullYear()) * 12 + n.getMonth() - b.getMonth(); if (n.getDate() < b.getDate()) m--;
   const stage = STAGES.find(s => d < s.untilDays) || STAGES[STAGES.length - 1];
   const age = d < 60 ? `出生第 ${d + 1} 天` : m < 24 ? `${m} 个月` : `${Math.floor(m / 12)} 岁 ${m % 12} 个月`;
@@ -79,6 +79,6 @@ function checkupDate(c){ const b = birthTs(); if (b == null) return null; if (c.
 const checkupsDone = () => (S.settings.checkups || {})[S.childId] || {};
 function nextCheckup(){ const done = checkupsDone(); return CHECKUPS.map(c => ({ ...c, at: checkupDate(c) })).find(c => c.at && !done[c.k] && c.at > Date.now() - 14 * D); }
 
-const APP_VERSION = "2026-10-15.2";
+const APP_VERSION = "2026-10-15.3";
 
 export { LS_KEY, S, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, CHECKUPS, checkupDate, checkupsDone, nextCheckup, APP_VERSION };

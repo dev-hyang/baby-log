@@ -7,11 +7,14 @@ import { importJSON, loadDemo, offerFile, putEntry, removeEntry, removeWhere, sa
 import { sbAuth, sbFamily, sbLogout, syncNow } from "./sync.js";
 import { UNIT_KEY, isUS } from "./units.js";
 import { $, D, H, dayKey, dur, newId, startOfDay, toast } from "./util.js";
-import { render } from "./views.js";
+import { render, toggleKids } from "./views.js";
 
 /* ============ events ============ */
 document.addEventListener("click", async ev => {
+  // the child menu closes on any click outside it; a click on an item falls through to its handler below
+  if (!$("#kids").hidden && !ev.target.closest("#bname")) toggleKids(false);
   const t = ev.target.closest("button,[data-checkup]"); if (!t) return;
+  if (t.id === "bname") { toggleKids(); return; }
   if (t.dataset.tab) { S.tab = t.dataset.tab; render(); window.scrollTo(0, 0); return; }
   if (t.dataset.add) { openForm(t.dataset.add, null, t.dataset.preset ? JSON.parse(t.dataset.preset) : {}); return; }
   if (t.dataset.edit) { const e = S.entries.find(x => x.id === t.dataset.edit); e && openForm(e.type, e); return; }
@@ -26,7 +29,7 @@ document.addEventListener("click", async ev => {
   }
   if (t.dataset.mealcheck) { await mealCheck(t.dataset.feed, t.dataset.mealcheck); return; }
   if (t.dataset.copy) { try { await navigator.clipboard.writeText(t.dataset.copy); toast("已复制：" + t.dataset.copy); } catch (e) { toast("请手动搜索：" + t.dataset.copy); } return; }
-  if (t.dataset.kidsel) { setChild(t.dataset.kidsel); S.mealDay = null; render(); return; }
+  if (t.dataset.kidsel) { setChild(t.dataset.kidsel); S.mealDay = null; render(); $("#bname").focus(); return; }
   if (t.dataset.seg) { readDraftInputs(); const k = t.dataset.seg; draft[k] = (draft[k] === t.dataset.v && k !== "child") ? null : t.dataset.v; drawForm(k); return; }
   if (t.dataset.unitsSet) { try { localStorage.setItem(UNIT_KEY, t.dataset.unitsSet); } catch (e) {} openSettings(); render(); toast("单位已切换为" + (isUS() ? "美制" : "公制")); return; }
   if (t.dataset.themeSet !== undefined) { const v = t.dataset.themeSet; if (v) document.documentElement.dataset.theme = v; else delete document.documentElement.dataset.theme; try { localStorage.setItem(LS_KEY + ".theme", v); } catch (e) {} openSettings(); return; }
@@ -74,6 +77,7 @@ document.addEventListener("change", async ev => {
   if (ev.target.id === "importFile" && ev.target.files[0]) { await importJSON(ev.target.files[0]); ev.target.value = ""; return; }
   if (draft && ev.target.closest("#sheetIn") && ev.target.type === "checkbox") { readDraftInputs(); drawForm(); }
 });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#kids").hidden) { toggleKids(false); $("#bname").focus(); } });
 document.addEventListener("input", ev => {
   if (ev.target.id === "q") { S.q = ev.target.value; S.logFocus = true; render(); return; }
   if (ev.target.type === "range") { const o = ev.target.parentElement.querySelector("output"); if (o) o.textContent = ev.target.value; }

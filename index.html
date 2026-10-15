@@ -7,19 +7,22 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=2026-10-15.2">
+<link rel="stylesheet" href="app.css?v=2026-10-15.3">
 <script>try { var th = localStorage.getItem("xiaoyueliang.v1.theme"); if (th) document.documentElement.dataset.theme = th; } catch (e) {}</script>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
-    <div class="brand"><b id="bname">小月亮</b><span id="bage">先在设置里填宝宝生日</span></div>
+    <div class="brand">
+      <button class="bname" id="bname" aria-haspopup="menu" aria-expanded="false" aria-controls="kids">小月亮<span class="chev" aria-hidden="true"></span></button>
+      <span id="bage">先在设置里填宝宝生日</span>
+      <div class="kids" id="kids" role="menu" aria-label="切换孩子" hidden></div>
+    </div>
     <div style="display:flex;align-items:center;gap:10px">
       <span class="status" id="status"><span class="dot"></span>本机保存</span>
       <button class="iconbtn" data-act="settings" aria-label="设置">设置</button>
     </div>
   </header>
-  <div class="kids" id="kids" role="group" aria-label="切换孩子"></div>
   <main id="main"></main>
 </div>
 
@@ -35,6 +38,6 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <input type="file" id="importFile" accept="application/json,.json" hidden>
 
-<script type="module" src="js/app.js?v=2026-10-15.2"></script>
+<script type="module" src="js/app.js?v=2026-10-15.3"></script>
 </body>
 </html>

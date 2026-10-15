@@ -26,11 +26,22 @@ button,input,select,textarea{font:inherit;color:inherit}
 :focus-visible{outline:3px solid var(--slate);outline-offset:2px;border-radius:6px}
 .wrap{max-width:720px;margin:0 auto;padding:0 16px 120px}
 header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 0 8px}
-.brand{display:flex;flex-direction:column}
-.brand b{font-size:20px;letter-spacing:.02em}
-.brand span{font-size:13px;color:var(--muted)}
-.kids{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
-.kids:empty{display:none}
+.brand{display:flex;flex-direction:column;position:relative}
+.brand > span{font-size:13px;color:var(--muted)}
+/* child switcher: the name itself is the trigger, the menu drops down under it */
+.bname{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:20px;letter-spacing:.02em;min-height:28px}
+.bname .chev{display:inline-block;width:10px;height:10px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:translateY(-3px) rotate(45deg);transition:transform .15s}
+.bname[aria-expanded="true"] .chev{transform:translateY(2px) rotate(225deg)}
+.kids{position:absolute;top:100%;left:0;z-index:30;margin-top:6px;min-width:260px;max-width:min(92vw,360px);background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 10px 28px rgba(0,0,0,.14);padding:6px;display:flex;flex-direction:column;gap:2px}
+.kids[hidden]{display:none}
+.kids button{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:44px;padding:8px 12px;border-radius:var(--radius-sm);font-size:15px}
+.kids button b{font-weight:600;white-space:nowrap}
+.kids button small{font-size:12px;color:var(--muted);text-align:right;white-space:nowrap}
+.kids button:hover{background:var(--bg)}
+.kids button[aria-checked="true"]{background:var(--slate-soft)}
+.kids button[aria-checked="true"]::after{content:"✓";color:var(--slate);font-weight:700;margin-left:4px}
+.kids .manage{border-top:1px solid var(--line);border-radius:0;margin-top:4px;padding-top:10px;color:var(--muted);font-size:14px;min-height:40px}
+.bname:focus-visible,.kids button:focus-visible{outline:3px solid var(--slate);outline-offset:2px;border-radius:6px}
 .kidrow{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:center}
 .kidrow input{min-width:0}
 .iconbtn{border:1px solid var(--line);background:var(--surface);border-radius:999px;min-width:44px;height:44px;padding:0 14px;cursor:pointer;font-size:14px}

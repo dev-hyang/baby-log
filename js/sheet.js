@@ -105,7 +105,7 @@ function openSettings(){
   <div class="field"><div class="lab">孩子（小名 · 出生日期）</div>
     <div id="kidRows">${st.children.map((c, i) => `<div class="kidrow"><input type="text" aria-label="第${i + 1}个孩子的小名" data-kr="${i}" data-kk="name" value="${esc(c.name)}" placeholder="小名"><input type="date" aria-label="第${i + 1}个孩子的出生日期" data-kr="${i}" data-kk="birth" value="${esc(c.birth)}">${st.children.length > 1 ? `<button class="chip" data-act="delkid" data-i="${i}" aria-label="移除${esc(c.name || "这个孩子")}">移除</button>` : ""}</div>`).join("")}</div>
     <button class="chip" data-act="addkid">＋ 添加孩子</button>
-    <p class="small muted" style="margin-top:6px">每个孩子的记录分开保存，有两个以上时顶部会出现切换按钮。妈妈的记录属于整个家庭，不随孩子切换。</p></div>
+    <p class="small muted" style="margin-top:6px">每个孩子的记录分开保存，点页面顶部的名字可以切换。妈妈的记录属于整个家庭，不随孩子切换。</p></div>
   <div class="field"><div class="lab">妈妈用药的最短间隔（按医嘱或说明书填写）</div>
     <div id="medRules">${(st.medIntervals || []).map((r, i) => `<div class="row2" style="margin-bottom:6px"><input type="text" aria-label="药名" data-mr="${i}" data-mk="name" value="${esc(r.name)}" placeholder="药名"><input type="number" inputmode="decimal" aria-label="间隔小时" data-mr="${i}" data-mk="hours" value="${esc(r.hours)}" placeholder="间隔（小时）"></div>`).join("")}</div>
     <button class="chip" data-act="addrule">＋ 添加一种药</button></div>

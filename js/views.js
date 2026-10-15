@@ -14,10 +14,15 @@ function renderStatus(){
   $("#status").innerHTML = S.mode === "family"
     ? (pending ? `<span class="dot"></span>${pending} 条待同步` : `<span class="dot ok"></span>家庭同步 · ${Object.keys(SB.members).length || 1} 人`)
     : S.mode === "cloud" ? `<span class="dot ok"></span>已同步到你的账号` : `<span class="dot"></span>保存在本设备`;
-  $("#bname").textContent = child().name ? `${child().name}的记录` : "小月亮";
+  $("#bname").innerHTML = `${esc(child().name ? `${child().name}的记录` : "小月亮")}<span class="chev" aria-hidden="true"></span>`;
   $("#bage").textContent = ageText();
-  const kids = S.settings.children;
-  $("#kids").innerHTML = kids.length > 1 ? kids.map(c => `<button class="chip" data-kidsel="${esc(c.id)}" aria-pressed="${c.id === S.childId}">${esc(c.name || "宝宝")}</button>`).join("") : "";
+  $("#kids").innerHTML = S.settings.children.map(c => `<button role="menuitemradio" aria-checked="${c.id === S.childId}" data-kidsel="${esc(c.id)}"><b>${esc(c.name || "宝宝")}</b><small>${esc(ageText(c.id))}</small></button>`).join("")
+    + `<button class="manage" role="menuitem" data-act="settings">管理孩子…</button>`;
+}
+function toggleKids(open = $("#kids").hidden){
+  $("#kids").hidden = !open;
+  $("#bname").setAttribute("aria-expanded", String(open));
+  if (open) { const cur = $("#kids [aria-checked='true']"); cur && cur.focus(); }
 }
 function render(){
   renderStatus();
@@ -290,4 +295,4 @@ function viewLearn(){
     ${["丁香妈妈", "崔玉涛育学园", "年糕妈妈"].map(n => `<div class="medrow"><span>${n}</span><button class="chip" data-copy="${n}">复制名称</button></div>`).join("")}</div>`;
 }
 
-export { renderStatus, render, heroHTML, bigDur, viewToday, medRow, entryRow, viewLog, viewList, lineChart, sleepBarcode, viewMom, viewGrow, vaxHTML, viewLearn };
+export { renderStatus, render, toggleKids, heroHTML, bigDur, viewToday, medRow, entryRow, viewLog, viewList, lineChart, sleepBarcode, viewMom, viewGrow, vaxHTML, viewLearn };
