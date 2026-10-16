@@ -1,0 +1,2 @@
+# Supabase SQL (schema baseline + migrations) stays local, not in git
+supabase/
