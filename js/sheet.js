@@ -170,7 +170,7 @@ function openSettings(){
   ${seg("data-theme-set", document.documentElement.dataset.theme || "", [["", t("跟随系统")], ["light", t("浅色")], ["dark", t("深色（夜里喂奶）")]], t("外观"))}
   <h2>${t("姐妹应用")}</h2>
   <div class="panel">${APPS.filter(a => a.key !== THIS_APP).map(a => `<div class="medrow"><div><b>${esc(t(a.name))}</b><div class="small muted">${esc(a.url.replace(/^https:\/\//, ""))}</div></div><a class="chip" href="${a.url}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;display:inline-flex;align-items:center">${t("打开")}</a></div>`).join("")}
-    <p class="small muted" style="margin-top:8px">${t("同一个家庭的其他小工具，点页面顶部标题旁的 ⇅ 也能切换。")}</p></div>
+    <p class="small muted" style="margin-top:8px">${t("同一个账号、同一个家庭，三个站点互通；标题旁的左右箭头也能切换。")}</p></div>
   <p class="small muted" style="margin-top:24px">${t("版本 {v}", { v: APP_VERSION })}</p>`;
   showSheet("settings");
 }

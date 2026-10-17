@@ -8,16 +8,16 @@ import { importJSON, loadDemo, offerFile, putEntry, removeEntry, removeWhere, sa
 import { sbAuth, sbCreate, sbJoin, sbLogout, sbMember, sbResetCode, syncNow } from "./sync.js";
 import { UNIT_KEY, isUS } from "./units.js";
 import { $, D, H, dayKey, dur, newId, startOfDay, toast } from "./util.js";
-import { render, toggleApps, toggleKids } from "./views.js";
+import { openPrint } from "./print.js";
+import { render, toggleKids, toggleMenu } from "./views.js";
 
 /* ============ events ============ */
 document.addEventListener("click", async ev => {
-  // the child / app menus close on any click outside them; a click on an item falls through to its handler below
+  // the child menu and the header dropdown close on any click outside them; a click on an item falls through to its handler below
   if (!$("#kids").hidden && !ev.target.closest("#bname")) toggleKids(false);
-  if (!$("#apps").hidden && !ev.target.closest("#appsw")) toggleApps(false);
+  if (!$("#hmenu").hidden && !ev.target.closest('[data-act="print-menu"], [data-act="more-menu"]')) toggleMenu(false);
   const t0 = ev.target.closest("button,[data-checkup]"); if (!t0) return;
   if (t0.id === "bname") { toggleKids(); return; }
-  if (t0.id === "appsw") { toggleApps(); return; }
   if (t0.dataset.tab) { S.tab = t0.dataset.tab; render(); window.scrollTo(0, 0); return; }
   if (t0.dataset.add) { openForm(t0.dataset.add, null, t0.dataset.preset ? JSON.parse(t0.dataset.preset) : {}); return; }
   if (t0.dataset.edit) { const e = S.entries.find(x => x.id === t0.dataset.edit); e && openForm(e.type, e); return; }
@@ -65,6 +65,9 @@ document.addEventListener("click", async ev => {
     case "wake": { const e = S.entries.find(x => x.id === t0.dataset.id); if (e) { await putEntry({ ...e, end: Date.now() }); toast(t("这一觉睡了 {d}", { d: dur(Date.now() - e.ts) })); } break; }
     case "addpick": pickType(); break;
     case "settings": openSettings(); break;
+    case "print-menu": toggleMenu("print"); break;
+    case "more-menu": toggleMenu("more"); break;
+    case "print-meal": case "print-trend": case "print-timeline": case "print-medical": openPrint(t0.dataset.act.slice(6)); break;
     case "addrule": readSettingsInputs(); S.settings.medIntervals.push({ name: "", hours: "" }); openSettings(); break;
     case "addkid": readSettingsInputs(); S.settings.children.push({ id: newId(), name: "", birth: "" }); openSettings(); break;
     case "delkid": {
@@ -101,13 +104,12 @@ document.addEventListener("change", async ev => {
 });
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && !$("#kids").hidden) { toggleKids(false); $("#bname").focus(); return; }
-  if (e.key === "Escape" && !$("#apps").hidden) { toggleApps(false); $("#appsw").focus(); return; }
-  // arrow keys walk the app list: ↓ / → next, ↑ / ← previous (also opens the menu from the switcher button)
+  if (e.key === "Escape" && !$("#hmenu").hidden) { toggleMenu(false); const o = [...document.querySelectorAll('header [data-act="more-menu"], header [data-act="print-menu"]')].find(b => b.offsetParent); o && o.focus(); return; }
+  // arrow keys walk the header dropdown: ↓ / → next, ↑ / ← previous
   const arrows = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 };
-  if (arrows[e.key] && (e.target.id === "appsw" || e.target.closest("#apps"))) {
+  if (arrows[e.key] && !$("#hmenu").hidden && e.target.closest("#hmenu")) {
     e.preventDefault();
-    if ($("#apps").hidden) toggleApps(true);
-    const items = [...$("#apps").querySelectorAll("a")], i = items.indexOf(document.activeElement);
+    const items = [...$("#hmenu").querySelectorAll("[role=menuitem]")], i = items.indexOf(document.activeElement);
     items[(i + arrows[e.key] + items.length) % items.length].focus();
   }
 });
