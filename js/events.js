@@ -8,14 +8,16 @@ import { importJSON, loadDemo, offerFile, putEntry, removeEntry, removeWhere, sa
 import { sbAuth, sbCreate, sbJoin, sbLogout, sbMember, sbResetCode, syncNow } from "./sync.js";
 import { UNIT_KEY, isUS } from "./units.js";
 import { $, D, H, dayKey, dur, newId, startOfDay, toast } from "./util.js";
-import { render, toggleKids } from "./views.js";
+import { render, toggleApps, toggleKids } from "./views.js";
 
 /* ============ events ============ */
 document.addEventListener("click", async ev => {
-  // the child menu closes on any click outside it; a click on an item falls through to its handler below
+  // the child / app menus close on any click outside them; a click on an item falls through to its handler below
   if (!$("#kids").hidden && !ev.target.closest("#bname")) toggleKids(false);
+  if (!$("#apps").hidden && !ev.target.closest("#appsw")) toggleApps(false);
   const t0 = ev.target.closest("button,[data-checkup]"); if (!t0) return;
   if (t0.id === "bname") { toggleKids(); return; }
+  if (t0.id === "appsw") { toggleApps(); return; }
   if (t0.dataset.tab) { S.tab = t0.dataset.tab; render(); window.scrollTo(0, 0); return; }
   if (t0.dataset.add) { openForm(t0.dataset.add, null, t0.dataset.preset ? JSON.parse(t0.dataset.preset) : {}); return; }
   if (t0.dataset.edit) { const e = S.entries.find(x => x.id === t0.dataset.edit); e && openForm(e.type, e); return; }
@@ -97,7 +99,18 @@ document.addEventListener("change", async ev => {
   if (ev.target.id === "importFile" && ev.target.files[0]) { await importJSON(ev.target.files[0]); ev.target.value = ""; return; }
   if (draft && ev.target.closest("#sheetIn") && ev.target.type === "checkbox") { readDraftInputs(); drawForm(); }
 });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#kids").hidden) { toggleKids(false); $("#bname").focus(); } });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && !$("#kids").hidden) { toggleKids(false); $("#bname").focus(); return; }
+  if (e.key === "Escape" && !$("#apps").hidden) { toggleApps(false); $("#appsw").focus(); return; }
+  // arrow keys walk the app list: ↓ / → next, ↑ / ← previous (also opens the menu from the switcher button)
+  const arrows = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 };
+  if (arrows[e.key] && (e.target.id === "appsw" || e.target.closest("#apps"))) {
+    e.preventDefault();
+    if ($("#apps").hidden) toggleApps(true);
+    const items = [...$("#apps").querySelectorAll("a")], i = items.indexOf(document.activeElement);
+    items[(i + arrows[e.key] + items.length) % items.length].focus();
+  }
+});
 document.addEventListener("input", ev => {
   if (ev.target.id === "q") { S.q = ev.target.value; S.logFocus = true; render(); return; }
   if (ev.target.type === "range") { const o = ev.target.parentElement.querySelector("output"); if (o) o.textContent = ev.target.value; }

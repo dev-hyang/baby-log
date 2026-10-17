@@ -1,3 +1,4 @@
+import { APPS, THIS_APP } from "./apps.js";
 import { ask } from "./ask.js";
 import { byTime, last, medStatus, suggestSide, within } from "./derived.js";
 import { t } from "./i18n.js";
@@ -20,11 +21,21 @@ function renderStatus(){
   $("#bage").textContent = ageText();
   $("#kids").innerHTML = S.settings.children.map(c => `<button role="menuitemradio" aria-checked="${c.id === S.childId}" data-kidsel="${esc(c.id)}"><b>${esc(c.name || t("宝宝"))}</b><small>${esc(ageText(c.id))}</small></button>`).join("")
     + `<button class="manage" role="menuitem" data-act="settings">${t("管理孩子…")}</button>`;
+  $("#apps").innerHTML = APPS.map(a => a.key === THIS_APP
+    ? `<a role="menuitem" href="${a.url}" aria-current="page" tabindex="0"><b>${esc(t(a.name))}</b><small>${t("当前")}</small></a>`
+    : `<a role="menuitem" href="${a.url}" target="_blank" rel="noopener" tabindex="0"><b>${esc(t(a.name))}</b><small>${t("新标签页打开")}</small></a>`).join("");
 }
 function toggleKids(open = $("#kids").hidden){
+  if (open) toggleApps(false);
   $("#kids").hidden = !open;
   $("#bname").setAttribute("aria-expanded", String(open));
   if (open) { const cur = $("#kids [aria-checked='true']"); cur && cur.focus(); }
+}
+function toggleApps(open = $("#apps").hidden){
+  if (open) toggleKids(false);
+  $("#apps").hidden = !open;
+  $("#appsw").setAttribute("aria-expanded", String(open));
+  if (open) { const cur = $("#apps [aria-current='page']"); cur && cur.focus(); }
 }
 function render(){
   renderStatus();
@@ -332,4 +343,4 @@ function viewLearn(){
     ${["丁香妈妈", "崔玉涛育学园", "年糕妈妈"].map(n => `<div class="medrow"><span>${n}</span><button class="chip" data-copy="${n}">${t("复制名称")}</button></div>`).join("")}</div>`;
 }
 
-export { renderStatus, render, toggleKids, heroHTML, bigDur, viewToday, medRow, entryRow, viewLog, viewList, lineChart, sleepBarcode, viewMom, viewGrow, milestonesHTML, foodsHTML, vaxHTML, viewLearn };
+export { renderStatus, render, toggleKids, toggleApps, heroHTML, bigDur, viewToday, medRow, entryRow, viewLog, viewList, lineChart, sleepBarcode, viewMom, viewGrow, milestonesHTML, foodsHTML, vaxHTML, viewLearn };
