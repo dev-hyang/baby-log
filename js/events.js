@@ -3,7 +3,7 @@ import { last } from "./derived.js";
 import { setLang, t } from "./i18n.js";
 import { mealCheck } from "./meal.js";
 import { draft, drawForm, openForm, openSettings, pickType, readDraftInputs, readSettingsInputs } from "./sheet.js";
-import { LS_KEY, S, child, childOf, isKidType, kidCount, setChild } from "./state.js";
+import { LS_KEY, S, child, childOf, isKidType, kidCount, matchCheckup, setChild } from "./state.js";
 import { importJSON, loadDemo, offerFile, putEntry, removeEntry, removeWhere, saveSettings, toCSV } from "./store.js";
 import { sbAuth, sbCreate, sbJoin, sbLogout, sbMember, sbResetCode, syncNow } from "./sync.js";
 import { UNIT_KEY, isUS } from "./units.js";
@@ -22,6 +22,7 @@ document.addEventListener("click", async ev => {
   if (t0.dataset.filter) { S.filter = t0.dataset.filter; render(); return; }
   if (t0.dataset.logview) { S.logView = t0.dataset.logview; render(); return; }
   if (t0.dataset.gran) { S.gran = t0.dataset.gran; render(); return; }
+  if (t0.dataset.ckview) { S.checkupView = t0.dataset.ckview; render(); return; }
   if (t0.dataset.metric) { S.metric = t0.dataset.metric; render(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   if (t0.dataset.mealday) {
     const cur = S.mealDay ?? startOfDay(Date.now());
@@ -50,6 +51,11 @@ document.addEventListener("click", async ev => {
       if (e.type === "sleep" && e.end && e.end < e.ts) { toast(t("醒来时间要晚于入睡时间")); return; }
       $("#sheet").close(); await putEntry(e);
       for (const id of also) await putEntry({ ...e, id: newId(), child: id }); // one copy per extra child
+      // a well-child visit ticks its checkpoint in the schedule, so the reminder table needs no second step
+      if (e.type === "baby" && e.src === "儿科体检") {
+        const cid = childOf(e), c = matchCheckup(e.ts, cid), done = (S.settings.checkups || {})[cid] || {};
+        if (c && !done[c.k]) { S.settings.checkups = { ...S.settings.checkups, [cid]: { ...done, [c.k]: true } }; await saveSettings(); toast(t("已保存，并勾选了 {label} 体检", { label: t(c.label) })); break; }
+      }
       toast(also.length ? t("已保存 {n} 条", { n: also.length + 1 }) : t("已保存")); break; }
     case "who-change": readDraftInputs(); draft._pick = true; drawForm("child"); break;
     case "del": if (confirm(t("删除这条记录？"))) { $("#sheet").close(); await removeEntry(draft.id); toast(t("已删除")); } break;

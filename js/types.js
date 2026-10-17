@@ -33,6 +33,8 @@ const TYPES = {
     { k: "how", label: "怎么入睡", type: "seg", opts: ["自主入睡", "奶睡", "抱睡", "拍睡/摇睡"] },
     { k: "note", label: "备注", type: "text", ph: "夜醒次数、哭闹…" } ] },
   baby:  { label: "宝宝健康", icon: "🌡", color: "var(--rose)", fields: [
+    { k: "src", label: "记录来源", type: "seg", opts: ["自己记录", "儿科体检", "看病/急诊"], def: "自己记录" },
+    { k: "clinic", label: "医院 / 医生", type: "text", show: m => isVisit(m) },
     { k: "temp", label: "体温", type: "num", dim: "temp", step: .1 },
     { k: "weight", label: "体重", type: "num", dim: "wbaby", step: .01 },
     { k: "length", label: "身长", type: "num", dim: "len", step: .1, half: 1 },
@@ -103,6 +105,8 @@ const TYPES = {
     { k: "note", label: "备注", type: "area", ph: "伤口、乳房胀痛、情绪…" } ] }
 };
 const typeLabel = type => t((TYPES[type] || {}).label || type);
+// a baby-health record taken at a clinic (well-child checkup or sick visit) rather than at home
+const isVisit = e => e.type === "baby" && !!e.src && e.src !== "自己记录";
 
 // one line per record for lists, tables and CSV; stored option values are translated, free text is not
 function summary(e){
@@ -114,7 +118,7 @@ function summary(e){
       if (e.left) p.push(t("左{n}分", { n: e.left })); if (e.right) p.push(t("右{n}分", { n: e.right })); if (e.ml) p.push(fmtU("vol", e.ml)); break;
     case "diaper": if (e.pee) p.push(t("尿")); if (e.poop) p.push(e.color ? t("{label}（{u}）", { label: t("便"), u: t(e.color) }) : t("便")); break;
     case "sleep": p.push(e.end ? t("睡到 {t} · {d}", { t: hm(e.end), d: dur(e.end - e.ts) }) : t("正在睡")); if (e.where) p.push(t(e.where)); if (e.how) p.push(t(e.how)); break;
-    case "baby": if (e.temp) p.push(`${t("体温")} ${fmtU("temp", e.temp)}`); if (e.weight) p.push(`${t("体重")} ${fmtU("wbaby", e.weight)}`); if (e.length) p.push(`${t("身长")} ${fmtU("len", e.length)}`); if (e.head) p.push(`${t("头围")} ${fmtU("len", e.head)}`); if (!p.length) p.push(t("健康记录")); break;
+    case "baby": if (isVisit(e)) p.push(t(e.src)); if (e.temp) p.push(`${t("体温")} ${fmtU("temp", e.temp)}`); if (e.weight) p.push(`${t("体重")} ${fmtU("wbaby", e.weight)}`); if (e.length) p.push(`${t("身长")} ${fmtU("len", e.length)}`); if (e.head) p.push(`${t("头围")} ${fmtU("len", e.head)}`); if (!p.length) p.push(t("健康记录")); break;
     case "bmed": p.push(v(e.cat), e.name || "", e.dose || ""); break;
     case "mmed": p.push(v(e.cat), e.name || "", e.dose || ""); break;
     case "vax": p.push(e.name || t("疫苗"), v(e.dose), v(e.site), e.reaction && e.reaction !== "无" ? t("反应：{r}", { r: t(e.reaction) }) : ""); break;
@@ -142,4 +146,4 @@ function flags(e){
   return f;
 }
 
-export { TYPES, typeLabel, summary, flags };
+export { TYPES, typeLabel, isVisit, summary, flags };

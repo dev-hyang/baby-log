@@ -9,7 +9,7 @@ const S = {
   childId: null, // which child this device is looking at
   mode: "local", col: null, prof: null, sample: null,
   tab: "today", filter: "all", q: "",
-  logView: "meal", mealDay: null, gran: "day", metric: "sleep",
+  logView: "meal", mealDay: null, gran: "day", metric: "sleep", checkupView: "plan",
   logFocus: false // re-focus the search box after the log view re-renders on typing
 };
 function loadLocal(){
@@ -87,10 +87,16 @@ const CHECKUPS = [
   { k: "m24", label: "2 岁", m: 24 }, { k: "m30", label: "2 岁半", m: 30 }, { k: "y3", label: "3 岁", m: 36 },
   { k: "y4", label: "4 岁", m: 48 }, { k: "y5", label: "5 岁", m: 60 }
 ];
-function checkupDate(c){ const b = birthTs(); if (b == null) return null; if (c.days) return b + c.days * D; const d = new Date(b); d.setMonth(d.getMonth() + c.m); return d.getTime(); }
-const checkupsDone = () => (S.settings.checkups || {})[S.childId] || {};
+function checkupDate(c, cid = S.childId){ const b = birthTs(cid); if (b == null) return null; if (c.days) return b + c.days * D; const d = new Date(b); d.setMonth(d.getMonth() + c.m); return d.getTime(); }
+const checkupsDone = (cid = S.childId) => (S.settings.checkups || {})[cid] || {};
+// the scheduled visit a clinic record most plausibly belongs to: the closest one within three weeks
+function matchCheckup(ts, cid = S.childId){
+  let best = null;
+  for (const c of CHECKUPS) { const at = checkupDate(c, cid); if (at == null) continue; const d = Math.abs(at - ts); if (d <= 21 * D && (!best || d < best.d)) best = { c, d }; }
+  return best && best.c;
+}
 function nextCheckup(){ const done = checkupsDone(); return CHECKUPS.map(c => ({ ...c, at: checkupDate(c) })).find(c => c.at && !done[c.k] && c.at > Date.now() - 14 * D); }
 
-const APP_VERSION = "2026-10-16.2";
+const APP_VERSION = "2026-10-17.1";
 
-export { LS_KEY, S, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupsDone, nextCheckup, APP_VERSION };
+export { LS_KEY, S, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupsDone, matchCheckup, nextCheckup, APP_VERSION };
