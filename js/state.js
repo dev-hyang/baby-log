@@ -91,6 +91,6 @@ function checkupDate(c){ const b = birthTs(); if (b == null) return null; if (c.
 const checkupsDone = () => (S.settings.checkups || {})[S.childId] || {};
 function nextCheckup(){ const done = checkupsDone(); return CHECKUPS.map(c => ({ ...c, at: checkupDate(c) })).find(c => c.at && !done[c.k] && c.at > Date.now() - 14 * D); }
 
-const APP_VERSION = "2026-10-16.1";
+const APP_VERSION = "2026-10-16.2";
 
 export { LS_KEY, S, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupsDone, nextCheckup, APP_VERSION };

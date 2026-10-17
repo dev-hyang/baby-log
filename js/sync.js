@@ -223,10 +223,16 @@ async function sbResetCode(){
   toast(t("邀请码已重置")); refreshSettingsIfOpen();
 }
 async function sbMember(action, uid){
-  if (!isOwner() || !SB.members[uid]) return;
+  const me = SB.user.id;
+  if (!SB.members[uid]) return;
+  if (!(isOwner() || (action === "rename" && uid === me))) return; // members may only rename themselves
   const name = memberName(uid);
   let call;
-  if (action === "remove") {
+  if (action === "rename") {
+    const next = prompt(t("{name} 的新称呼", { name }), name); if (next == null) return;
+    const v = next.trim(); if (!v || v === name) return;
+    call = SB.client.rpc("set_member_name", { p_family: SB.family.id, p_user: uid, p_name: v });
+  } else if (action === "remove") {
     if (!confirm(t("把 {name} 移出家庭？对方设备上的家庭记录副本会被清除；已写的记录保留。如果不想让对方再加入，之后请重置邀请码。", { name }))) return;
     call = SB.client.rpc("remove_member", { p_family: SB.family.id, p_user: uid });
   } else {
@@ -266,15 +272,21 @@ function familyHTML(){
     <div class="btns"><button class="btn" data-act="sb-join">${t("加入家庭")}</button><button class="btn" data-act="sb-logout">${t("退出登录")}</button></div>`;
   }
   const owner = isOwner(), me = SB.user.id;
-  const rows = Object.entries(SB.members).map(([uid, m]) => `<div class="medrow"><div><b>${esc(m.name)}</b>${uid === me ? ` <span class="small muted">${t("（你）")}</span>` : ""}${m.role === "owner" ? ` <span class="pill ok">${t("家主")}</span>` : ""}</div>
-      ${owner && uid !== me ? `<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${m.role === "owner" ? `<button class="chip" data-member="demote" data-uid="${esc(uid)}">${t("转为成员")}</button>` : `<button class="chip" data-member="promote" data-uid="${esc(uid)}">${t("设为家主")}</button>`}<button class="chip" data-member="remove" data-uid="${esc(uid)}" style="color:var(--rose)">${t("移除")}</button></div>` : ""}</div>`).join("");
+  const rows = Object.entries(SB.members).map(([uid, m]) => {
+    const btn = (act, label, style = "") => `<button class="chip" data-member="${act}" data-uid="${esc(uid)}"${style}>${label}</button>`;
+    const btns = [];
+    if (owner || uid === me) btns.push(btn("rename", t("改称呼")));
+    if (owner && uid !== me) btns.push(m.role === "owner" ? btn("demote", t("转为成员")) : btn("promote", t("设为家主")), btn("remove", t("移除"), ' style="color:var(--rose)"'));
+    return `<div class="medrow"><div><b>${esc(m.name)}</b>${uid === me ? ` <span class="small muted">${t("（你）")}</span>` : ""}${m.role === "owner" ? ` <span class="pill ok">${t("家主")}</span>` : ""}</div>
+      ${btns.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${btns.join("")}</div>` : ""}</div>`;
+  }).join("");
   return `
     <p class="small muted" style="margin-bottom:0">${t("家庭成员")}</p>
     <div class="panel" style="padding:0 14px">${rows}</div>
     <p style="margin-top:12px">${t("邀请码")} <b class="num" style="font-size:20px;letter-spacing:.12em">${esc(SB.family.invite_code)}</b> <button class="chip" data-copy="${esc(SB.family.invite_code)}">${t("复制")}</button>${owner ? ` <button class="chip" data-act="sb-reset-code">${t("重置邀请码")}</button>` : ""}</p>
     <p class="small muted">${t("把网址和邀请码发给家人：对方打开网页，在设置里输入邀请码就能一起记录，不需要注册。邀请码相当于家门钥匙，只发给信任的人。")}</p>
     ${isAnon() ? `<p class="small muted">${t("这台设备是用邀请码加入的，没有绑定邮箱。换手机或清理浏览器数据后，再输一次邀请码即可。")}</p>` : ""}
-    ${owner ? `<p class="small muted">${t("你是家主：可以重置邀请码、把家人设为家主或移出家庭（比如有人误加入）。")}</p>` : ""}
+    ${owner ? `<p class="small muted">${t("你是家主：可以重置邀请码、修改家人的称呼、把家人设为家主或移出家庭（比如有人误加入）。")}</p>` : ""}
     <div class="btns"><button class="btn" data-act="sb-sync">${t("立即同步")}</button><button class="btn" data-act="sb-logout">${t("退出登录")}</button></div>`;
 }
 
