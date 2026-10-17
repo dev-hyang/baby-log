@@ -6,13 +6,17 @@ import { familyHTML } from "./sync.js";
 import { TYPES, flags, typeLabel } from "./types.js";
 import { DISP_DEC, KG_LB, fromDisp, isUS, toDisp, trim, unitOf, unitPref } from "./units.js";
 import { $, esc, fromInput, newId, num, toInput } from "./util.js";
+import { render } from "./views.js";
 
 /* ============ sheet as a page ============
    The form replaces the page content instead of floating over it, so nothing depends on how a given
    iOS version sizes the viewport around its toolbars. Back gesture / back button closes it. */
-let sheetScrollY = 0;
-function showSheet(){
+let sheetScrollY = 0, sheetKind = null; // "form" | "pick" | "settings"
+// the page manages its own scroll position when the sheet's history entry is popped
+try { history.scrollRestoration = "manual"; } catch (e) {}
+function showSheet(kind){
   const d = $("#sheet");
+  sheetKind = kind;
   if (!d.open) {
     sheetScrollY = window.scrollY;
     d.show(); // non-modal: rendered in page flow
@@ -22,13 +26,20 @@ function showSheet(){
   window.scrollTo(0, 0);
   const first = d.querySelector(".sheet-head h3"); if (first) { first.tabIndex = -1; first.focus({ preventScroll: true }); }
 }
-$("#sheet").addEventListener("close", () => {
+// Runs once per close, whether we closed the sheet ourselves or the browser did (back gesture).
+// A record form returns to where it was opened; settings always lands on the top of Today.
+function onSheetClosed(){
+  if (sheetKind == null) return;
+  const kind = sheetKind; sheetKind = null;
   document.body.classList.remove("sheet-open");
-  requestAnimationFrame(() => window.scrollTo(0, sheetScrollY));
+  if (kind === "settings") { S.tab = "today"; render(); window.scrollTo(0, 0); requestAnimationFrame(() => window.scrollTo(0, 0)); }
+  else { window.scrollTo(0, sheetScrollY); requestAnimationFrame(() => window.scrollTo(0, sheetScrollY)); }
   if (history.state && history.state.sheet) { try { history.back(); } catch (e) {} }
-});
-window.addEventListener("popstate", () => { const d = $("#sheet"); if (d.open) d.close(); });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#sheet").open) $("#sheet").close(); });
+}
+function closeSheet(){ const d = $("#sheet"); if (d.open) d.close(); onSheetClosed(); }
+$("#sheet").addEventListener("close", onSheetClosed);
+window.addEventListener("popstate", () => { if ($("#sheet").open) closeSheet(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#sheet").open) closeSheet(); });
 
 const head = title => `<div class="sheet-head"><h3 id="sheetTitle">${title}</h3><button class="iconbtn" data-act="close" aria-label="${t("关闭")}">${t("关闭")}</button></div>`;
 // suggestion lists for free-text fields, shown in the interface language
@@ -43,7 +54,7 @@ function openForm(type, existing, preset){
   const T = TYPES[type];
   draft = existing ? { ...existing } : { id: newId(), type, ts: Date.now(), ...(isKidType(type) ? { child: S.childId } : {}), ...preset };
   if (!existing) for (const f of T.fields) { const d = typeof f.def === "function" ? f.def(draft) : f.def; if (d !== undefined && draft[f.k] === undefined) draft[f.k] = d; }
-  drawForm(); showSheet(false);
+  drawForm(); showSheet("form");
 }
 function drawForm(focusKey){
   const T = TYPES[draft.type], isNew = !S.entries.some(e => e.id === draft.id);
@@ -126,7 +137,7 @@ function pickType(){
   $("#sheetIn").innerHTML = `${head(t("补记哪一类？"))}
   ${grid(first)}
   ${rest.length ? `<h2>${t("其他")}</h2>${grid(rest)}` : ""}`;
-  showSheet(true);
+  showSheet("pick");
 }
 
 /* ============ settings sheet ============ */
@@ -161,7 +172,7 @@ function openSettings(){
   <div class="panel">${APPS.filter(a => a.key !== THIS_APP).map(a => `<div class="medrow"><div><b>${esc(t(a.name))}</b><div class="small muted">${esc(a.url.replace(/^https:\/\//, ""))}</div></div><a class="chip" href="${a.url}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;display:inline-flex;align-items:center">${t("打开")}</a></div>`).join("")}
     <p class="small muted" style="margin-top:8px">${t("同一个家庭的其他小工具，点页面顶部标题旁的 ⇅ 也能切换。")}</p></div>
   <p class="small muted" style="margin-top:24px">${t("版本 {v}", { v: APP_VERSION })}</p>`;
-  showSheet(false);
+  showSheet("settings");
 }
 function readSettingsInputs(){
   const kids = []; document.querySelectorAll("[data-kr]").forEach(el => { const i = +el.dataset.kr; (kids[i] ||= { ...S.settings.children[i] })[el.dataset.kk] = el.value.trim(); });
@@ -170,4 +181,4 @@ function readSettingsInputs(){
   S.settings.medIntervals = rules.filter(r => r && (r.name || r.hours));
 }
 
-export { sheetScrollY, showSheet, draft, openForm, drawForm, readDraftInputs, pickType, openSettings, readSettingsInputs };
+export { sheetScrollY, showSheet, closeSheet, draft, openForm, drawForm, readDraftInputs, pickType, openSettings, readSettingsInputs };
