@@ -1,7 +1,8 @@
+import { LANGS, langPref, t } from "./i18n.js";
 import { APP_VERSION, S, child, childName, childOf, isKidType } from "./state.js";
 import { milestoneNames, stageTypes } from "./stages.js";
 import { familyHTML } from "./sync.js";
-import { TYPES, flags } from "./types.js";
+import { TYPES, flags, typeLabel } from "./types.js";
 import { DISP_DEC, KG_LB, fromDisp, isUS, toDisp, trim, unitOf, unitPref } from "./units.js";
 import { $, esc, fromInput, newId, num, toInput } from "./util.js";
 
@@ -28,6 +29,13 @@ $("#sheet").addEventListener("close", () => {
 window.addEventListener("popstate", () => { const d = $("#sheet"); if (d.open) d.close(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#sheet").open) $("#sheet").close(); });
 
+const head = title => `<div class="sheet-head"><h3 id="sheetTitle">${title}</h3><button class="iconbtn" data-act="close" aria-label="${t("关闭")}">${t("关闭")}</button></div>`;
+// suggestion lists for free-text fields, shown in the interface language
+const VAX_LIST = ["乙肝疫苗 HepB", "卡介苗 BCG", "脊灰疫苗 IPV/OPV", "百白破 DTaP", "Hib 疫苗", "肺炎球菌疫苗 PCV", "轮状病毒疫苗 RV", "麻腮风 MMR", "水痘疫苗 VAR", "甲肝疫苗 HepA", "乙脑疫苗 JE", "流脑疫苗 MenA/MenAC", "流感疫苗 Flu", "新冠疫苗 COVID-19", "RSV 单抗 nirsevimab"];
+const MED_LIST = ["布洛芬", "泰诺（对乙酰氨基酚）", "复合维生素", "铁剂", "钙片"];
+const FOOD_LIST = ["高铁米粉", "南瓜泥", "红薯泥", "胡萝卜泥", "土豆泥", "苹果泥", "香蕉", "牛油果", "蛋黄", "鸡蛋", "豆腐", "鱼肉", "鸡肉", "牛肉", "猪肝", "酸奶", "粥", "面条", "花生酱（稀）", "西兰花", "菠菜", "草莓", "橙子"];
+const datalist = (id, items) => `<datalist id="${id}">${items.map(v => `<option value="${esc(v)}">`).join("")}</datalist>`;
+
 /* ============ form sheet ============ */
 let draft = null;
 function openForm(type, existing, preset){
@@ -39,30 +47,30 @@ function openForm(type, existing, preset){
 function drawForm(focusKey){
   const T = TYPES[draft.type], isNew = !S.entries.some(e => e.id === draft.id);
   const fieldsHTML = T.fields.filter(f => !f.show || f.show(draft)).map(f => {
-    const v = draft[f.k], id = "f_" + f.k;
+    const v = draft[f.k], id = "f_" + f.k, label = t(f.label), ph = esc(f.ph ? t(f.ph) : "");
     let inner = "";
     if (f.type === "seg") {
       let opts = typeof f.opts === "function" ? f.opts(draft) : f.opts;
       if (v && !opts.includes(v)) opts = [...opts, v]; // an older record whose option no longer fits the age list stays visible
-      inner = `<div class="lab" id="${id}">${f.label}</div><div class="seg" role="group" aria-labelledby="${id}">${opts.map(o => `<button type="button" data-seg="${f.k}" data-v="${esc(o)}" aria-pressed="${v === o}">${esc(o)}</button>`).join("")}</div>`;
+      inner = `<div class="lab" id="${id}">${label}</div><div class="seg" role="group" aria-labelledby="${id}">${opts.map(o => `<button type="button" data-seg="${f.k}" data-v="${esc(o)}" aria-pressed="${v === o}">${esc(t(o))}</button>`).join("")}</div>`;
     }
-    else if (f.type === "check") inner = `<label class="check"><input type="checkbox" data-f="${f.k}" ${v ? "checked" : ""}>${f.label}</label>`;
+    else if (f.type === "check") inner = `<label class="check"><input type="checkbox" data-f="${f.k}" ${v ? "checked" : ""}>${label}</label>`;
     else if (f.type === "num" && f.dim === "wbaby" && isUS()) {
       const tot = v == null || v === "" ? null : +v * KG_LB * 16;
       let lb = tot == null ? "" : Math.floor(tot / 16), oz = tot == null ? "" : trim(tot - lb * 16, 1);
       if (oz === "16") { lb++; oz = "0"; }
-      inner = `<div class="lab">${f.label}（lb + oz）</div><div class="row2">
-        <input id="${id}" aria-label="${f.label} 磅 lb" type="number" inputmode="decimal" step="1" min="0" data-wpart="lb" data-orig="${lb}" value="${lb}" placeholder="lb">
-        <input aria-label="${f.label} 盎司 oz" type="number" inputmode="decimal" step="0.1" min="0" max="15.9" data-wpart="oz" data-orig="${oz}" value="${oz}" placeholder="oz"></div>`;
+      inner = `<div class="lab">${t("{label}（{u}）", { label, u: "lb + oz" })}</div><div class="row2">
+        <input id="${id}" aria-label="${label} ${t("磅 lb")}" type="number" inputmode="decimal" step="1" min="0" data-wpart="lb" data-orig="${lb}" value="${lb}" placeholder="lb">
+        <input aria-label="${label} ${t("盎司 oz")}" type="number" inputmode="decimal" step="0.1" min="0" max="15.9" data-wpart="oz" data-orig="${oz}" value="${oz}" placeholder="oz"></div>`;
     }
     else if (f.type === "num") {
       const dv = f.dim ? (v == null || v === "" ? "" : trim(toDisp(f.dim, v), DISP_DEC[f.dim])) : (v ?? "");
-      inner = `<label for="${id}">${f.label}${f.dim ? `（${unitOf(f.dim)}）` : ""}</label><input id="${id}" type="number" inputmode="decimal" step="${f.dim && isUS() ? "any" : (f.step || 1)}" min="0" data-f="${f.k}" ${f.dim ? `data-dim="${f.dim}" data-orig="${dv}"` : ""} value="${dv}" placeholder="${esc(f.ph || "")}">`;
+      inner = `<label for="${id}">${f.dim ? t("{label}（{u}）", { label, u: unitOf(f.dim) }) : label}</label><input id="${id}" type="number" inputmode="decimal" step="${f.dim && isUS() ? "any" : (f.step || 1)}" min="0" data-f="${f.k}" ${f.dim ? `data-dim="${f.dim}" data-orig="${dv}"` : ""} value="${dv}" placeholder="${ph}">`;
     }
-    else if (f.type === "datetime") inner = `<label for="${id}">${f.label}</label><input id="${id}" type="datetime-local" data-f="${f.k}" data-kind="dt" value="${v ? toInput(v) : ""}">`;
-    else if (f.type === "range") inner = `<label for="${id}">${f.label}</label><div class="range"><input id="${id}" type="range" min="${f.min}" max="${f.max}" data-f="${f.k}" value="${v ?? Math.round((f.min + f.max) / 2)}"><output class="num" style="min-width:24px">${v ?? "–"}</output></div>`;
-    else if (f.type === "area") inner = `<label for="${id}">${f.label}</label><textarea id="${id}" data-f="${f.k}" placeholder="${esc(f.ph || "")}">${esc(v || "")}</textarea>`;
-    else inner = `<label for="${id}">${f.label}</label><input id="${id}" type="text" data-f="${f.k}" value="${esc(v || "")}" ${f.list ? `list="${f.list}"` : ""} placeholder="${esc(f.ph || "")}">`;
+    else if (f.type === "datetime") inner = `<label for="${id}">${label}</label><input id="${id}" type="datetime-local" data-f="${f.k}" data-kind="dt" value="${v ? toInput(v) : ""}">`;
+    else if (f.type === "range") inner = `<label for="${id}">${label}</label><div class="range"><input id="${id}" type="range" min="${f.min}" max="${f.max}" data-f="${f.k}" value="${v ?? Math.round((f.min + f.max) / 2)}"><output class="num" style="min-width:24px">${v ?? "–"}</output></div>`;
+    else if (f.type === "area") inner = `<label for="${id}">${label}</label><textarea id="${id}" data-f="${f.k}" placeholder="${ph}">${esc(v || "")}</textarea>`;
+    else inner = `<label for="${id}">${label}</label><input id="${id}" type="text" data-f="${f.k}" value="${esc(v || "")}" ${f.list ? `list="${f.list}"` : ""} placeholder="${ph}">`;
     const hint = typeof f.hint === "function" ? f.hint(draft) : f.hint;
     return `<div class="field" ${f.half ? 'data-half="1"' : ""}>${inner}${hint ? `<p class="small muted" style="margin:6px 0 0">${esc(hint)}</p>` : ""}</div>`;
   });
@@ -71,16 +79,13 @@ function drawForm(focusKey){
     if (fieldsHTML[i].includes('data-half="1"') && fieldsHTML[i + 1]?.includes('data-half="1"')) { out.push(`<div class="row2">${fieldsHTML[i]}${fieldsHTML[i + 1]}</div>`); i++; } else out.push(fieldsHTML[i]);
   }
   const fl = flags(draft);
-  $("#sheetIn").innerHTML = `<div class="sheet-head"><h3 id="sheetTitle">${T.icon} ${isNew ? "记录" : "修改"}${T.label}</h3><button class="iconbtn" data-act="close" aria-label="关闭">关闭</button></div>
+  $("#sheetIn").innerHTML = `${head(`${T.icon} ${t(isNew ? "记录{type}" : "修改{type}", { type: typeLabel(draft.type) })}`)}
     ${whoHTML(isNew)}
-    <div class="field"><label for="f_ts">${draft.type === "sleep" ? "入睡时间" : "时间"}</label><input id="f_ts" type="datetime-local" data-f="ts" data-kind="dt" value="${toInput(draft.ts)}"></div>
+    <div class="field"><label for="f_ts">${draft.type === "sleep" ? t("入睡时间") : t("时间")}</label><input id="f_ts" type="datetime-local" data-f="ts" data-kind="dt" value="${toInput(draft.ts)}"></div>
     ${out.join("")}
     ${fl.map(f => `<div class="warnline" role="alert">${esc(f)}</div>`).join("")}
-    <datalist id="vaxlist">${["乙肝疫苗 HepB", "卡介苗 BCG", "脊灰疫苗 IPV/OPV", "百白破 DTaP", "Hib 疫苗", "肺炎球菌疫苗 PCV", "轮状病毒疫苗 RV", "麻腮风 MMR", "水痘疫苗 VAR", "甲肝疫苗 HepA", "乙脑疫苗 JE", "流脑疫苗 MenA/MenAC", "流感疫苗 Flu", "新冠疫苗 COVID-19", "RSV 单抗 nirsevimab"].map(v => `<option value="${v}">`).join("")}</datalist>
-    <datalist id="medlist"><option value="布洛芬"><option value="泰诺（对乙酰氨基酚）"><option value="复合维生素"><option value="铁剂"><option value="钙片"></datalist>
-    <datalist id="foodlist">${["高铁米粉", "南瓜泥", "红薯泥", "胡萝卜泥", "土豆泥", "苹果泥", "香蕉", "牛油果", "蛋黄", "鸡蛋", "豆腐", "鱼肉", "鸡肉", "牛肉", "猪肝", "酸奶", "粥", "面条", "花生酱（稀）", "西兰花", "菠菜", "草莓", "橙子"].map(v => `<option value="${v}">`).join("")}</datalist>
-    <datalist id="milestonelist">${milestoneNames().map(v => `<option value="${esc(v)}">`).join("")}</datalist>
-    <div class="btns"><button class="btn primary" data-act="save">保存</button>${isNew ? "" : `<button class="btn danger" data-act="del">删除</button>`}</div>`;
+    ${datalist("vaxlist", VAX_LIST.map(v => t(v)))}${datalist("medlist", MED_LIST.map(v => t(v)))}${datalist("foodlist", FOOD_LIST.map(v => t(v)))}${datalist("milestonelist", milestoneNames())}
+    <div class="btns"><button class="btn primary" data-act="save">${t("保存")}</button>${isNew ? "" : `<button class="btn danger" data-act="del">${t("删除")}</button>`}</div>`;
   if (focusKey) { const el = $("#sheetIn").querySelector(`[data-seg="${focusKey}"][aria-pressed="true"]`); el && el.focus(); }
 }
 /* Which child the record belongs to. The form opens for the child shown on the page, so by default this is
@@ -92,10 +97,10 @@ function whoHTML(isNew){
   const cur = childOf(draft);
   if (draft.type === "activity" && isNew) {
     const sel = new Set([cur, ...(draft.also || [])]);
-    return `<div class="field"><div class="lab" id="f_child">哪个孩子（可多选，一起做的活动会各记一条）</div><div class="seg" role="group" aria-labelledby="f_child">${kids.map(c => `<button type="button" data-who="${esc(c.id)}" aria-pressed="${sel.has(c.id)}">${esc(c.name || "宝宝")}</button>`).join("")}</div></div>`;
+    return `<div class="field"><div class="lab" id="f_child">${t("哪个孩子（可多选，一起做的活动会各记一条）")}</div><div class="seg" role="group" aria-labelledby="f_child">${kids.map(c => `<button type="button" data-who="${esc(c.id)}" aria-pressed="${sel.has(c.id)}">${esc(c.name || t("宝宝"))}</button>`).join("")}</div></div>`;
   }
-  if (draft._pick) return `<div class="field"><div class="lab" id="f_child">记录给哪个孩子</div><div class="seg" role="group" aria-labelledby="f_child">${kids.map(c => `<button type="button" data-seg="child" data-v="${esc(c.id)}" aria-pressed="${cur === c.id}">${esc(c.name || "宝宝")}</button>`).join("")}</div></div>`;
-  return `<div class="field who"><span class="small muted">记录给</span><b>${esc(childName(cur))}</b><button type="button" class="chip" data-act="who-change">换一个孩子</button></div>`;
+  if (draft._pick) return `<div class="field"><div class="lab" id="f_child">${t("记录给哪个孩子")}</div><div class="seg" role="group" aria-labelledby="f_child">${kids.map(c => `<button type="button" data-seg="child" data-v="${esc(c.id)}" aria-pressed="${cur === c.id}">${esc(c.name || t("宝宝"))}</button>`).join("")}</div></div>`;
+  return `<div class="field who"><span class="small muted">${t("记录给")}</span><b>${esc(childName(cur))}</b><button type="button" class="chip" data-act="who-change">${t("换一个孩子")}</button></div>`;
 }
 function readDraftInputs(){
   $("#sheetIn").querySelectorAll("[data-f]").forEach(el => {
@@ -116,38 +121,42 @@ function readDraftInputs(){
 function pickType(){
   draft = null;
   const first = stageTypes(), rest = Object.keys(TYPES).filter(k => !first.includes(k));
-  const grid = keys => `<div class="quick">${keys.map(k => `<button data-add="${k}"><i>${TYPES[k].icon}</i>${TYPES[k].label}</button>`).join("")}</div>`;
-  $("#sheetIn").innerHTML = `<div class="sheet-head"><h3 id="sheetTitle">补记哪一类？</h3><button class="iconbtn" data-act="close" aria-label="关闭">关闭</button></div>
+  const grid = keys => `<div class="quick">${keys.map(k => `<button data-add="${k}"><i>${TYPES[k].icon}</i>${typeLabel(k)}</button>`).join("")}</div>`;
+  $("#sheetIn").innerHTML = `${head(t("补记哪一类？"))}
   ${grid(first)}
-  ${rest.length ? `<h2>其他</h2>${grid(rest)}` : ""}`;
+  ${rest.length ? `<h2>${t("其他")}</h2>${grid(rest)}` : ""}`;
   showSheet(true);
 }
 
 /* ============ settings sheet ============ */
 function openSettings(){
   const st = S.settings;
-  $("#sheetIn").innerHTML = `<div class="sheet-head"><h3 id="sheetTitle">设置</h3><button class="iconbtn" data-act="close" aria-label="关闭">关闭</button></div>
-  <div class="field"><div class="lab">孩子（小名 · 出生日期）</div>
-    <div id="kidRows">${st.children.map((c, i) => `<div class="kidrow"><input type="text" aria-label="第${i + 1}个孩子的小名" data-kr="${i}" data-kk="name" value="${esc(c.name)}" placeholder="小名"><input type="date" aria-label="第${i + 1}个孩子的出生日期" data-kr="${i}" data-kk="birth" value="${esc(c.birth)}">${st.children.length > 1 ? `<button class="chip" data-act="delkid" data-i="${i}" aria-label="移除${esc(c.name || "这个孩子")}">移除</button>` : ""}</div>`).join("")}</div>
-    <button class="chip" data-act="addkid">＋ 添加孩子</button>
-    <p class="small muted" style="margin-top:6px">每个孩子的记录分开保存，点页面顶部的名字可以切换。妈妈的记录属于整个家庭，不随孩子切换。</p></div>
-  <div class="field"><div class="lab">妈妈用药的最短间隔（按医嘱或说明书填写）</div>
-    <div id="medRules">${(st.medIntervals || []).map((r, i) => `<div class="row2" style="margin-bottom:6px"><input type="text" aria-label="药名" data-mr="${i}" data-mk="name" value="${esc(r.name)}" placeholder="药名"><input type="number" inputmode="decimal" aria-label="间隔小时" data-mr="${i}" data-mk="hours" value="${esc(r.hours)}" placeholder="间隔（小时）"></div>`).join("")}</div>
-    <button class="chip" data-act="addrule">＋ 添加一种药</button></div>
-  <div class="btns"><button class="btn primary" data-act="savesettings">保存设置</button></div>
+  const seg = (attr, cur, items, label) => `<div class="seg" role="group" aria-label="${label}">${items.map(([v, l]) => `<button ${attr}="${v}" aria-pressed="${cur === v}">${l}</button>`).join("")}</div>`;
+  $("#sheetIn").innerHTML = `${head(t("设置"))}
+  <div class="field"><div class="lab">${t("孩子（小名 · 出生日期）")}</div>
+    <div id="kidRows">${st.children.map((c, i) => `<div class="kidrow"><input type="text" aria-label="${t("第{n}个孩子的小名", { n: i + 1 })}" data-kr="${i}" data-kk="name" value="${esc(c.name)}" placeholder="${t("小名")}"><input type="date" aria-label="${t("第{n}个孩子的出生日期", { n: i + 1 })}" data-kr="${i}" data-kk="birth" value="${esc(c.birth)}">${st.children.length > 1 ? `<button class="chip" data-act="delkid" data-i="${i}" aria-label="${t("移除{name}", { name: esc(c.name || t("这个孩子")) })}">${t("移除")}</button>` : ""}</div>`).join("")}</div>
+    <button class="chip" data-act="addkid">${t("＋ 添加孩子")}</button>
+    <p class="small muted" style="margin-top:6px">${t("每个孩子的记录分开保存，点页面顶部的名字可以切换。妈妈的记录属于整个家庭，不随孩子切换。")}</p></div>
+  <div class="field"><div class="lab">${t("妈妈用药的最短间隔（按医嘱或说明书填写）")}</div>
+    <div id="medRules">${(st.medIntervals || []).map((r, i) => `<div class="row2" style="margin-bottom:6px"><input type="text" aria-label="${t("药名")}" data-mr="${i}" data-mk="name" value="${esc(r.name)}" placeholder="${t("药名")}"><input type="number" inputmode="decimal" aria-label="${t("间隔小时")}" data-mr="${i}" data-mk="hours" value="${esc(r.hours)}" placeholder="${t("间隔（小时）")}"></div>`).join("")}</div>
+    <button class="chip" data-act="addrule">${t("＋ 添加一种药")}</button></div>
+  <div class="btns"><button class="btn primary" data-act="savesettings">${t("保存设置")}</button></div>
 
-  <h2>家庭协作</h2>
+  <h2>${t("家庭协作")}</h2>
   ${familyHTML()}
-  <h2>数据</h2>
-  <p class="small muted">${S.mode === "family" ? "记录保存在家庭云端，每台设备都有一份离线副本；没网时照常记录，联网后自动同步。" : S.mode === "cloud" ? "记录已同步到你的 Claude 账号，同时在本设备留有副本。" : "记录目前只保存在这台设备的浏览器里。换手机或清理浏览器数据会丢失，建议每周导出一次备份。"}</p>
-  <div class="btns"><button class="btn" data-act="export">导出备份（JSON）</button><button class="btn" data-act="csv">导出表格（CSV）</button><button class="btn" data-act="import">从备份恢复</button></div>
-  <div class="btns"><button class="btn" data-act="demo">载入演示数据</button><button class="btn" data-act="cleardemo">清除演示数据</button><button class="btn danger" data-act="clearall">清空全部记录</button></div>
-  <h2>单位</h2>
-  <div class="seg" role="group" aria-label="单位">${[["auto", `自动（当前：${isUS() ? "美制" : "公制"}）`], ["metric", "公制 kg · cm · ml · ℃"], ["us", "美制 lb · in · fl oz · ℉"]].map(([v, l]) => `<button data-units-set="${v}" aria-pressed="${unitPref() === v}">${l}</button>`).join("")}</div>
-  <p class="small muted" style="margin-top:6px">只影响这台设备的显示和输入。数据统一按公制保存，切换不会改动已有记录，家人可以各用各的单位。“自动”按手机的语言和时区判断（北美时区默认美制）。</p>
-  <p class="small muted" style="margin-top:24px">版本 ${APP_VERSION}</p>
-  <h2>显示</h2>
-  <div class="seg" role="group" aria-label="外观">${[["", "跟随系统"], ["light", "浅色"], ["dark", "深色（夜里喂奶）"]].map(([v, l]) => `<button data-theme-set="${v}" aria-pressed="${(document.documentElement.dataset.theme || "") === v}">${l}</button>`).join("")}</div>`;
+  <h2>${t("数据")}</h2>
+  <p class="small muted">${S.mode === "family" ? t("记录保存在家庭云端，每台设备都有一份离线副本；没网时照常记录，联网后自动同步。") : S.mode === "cloud" ? t("记录已同步到你的 Claude 账号，同时在本设备留有副本。") : t("记录目前只保存在这台设备的浏览器里。换手机或清理浏览器数据会丢失，建议每周导出一次备份。")}</p>
+  <div class="btns"><button class="btn" data-act="export">${t("导出备份（JSON）")}</button><button class="btn" data-act="csv">${t("导出表格（CSV）")}</button><button class="btn" data-act="import">${t("从备份恢复")}</button></div>
+  <div class="btns"><button class="btn" data-act="demo">${t("载入演示数据")}</button><button class="btn" data-act="cleardemo">${t("清除演示数据")}</button><button class="btn danger" data-act="clearall">${t("清空全部记录")}</button></div>
+  <h2>${t("语言 / Language")}</h2>
+  ${seg("data-lang-set", langPref(), LANGS.map(([v, l]) => [v, v === "auto" ? t("自动") : l]), t("语言 / Language"))}
+  <p class="small muted" style="margin-top:6px">${t("只影响这台设备的显示。记录内容按统一格式保存，家人可以各看各的语言。")}</p>
+  <h2>${t("单位")}</h2>
+  ${seg("data-units-set", unitPref(), [["auto", t("自动（当前：{u}）", { u: isUS() ? t("美制") : t("公制") })], ["metric", t("公制 kg · cm · ml · ℃")], ["us", t("美制 lb · in · fl oz · ℉")]], t("单位"))}
+  <p class="small muted" style="margin-top:6px">${t("只影响这台设备的显示和输入。数据统一按公制保存，切换不会改动已有记录，家人可以各用各的单位。“自动”按手机的语言和时区判断（北美时区默认美制）。")}</p>
+  <h2>${t("显示")}</h2>
+  ${seg("data-theme-set", document.documentElement.dataset.theme || "", [["", t("跟随系统")], ["light", t("浅色")], ["dark", t("深色（夜里喂奶）")]], t("外观"))}
+  <p class="small muted" style="margin-top:24px">${t("版本 {v}", { v: APP_VERSION })}</p>`;
   showSheet(false);
 }
 function readSettingsInputs(){

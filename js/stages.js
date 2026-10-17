@@ -1,4 +1,5 @@
 import { expectedDiapers, sleepMsIn } from "./derived.js";
+import { t } from "./i18n.js";
 import { S, ageMonths, babyAgeDays, birthTs, stageOf, vis } from "./state.js";
 import { TYPES } from "./types.js";
 import { isUS, toDisp, trim, unitOf } from "./units.js";
@@ -52,15 +53,15 @@ const stageMetrics = () => stageCfg().metrics;
 function quickHTML(){
   return stageCfg().quick.map(k => {
     const q = Q[k];
-    if (q.act) return `<button data-act="${q.act}"><i>${q.icon}</i>${q.label}</button>`;
+    if (q.act) return `<button data-act="${q.act}"><i>${q.icon}</i>${t(q.label)}</button>`;
     const preset = typeof q.preset === "function" ? q.preset() : q.preset;
-    return `<button data-add="${q.add}" ${preset ? `data-preset="${esc(JSON.stringify(preset))}"` : ""}><i>${q.icon}</i>${q.label}</button>`;
+    return `<button data-add="${q.add}" ${preset ? `data-preset="${esc(JSON.stringify(preset))}"` : ""}><i>${q.icon}</i>${t(q.label)}</button>`;
   }).join("");
 }
 
 /* ---- 24h stats on Today ---- */
 const stat = (k, v, ref = "") => `<div class="stat"><div class="k">${k}</div><div class="v num">${v}</div>${ref}</div>`;
-const n = (x, u = "次") => `${x}<small>${u}</small>`;
+const n = (x, u = t("次")) => `${x}<small>${u}</small>`;
 const vol = ml => `${trim(toDisp("vol", ml), isUS() ? 1 : 0)}<small>${unitOf("vol")}</small>`;
 const sumMin = list => list.reduce((a, e) => a + (+e.minutes || 0), 0);
 function statsHTML(day){
@@ -68,35 +69,37 @@ function statsHTML(day){
   const feeds = day.filter(e => e.type === "feed" && e.method !== "吸奶");
   const ml = feeds.reduce((a, e) => a + (+e.ml || 0), 0);
   const wet = day.filter(e => e.type === "diaper" && e.pee).length, poop = day.filter(e => e.type === "diaper" && e.poop).length;
-  const sleep = stat("睡眠", `${Math.round(sleepMsIn(Date.now() - D, Date.now()) / H * 10) / 10}<small>小时</small>`);
+  const sleep = stat(t("睡眠"), `${Math.round(sleepMsIn(Date.now() - D, Date.now()) / H * 10) / 10}<small>${t("小时")}</small>`);
   const foods = day.filter(e => e.type === "food");
   const act = kind => sumMin(day.filter(e => e.type === "activity" && e.kind === kind));
+  const min = x => `${x}<small>${t("分")}</small>`;
   if (key === "newborn") {
     const L = feeds.reduce((a, e) => a + (+e.left || 0), 0), R = feeds.reduce((a, e) => a + (+e.right || 0), 0);
     const exp = expectedDiapers(babyAgeDays());
-    return stat("喂奶次数", n(feeds.length), `<div class="ref ${feeds.length && feeds.length < 8 ? "warn" : ""}">新生儿通常 8–12 次</div>`)
-      + stat("瓶喂总量", vol(ml))
-      + stat("亲喂 左 / 右", `${L}<small>分</small> ${R}<small>分</small>`)
-      + stat("湿尿布 / 大便", `${n(wet)} ${n(poop)}`, birthTs() ? `<div class="ref ${wet < exp.wet ? "warn" : ""}">参考：至少 ${exp.wet} 次湿尿布${exp.poop ? `、${exp.poop} 次大便` : ""}</div>` : "")
+    return stat(t("喂奶次数"), n(feeds.length), `<div class="ref ${feeds.length && feeds.length < 8 ? "warn" : ""}">${t("新生儿通常 8–12 次")}</div>`)
+      + stat(t("瓶喂总量"), vol(ml))
+      + stat(t("亲喂 左 / 右"), `${min(L)} ${min(R)}`)
+      + stat(t("湿尿布 / 大便"), `${n(wet)} ${n(poop)}`, birthTs() ? `<div class="ref ${wet < exp.wet ? "warn" : ""}">${t("参考：至少 {n} 次湿尿布", { n: exp.wet })}${exp.poop ? t("、{n} 次大便", { n: exp.poop }) : ""}</div>` : "")
       + sleep;
   }
   if (key === "infant") {
     const newFoods = foods.filter(f => f.newFood).length;
-    return stat("喂奶次数", n(feeds.length)) + stat("瓶喂总量", vol(ml))
-      + stat("辅食", n(foods.length), newFoods ? `<div class="ref">今天试了 ${newFoods} 种新食物</div>` : "")
-      + stat("湿尿布 / 大便", `${n(wet)} ${n(poop)}`) + sleep;
+    return stat(t("喂奶次数"), n(feeds.length)) + stat(t("瓶喂总量"), vol(ml))
+      + stat(t("辅食"), n(foods.length), newFoods ? `<div class="ref">${t("今天试了 {n} 种新食物", { n: newFoods })}</div>` : "")
+      + stat(t("湿尿布 / 大便"), `${n(wet)} ${n(poop)}`) + sleep;
   }
   const potty = day.filter(e => e.type === "potty");
   const ok = potty.filter(p => ["小马桶", "马桶"].includes(p.where) && p.what !== "坐了没出").length;
   const upset = day.filter(e => e.type === "behavior" && ["发脾气", "哭闹"].includes(e.kind)).length;
   if (key === "toddler") {
-    return stat("吃饭", n(foods.filter(f => f.meal !== "奶").length)) + stat("喝奶", vol(ml))
-      + stat("如厕 成功 / 总", `${n(ok)} ${n(potty.length)}`) + stat("尿布", n(day.filter(e => e.type === "diaper").length))
-      + stat("户外 / 阅读", `${act("户外")}<small>分</small> ${act("阅读")}<small>分</small>`) + sleep;
+    return stat(t("吃饭"), n(foods.filter(f => f.meal !== "奶").length)) + stat(t("喝奶"), vol(ml))
+      + stat(t("如厕 成功 / 总"), `${n(ok)} ${n(potty.length)}`) + stat(t("尿布"), n(day.filter(e => e.type === "diaper").length))
+      + stat(t("户外 / 阅读"), `${min(act("户外"))} ${min(act("阅读"))}`) + sleep;
   }
-  return stat("吃饭", n(foods.length)) + stat("阅读", `${act("阅读")}<small>分钟</small>`)
-    + stat("户外", `${act("户外")}<small>分钟</small>`) + stat("屏幕", `${act("屏幕")}<small>分钟</small>`, act("屏幕") > 60 ? `<div class="ref warn">AAP 建议 2–5 岁每天不超过 1 小时高质量内容</div>` : "")
-    + stat("发脾气 / 哭闹", n(upset)) + sleep;
+  const mins = x => `${x}<small>${t("分钟")}</small>`;
+  return stat(t("吃饭"), n(foods.length)) + stat(t("阅读"), mins(act("阅读")))
+    + stat(t("户外"), mins(act("户外"))) + stat(t("屏幕"), mins(act("屏幕")), act("屏幕") > 60 ? `<div class="ref warn">${t("AAP 建议 2–5 岁每天不超过 1 小时高质量内容")}</div>` : "")
+    + stat(t("发脾气 / 哭闹"), n(upset)) + sleep;
 }
 
 /* ---- milestone references (CDC "Learn the Signs. Act Early." 2022, abridged) ---- */
@@ -119,38 +122,41 @@ function milestoneRef(){
   const m = ageMonths(); if (m == null) return null;
   return MILESTONE_REF.find(r => r.m >= m) || MILESTONE_REF[MILESTONE_REF.length - 1];
 }
-const milestoneNames = () => MILESTONE_REF.flatMap(r => r.items.map(i => i[1]));
+// suggestions for the free-text milestone field, in the interface language
+const milestoneNames = () => MILESTONE_REF.flatMap(r => r.items.map(i => t(i[1])));
 function milestoneRefHTML(){
   const ref = milestoneRef(); if (!ref) return "";
   const done = new Set(vis().filter(e => e.type === "milestone").map(e => (e.name || "").trim()));
-  const label = ref.m < 24 ? `${ref.m} 个月` : ref.m % 12 ? `${Math.floor(ref.m / 12)} 岁半` : `${ref.m / 12} 岁`;
-  return `<h3 class="small muted" style="margin-top:12px">${label}左右常见的里程碑 · 点一下记录</h3>
-  <div class="ms">${ref.items.map(([cat, name]) => `<button class="chip ${done.has(name) ? "done" : ""}" data-add="milestone" data-preset="${esc(JSON.stringify({ cat, name }))}"><span class="cat">${cat}</span>${esc(name)}${done.has(name) ? " ✓" : ""}</button>`).join("")}</div>
-  <p class="small muted" style="margin-top:8px">整理自美国 CDC「Learn the Signs. Act Early.」（2022 版，大多数孩子在该月龄能做到的事）。个体差异很大，不是诊断标准；担心时和儿科医生聊。</p>`;
+  const label = ref.m < 24 ? t("{m} 个月", { m: ref.m }) : ref.m % 12 ? t("{y} 岁半", { y: Math.floor(ref.m / 12) }) : t("{y} 岁", { y: ref.m / 12 });
+  // a milestone is "done" whether it was saved from this chip in any language or typed in
+  const isDone = name => done.has(name) || done.has(t(name));
+  return `<h3 class="small muted" style="margin-top:12px">${t("{age}左右常见的里程碑 · 点一下记录", { age: label })}</h3>
+  <div class="ms">${ref.items.map(([cat, name]) => `<button class="chip ${isDone(name) ? "done" : ""}" data-add="milestone" data-preset="${esc(JSON.stringify({ cat, name: t(name) }))}"><span class="cat">${t(cat)}</span>${esc(t(name))}${isDone(name) ? " ✓" : ""}</button>`).join("")}</div>
+  <p class="small muted" style="margin-top:8px">${t("整理自美国 CDC「Learn the Signs. Act Early.」（2022 版，大多数孩子在该月龄能做到的事）。个体差异很大，不是诊断标准；担心时和儿科医生聊。")}</p>`;
 }
 
 /* ---- when to call the doctor, by stage ---- */
+const DOCTOR_NEWBORN = [
+  "<b>3 个月以内</b>体温 ≥ 38℃（100.4℉）：立即联系医生或去急诊，不要先自行用退烧药。",
+  "呼吸急促、费力，嘴唇发青，或很难叫醒、异常软。",
+  "湿尿布明显变少（出生第 5 天后 24 小时少于 6 次），嘴唇干、哭时无泪。",
+  "皮肤或眼白越来越黄，尤其蔓延到腹部和腿，或出生 24 小时内就发黄。",
+  "大便灰白色、带血，或持续喷射性呕吐、呕吐物呈绿色。",
+  "连续几次拒奶，或体重没有按医生预期回升。",
+  "脐带周围红肿、有臭味或流脓。"
+];
+const DOCTOR_OLDER = [
+  "发热伴精神差、持续 2–3 天不退，或体温 ≥ 40℃（104℉）。",
+  "呼吸急促、费力，嘴唇发青，或很难叫醒。",
+  "脱水：尿明显变少、嘴唇干、哭时无泪、异常没精神。",
+  "持续呕吐或腹泻，大便带血，或剧烈腹痛。",
+  "抽搐、颈部僵硬、发热伴按压不褪色的皮疹。",
+  "头部摔伤后呕吐、嗜睡或行为异常。",
+  "吃了新食物后嘴唇面部肿胀、呼吸困难、全身荨麻疹：立即就医。"
+];
 function doctorListHTML(){
-  if (stageOf().key === "newborn") return `<ul class="plain">
-    <li><b>3 个月以内</b>体温 ≥ 38℃（100.4℉）：立即联系医生或去急诊，不要先自行用退烧药。</li>
-    <li>呼吸急促、费力，嘴唇发青，或很难叫醒、异常软。</li>
-    <li>湿尿布明显变少（出生第 5 天后 24 小时少于 6 次），嘴唇干、哭时无泪。</li>
-    <li>皮肤或眼白越来越黄，尤其蔓延到腹部和腿，或出生 24 小时内就发黄。</li>
-    <li>大便灰白色、带血，或持续喷射性呕吐、呕吐物呈绿色。</li>
-    <li>连续几次拒奶，或体重没有按医生预期回升。</li>
-    <li>脐带周围红肿、有臭味或流脓。</li>
-  </ul>`;
-  return `<ul class="plain">
-    <li>发热伴精神差、持续 2–3 天不退，或体温 ≥ 40℃（104℉）。</li>
-    <li>呼吸急促、费力，嘴唇发青，或很难叫醒。</li>
-    <li>脱水：尿明显变少、嘴唇干、哭时无泪、异常没精神。</li>
-    <li>持续呕吐或腹泻，大便带血，或剧烈腹痛。</li>
-    <li>抽搐、颈部僵硬、发热伴按压不褪色的皮疹。</li>
-    <li>头部摔伤后呕吐、嗜睡或行为异常。</li>
-    <li>吃了新食物后嘴唇面部肿胀、呼吸困难、全身荨麻疹：立即就医。</li>
-  </ul>`;
+  const list = stageOf().key === "newborn" ? DOCTOR_NEWBORN : DOCTOR_OLDER;
+  return `<ul class="plain">${list.map(s => `<li>${t(s)}</li>`).join("")}</ul>`;
 }
 
-const typeLabel = t => (TYPES[t] || {}).label || t;
-
-export { STAGE, stageCfg, stageTypes, stageMetrics, quickHTML, statsHTML, MILESTONE_REF, milestoneRef, milestoneNames, milestoneRefHTML, doctorListHTML, typeLabel };
+export { STAGE, stageCfg, stageTypes, stageMetrics, quickHTML, statsHTML, MILESTONE_REF, milestoneRef, milestoneNames, milestoneRefHTML, doctorListHTML };

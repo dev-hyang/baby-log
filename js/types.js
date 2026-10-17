@@ -1,8 +1,12 @@
+import { t } from "./i18n.js";
 import { S, ageMonths, babyAgeDays, childOf } from "./state.js";
 import { fmtU } from "./units.js";
 import { $, D, dur, hm, num } from "./util.js";
 
-/* ============ record types ============ */
+/* ============ record types ============
+   Labels, placeholders and option values below are the canonical simplified-Chinese strings; the form and
+   the summaries translate them for display with t(). Option values are what gets stored, so every device
+   in a family keeps the same data no matter which language it shows. */
 // Milk options follow the child's age at the time of the record: breast/formula under 1, whole milk
 // from 1 (AAP), lower-fat choices from 2. The default remembers the family's last choice for that child.
 const MILK_BABY = ["亲喂", "母乳瓶喂", "配方奶", "混合", "吸奶"];
@@ -10,7 +14,7 @@ const MILK_1Y = ["全脂牛奶", "亲喂", "配方奶/幼儿奶", "母乳瓶喂"
 const MILK_2Y = ["全脂牛奶", "2% 低脂", "1% 低脂", "脱脂", "豆奶/植物奶", "亲喂", "其他"];
 function milkOpts(m){ const mo = ageMonths(childOf(m), m.ts || Date.now()); return mo == null || mo < 12 ? MILK_BABY : mo < 24 ? MILK_1Y : MILK_2Y; }
 function milkDef(m){ const opts = milkOpts(m); const prev = S.entries.filter(e => e.type === "feed" && childOf(e) === childOf(m)).sort((a, b) => b.ts - a.ts)[0]; return prev && opts.includes(prev.method) ? prev.method : opts[0]; }
-function milkHint(m){ const mo = ageMonths(childOf(m), m.ts || Date.now()); if (mo == null || mo < 12) return ""; return mo < 24 ? "AAP：1–2 岁建议全脂牛奶，每天约 2–3 杯（480–720 ml）以内，喝太多会影响吃饭和铁的吸收。" : "2 岁后可按医生建议换低脂或脱脂奶，每天约 2–2.5 杯（480–600 ml）。"; }
+function milkHint(m){ const mo = ageMonths(childOf(m), m.ts || Date.now()); if (mo == null || mo < 12) return ""; return mo < 24 ? t("AAP：1–2 岁建议全脂牛奶，每天约 2–3 杯（480–720 ml）以内，喝太多会影响吃饭和铁的吸收。") : t("2 岁后可按医生建议换低脂或脱脂奶，每天约 2–2.5 杯（480–600 ml）。"); }
 const TYPES = {
   feed:  { label: "喂奶", icon: "🍼", color: "var(--honey)", fields: [
     { k: "method", label: "方式", type: "seg", opts: milkOpts, def: milkDef, hint: milkHint },
@@ -98,41 +102,44 @@ const TYPES = {
     { k: "bp", label: "血压（选填）", type: "text", half: 1, ph: "120/80" },
     { k: "note", label: "备注", type: "area", ph: "伤口、乳房胀痛、情绪…" } ] }
 };
+const typeLabel = type => t((TYPES[type] || {}).label || type);
 
+// one line per record for lists, tables and CSV; stored option values are translated, free text is not
 function summary(e){
   const p = [];
+  const v = x => x ? t(x) : "";
   switch (e.type) {
     case "feed":
-      p.push(e.method || "喂奶");
-      if (e.left) p.push(`左${e.left}分`); if (e.right) p.push(`右${e.right}分`); if (e.ml) p.push(fmtU("vol", e.ml)); break;
-    case "diaper": if (e.pee) p.push("尿"); if (e.poop) p.push("便" + (e.color ? `（${e.color}）` : "")); break;
-    case "sleep": p.push(e.end ? `睡到 ${hm(e.end)} · ${dur(e.end - e.ts)}` : "正在睡"); if (e.where) p.push(e.where); if (e.how) p.push(e.how); break;
-    case "baby": if (e.temp) p.push(`体温 ${fmtU("temp", e.temp)}`); if (e.weight) p.push(`体重 ${fmtU("wbaby", e.weight)}`); if (e.length) p.push(`身长 ${fmtU("len", e.length)}`); if (e.head) p.push(`头围 ${fmtU("len", e.head)}`); if (!p.length) p.push("健康记录"); break;
-    case "bmed": p.push(e.cat || "", e.name || "", e.dose || ""); break;
-    case "mmed": p.push(e.cat || "", e.name || "", e.dose || ""); break;
-    case "vax": p.push(e.name || "疫苗", e.dose || "", e.site || "", e.reaction && e.reaction !== "无" ? "反应：" + e.reaction : ""); break;
-    case "mbody": if (e.weight) p.push(`体重 ${fmtU("wmom", e.weight)}`); if (e.lochia) p.push(`恶露 ${e.lochia}`); if (e.pain != null) p.push(`疼痛 ${e.pain}`); if (e.mood != null) p.push(`心情 ${e.mood}/5`); if (e.sleepHrs) p.push(`睡 ${e.sleepHrs}h`); break;
-    case "food": p.push(e.meal || "", e.foods || "", e.amount || "", e.newFood ? "新食物" : "", e.reaction && e.reaction !== "无" ? "反应：" + e.reaction : ""); break;
-    case "milestone": p.push(e.cat || "", e.name || "里程碑"); break;
-    case "potty": p.push(e.what || "", e.where || "", e.self ? "自己说要去" : ""); break;
-    case "speech": p.push(e.kind || "", e.words ? `「${e.words}」` : "", e.lang && e.lang !== "中文" ? e.lang : ""); break;
-    case "activity": p.push(e.kind || "活动", e.what || "", e.minutes ? `${e.minutes}分钟` : ""); break;
-    case "behavior": p.push(e.kind || "", e.trigger ? "起因：" + e.trigger : "", e.minutes ? `${e.minutes}分钟` : "", e.how ? "处理：" + e.how : ""); break;
+      p.push(v(e.method) || t("喂奶"));
+      if (e.left) p.push(t("左{n}分", { n: e.left })); if (e.right) p.push(t("右{n}分", { n: e.right })); if (e.ml) p.push(fmtU("vol", e.ml)); break;
+    case "diaper": if (e.pee) p.push(t("尿")); if (e.poop) p.push(e.color ? t("{label}（{u}）", { label: t("便"), u: t(e.color) }) : t("便")); break;
+    case "sleep": p.push(e.end ? t("睡到 {t} · {d}", { t: hm(e.end), d: dur(e.end - e.ts) }) : t("正在睡")); if (e.where) p.push(t(e.where)); if (e.how) p.push(t(e.how)); break;
+    case "baby": if (e.temp) p.push(`${t("体温")} ${fmtU("temp", e.temp)}`); if (e.weight) p.push(`${t("体重")} ${fmtU("wbaby", e.weight)}`); if (e.length) p.push(`${t("身长")} ${fmtU("len", e.length)}`); if (e.head) p.push(`${t("头围")} ${fmtU("len", e.head)}`); if (!p.length) p.push(t("健康记录")); break;
+    case "bmed": p.push(v(e.cat), e.name || "", e.dose || ""); break;
+    case "mmed": p.push(v(e.cat), e.name || "", e.dose || ""); break;
+    case "vax": p.push(e.name || t("疫苗"), v(e.dose), v(e.site), e.reaction && e.reaction !== "无" ? t("反应：{r}", { r: t(e.reaction) }) : ""); break;
+    case "mbody": if (e.weight) p.push(`${t("体重")} ${fmtU("wmom", e.weight)}`); if (e.lochia) p.push(`${t("恶露")} ${t(e.lochia)}`); if (e.pain != null) p.push(`${t("疼痛")} ${e.pain}`); if (e.mood != null) p.push(`${t("心情")} ${e.mood}/5`); if (e.sleepHrs) p.push(t("睡 {h}h", { h: e.sleepHrs })); break;
+    case "food": p.push(v(e.meal), e.foods || "", v(e.amount), e.newFood ? t("新食物") : "", e.reaction && e.reaction !== "无" ? t("反应：{r}", { r: t(e.reaction) }) : ""); break;
+    case "milestone": p.push(v(e.cat), e.name || t("里程碑")); break;
+    case "potty": p.push(v(e.what), v(e.where), e.self ? t("自己说要去") : ""); break;
+    case "speech": p.push(v(e.kind), e.words ? `「${e.words}」` : "", e.lang && e.lang !== "中文" ? t(e.lang) : ""); break;
+    case "activity": p.push(v(e.kind) || t("活动"), e.what || "", e.minutes ? t("{n}分钟", { n: e.minutes }) : ""); break;
+    case "behavior": p.push(v(e.kind), e.trigger ? t("起因：{s}", { s: e.trigger }) : "", e.minutes ? t("{n}分钟", { n: e.minutes }) : "", e.how ? t("处理：{s}", { s: e.how }) : ""); break;
   }
   return p.filter(Boolean).join(" · ");
 }
 function flags(e){
   const f = [];
   const ageDays = babyAgeDays(e.ts, childOf(e));
-  if (e.type === "baby" && e.temp >= 38) f.push(ageDays != null && ageDays < 90 ? "3个月内宝宝体温≥38℃：请立即联系儿科医生或急诊" : "发热：留意精神状态，按医生建议处理");
-  if (e.type === "diaper" && e.poop && e.color === "白/灰白") f.push("灰白色大便可能提示肝胆问题，请尽快就医");
-  if (e.type === "diaper" && e.poop && e.color === "带血") f.push("大便带血：请联系儿科医生");
-  if (e.type === "diaper" && e.poop && e.color === "黑（胎便）" && ageDays != null && ageDays > 5) f.push("出生5天后仍为黑色大便：请咨询医生");
-  if (e.type === "food" && ["皮疹", "呕吐", "腹泻"].includes(e.reaction)) f.push(`进食后${e.reaction}可能是食物过敏：记下吃了什么并咨询医生；如出现嘴唇或面部肿胀、呼吸困难、全身荨麻疹，请立即就医`);
-  if (e.type === "vax" && ["发热", "其他"].includes(e.reaction)) f.push("接种后若出现高热、持续哭闹超过3小时、呼吸困难、面部肿胀或全身荨麻疹，请及时就医");
-  if (e.type === "mbody" && e.lochia === "1小时浸透1片") f.push("出血量大（约1小时浸透1片卫生巾）：属于紧急警示信号，请立即就医");
-  if (e.type === "mbody" && e.mood != null && e.mood <= 1) f.push("如果持续低落或有伤害自己/宝宝的念头，请马上联系医生或身边可信任的人");
+  if (e.type === "baby" && e.temp >= 38) f.push(ageDays != null && ageDays < 90 ? t("3个月内宝宝体温≥38℃：请立即联系儿科医生或急诊") : t("发热：留意精神状态，按医生建议处理"));
+  if (e.type === "diaper" && e.poop && e.color === "白/灰白") f.push(t("灰白色大便可能提示肝胆问题，请尽快就医"));
+  if (e.type === "diaper" && e.poop && e.color === "带血") f.push(t("大便带血：请联系儿科医生"));
+  if (e.type === "diaper" && e.poop && e.color === "黑（胎便）" && ageDays != null && ageDays > 5) f.push(t("出生5天后仍为黑色大便：请咨询医生"));
+  if (e.type === "food" && ["皮疹", "呕吐", "腹泻"].includes(e.reaction)) f.push(t("进食后{r}可能是食物过敏：记下吃了什么并咨询医生；如出现嘴唇或面部肿胀、呼吸困难、全身荨麻疹，请立即就医", { r: t(e.reaction) }));
+  if (e.type === "vax" && ["发热", "其他"].includes(e.reaction)) f.push(t("接种后若出现高热、持续哭闹超过3小时、呼吸困难、面部肿胀或全身荨麻疹，请及时就医"));
+  if (e.type === "mbody" && e.lochia === "1小时浸透1片") f.push(t("出血量大（约1小时浸透1片卫生巾）：属于紧急警示信号，请立即就医"));
+  if (e.type === "mbody" && e.mood != null && e.mood <= 1) f.push(t("如果持续低落或有伤害自己/宝宝的念头，请马上联系医生或身边可信任的人"));
   return f;
 }
 
-export { TYPES, summary, flags };
+export { TYPES, typeLabel, summary, flags };

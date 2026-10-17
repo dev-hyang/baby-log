@@ -1,10 +1,11 @@
+import { t } from "./i18n.js";
 import { $, D, newId, startOfDay } from "./util.js";
 
 /* ============ state & storage ============ */
 const LS_KEY = "xiaoyueliang.v1";
 const S = {
   entries: [],
-  settings: { babyName: "", birth: "", children: [], legacyChild: null, medIntervals: [{ name: "布洛芬", hours: "" }, { name: "泰诺", hours: "" }], checkups: {} },
+  settings: { babyName: "", birth: "", children: [], legacyChild: null, medIntervals: [{ name: t("布洛芬"), hours: "" }, { name: t("泰诺"), hours: "" }], checkups: {} },
   childId: null, // which child this device is looking at
   mode: "local", col: null, prof: null, sample: null,
   tab: "today", filter: "all", q: "",
@@ -41,7 +42,7 @@ function normalizeSettings(){
   S.childId = st.children.some(c => c.id === cid) ? cid : st.children[0].id;
 }
 const child = (id = S.childId) => S.settings.children.find(c => c.id === id) || S.settings.children[0];
-const childName = (id = S.childId) => (child(id) && child(id).name) || "宝宝";
+const childName = (id = S.childId) => (child(id) && child(id).name) || t("宝宝");
 // unknown ids (e.g. a child removed on another device) fall back to the legacy child so no record disappears
 function childOf(e){ return e.child && S.settings.children.some(c => c.id === e.child) ? e.child : S.settings.legacyChild; }
 function setChild(id){ if (!S.settings.children.some(c => c.id === id)) return; S.childId = id; try { localStorage.setItem(CHILD_KEY, id); } catch (e) {} }
@@ -53,13 +54,13 @@ function saveLocal(){ try { localStorage.setItem(LS_KEY, JSON.stringify({ entrie
 function birthTs(cid = S.childId){ const c = child(cid); return c && c.birth ? new Date(c.birth + "T00:00:00").getTime() : null; }
 function babyAgeDays(at = Date.now(), cid = S.childId){ const b = birthTs(cid); return b == null ? null : Math.floor((startOfDay(at) - b) / D); }
 function ageText(cid = S.childId){
-  const d = babyAgeDays(Date.now(), cid); if (d == null) return "先在设置里填宝宝生日";
-  if (d < 0) return `距预产期还有 ${-d} 天`;
+  const d = babyAgeDays(Date.now(), cid); if (d == null) return t("先在设置里填宝宝生日");
+  if (d < 0) return t("距预产期还有 {n} 天", { n: -d });
   const b = new Date(birthTs(cid)), n = new Date();
   let m = (n.getFullYear() - b.getFullYear()) * 12 + n.getMonth() - b.getMonth(); if (n.getDate() < b.getDate()) m--;
   const stage = STAGES.find(s => d < s.untilDays) || STAGES[STAGES.length - 1];
-  const age = d < 60 ? `出生第 ${d + 1} 天` : m < 24 ? `${m} 个月` : `${Math.floor(m / 12)} 岁 ${m % 12} 个月`;
-  return `${age} · ${stage.name}`;
+  const age = d < 60 ? t("出生第 {n} 天", { n: d + 1 }) : m < 24 ? t("{m} 个月", { m }) : t("{y} 岁 {m} 个月", { y: Math.floor(m / 12), m: m % 12 });
+  return `${age} · ${t(stage.name)}`;
 }
 const STAGES = [
   { key: "newborn", name: "新生儿期", range: "0–3 个月", untilDays: 91, items: ["喂奶 / 尿布 / 睡眠", "妈妈产后恢复", "黄疸与体重"] },
@@ -72,7 +73,12 @@ const STAGES = [
 function stageOf(cid = S.childId){ const d = babyAgeDays(Date.now(), cid); return d == null ? STAGES[0] : STAGES.find(s => d < s.untilDays) || STAGES[STAGES.length - 1]; }
 function ageMonths(cid = S.childId, at = Date.now()){ const b = birthTs(cid); if (b == null) return null; const bd = new Date(b), n = new Date(at); let m = (n.getFullYear() - bd.getFullYear()) * 12 + n.getMonth() - bd.getMonth(); if (n.getDate() < bd.getDate()) m--; return Math.max(0, m); }
 // "26天" / "8月龄" / "2岁3月" for a record's timestamp
-function ageAtText(ts, cid = S.childId){ const d = babyAgeDays(ts, cid); if (d == null || d < 0) return ""; if (d < 60) return `${d + 1}天`; const m = ageMonths(cid, ts); return m < 24 ? `${m}月龄` : `${Math.floor(m / 12)}岁${m % 12 ? `${m % 12}月` : ""}`; }
+function ageAtText(ts, cid = S.childId){
+  const d = babyAgeDays(ts, cid); if (d == null || d < 0) return "";
+  if (d < 60) return t("{n}天", { n: d + 1 });
+  const m = ageMonths(cid, ts);
+  return m < 24 ? t("{m}月龄", { m }) : m % 12 ? t("{y}岁{m}月", { y: Math.floor(m / 12), m: m % 12 }) : t("{y}岁", { y: Math.floor(m / 12) });
+}
 // AAP Bright Futures well-child visit schedule
 const CHECKUPS = [
   { k: "d4", label: "出生后 3–5 天", days: 4 }, { k: "m1", label: "1 月龄", m: 1 }, { k: "m2", label: "2 月龄", m: 2 },
@@ -85,6 +91,6 @@ function checkupDate(c){ const b = birthTs(); if (b == null) return null; if (c.
 const checkupsDone = () => (S.settings.checkups || {})[S.childId] || {};
 function nextCheckup(){ const done = checkupsDone(); return CHECKUPS.map(c => ({ ...c, at: checkupDate(c) })).find(c => c.at && !done[c.k] && c.at > Date.now() - 14 * D); }
 
-const APP_VERSION = "2026-10-15.5";
+const APP_VERSION = "2026-10-16.1";
 
 export { LS_KEY, S, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupsDone, nextCheckup, APP_VERSION };

@@ -1,4 +1,5 @@
 import { sleepMsIn } from "./derived.js";
+import { t } from "./i18n.js";
 import { stageMetrics } from "./stages.js";
 import { S, vis } from "./state.js";
 import { isUS, toDisp, unitOf } from "./units.js";
@@ -24,6 +25,7 @@ const METRICS = {
   words:   { label: "语言记录", unit: "条", dec: 1, color: "#5B8E5A", day: (a, b) => inRange(a, b, "speech").length },
   tantrum: { label: "发脾气 / 哭闹", unit: "次", dec: 1, color: "var(--rose)", day: (a, b) => inRange(a, b, "behavior").filter(e => ["发脾气", "哭闹"].includes(e.kind)).length }
 };
+const mLabel = k => t(METRICS[k].label), mUnit = k => t(METRICS[k].unit);
 function actMinutes(a, b, kind){ return inRange(a, b, "activity").filter(e => e.kind === kind).reduce((s, e) => s + (+e.minutes || 0), 0); }
 function inRange(a, b, type){ return vis().filter(e => e.type === type && e.ts >= a && e.ts < b); }
 function hasData(a, b){ return vis().some(e => e.ts >= a && e.ts < b); }
@@ -63,8 +65,9 @@ function barChart(m, bks, vals){
     if (bks.length <= 8 || i % 2 === (bks.length - 1) % 2) g += `<text x="${(x + w / 2).toFixed(1)}" y="${Hh - 6}" text-anchor="middle">${bk.label}</text>`;
   });
   if (avg != null) g += `<line x1="${P.l}" x2="${W - P.r}" y1="${Y(avg).toFixed(1)}" y2="${Y(avg).toFixed(1)}" stroke="var(--ink)" stroke-dasharray="4 4" stroke-opacity=".5"/>`;
-  return `<div class="scroll-x"><svg viewBox="0 0 ${W} ${Hh}" width="100%" role="img" aria-label="${M.label}${S.gran === "day" ? "每天" : "每周日均"}柱状图，虚线为平均值 ${avg == null ? "无" : fmtV(m, avg)}${M.unit}">${g}</svg></div>
-  <div class="legend"><span style="--c:${M.color}">${S.gran === "day" ? "每天" : "每周日均（日期为周一）"}</span><span style="--c:${M.color};opacity:.5">进行中</span><span style="--c:transparent">┅ 虚线为平均</span></div>`;
+  const per = S.gran === "day" ? t("每天") : t("每周日均");
+  return `<div class="scroll-x"><svg viewBox="0 0 ${W} ${Hh}" width="100%" role="img" aria-label="${t("{metric}{per}柱状图，虚线为平均值 {avg}{unit}", { metric: mLabel(m), per, avg: avg == null ? t("无") : fmtV(m, avg), unit: mUnit(m) })}">${g}</svg></div>
+  <div class="legend"><span style="--c:${M.color}">${S.gran === "day" ? t("每天") : t("每周日均（日期为周一）")}</span><span style="--c:${M.color};opacity:.5">${t("进行中")}</span><span style="--c:transparent">${t("┅ 虚线为平均")}</span></div>`;
 }
 function viewTrend(){
   const n = S.gran === "day" ? 14 : 8;
@@ -76,36 +79,37 @@ function viewTrend(){
   const cur = vals[vals.length - 1], prev = vals[vals.length - 2];
   const delta = (c, p) => (c == null || p == null) ? "" : c - p;
   const pct = (c, p) => (c == null || p == null || p === 0) ? "" : ` (${c >= p ? "+" : ""}${Math.round((c - p) / p * 100)}%)`;
-  const per = S.gran === "day" ? ["今天", "昨天"] : ["本周", "上周"];
+  const per = S.gran === "day" ? [t("今天"), t("昨天")] : [t("本周"), t("上周")];
   const dv = delta(cur, prev);
+  const daily = S.gran === "week" ? t("日均") : "";
   // comparison table across all metrics
   const cmpRows = Object.keys(METRICS).map(k => {
     const c = metricValue(k, bks[bks.length - 1]), p = metricValue(k, bks[bks.length - 2]);
     if (!c && !p) return ""; // hide metrics with no data in either period
     const d = delta(c, p);
-    return `<div><button data-metric="${k}">${METRICS[k].label}</button> <span class="small muted">${METRICS[k].unit}</span></div>
+    return `<div><button data-metric="${k}">${mLabel(k)}</button> <span class="small muted">${mUnit(k)}</span></div>
       <div class="num">${fmtV(k, c)}</div><div class="num">${fmtV(k, p)}</div>
       <div class="num ${d === "" || Math.abs(d) < 1e-9 ? "" : d > 0 ? "up" : "down"}">${d === "" ? "–" : (d > 0 ? "↑" : d < 0 ? "↓" : "") + fmtV(k, Math.abs(d))}</div>`;
   }).join("");
-  if (!vis().length) return `<div class="empty">还没有记录。记录几天后这里会显示趋势。</div>`;
+  if (!vis().length) return `<div class="empty">${t("还没有记录。记录几天后这里会显示趋势。")}</div>`;
   return `
-  <div class="chips" role="group" aria-label="时间粒度" style="margin-top:12px">
-    <button class="chip" data-gran="day" aria-pressed="${S.gran === "day"}">按天（14 天）</button>
-    <button class="chip" data-gran="week" aria-pressed="${S.gran === "week"}">按周（8 周）</button>
+  <div class="chips" role="group" aria-label="${t("时间粒度")}" style="margin-top:12px">
+    <button class="chip" data-gran="day" aria-pressed="${S.gran === "day"}">${t("按天（14 天）")}</button>
+    <button class="chip" data-gran="week" aria-pressed="${S.gran === "week"}">${t("按周（8 周）")}</button>
   </div>
-  <div class="chips" role="group" aria-label="指标">${keys.map(k => `<button class="chip" data-metric="${k}" aria-pressed="${S.metric === k}">${METRICS[k].label}</button>`).join("")}</div>
+  <div class="chips" role="group" aria-label="${t("指标")}">${keys.map(k => `<button class="chip" data-metric="${k}" aria-pressed="${S.metric === k}">${mLabel(k)}</button>`).join("")}</div>
   <div class="panel">
-    <div class="small muted">${M.label} · ${per[0]}${S.gran === "week" ? (M.max ? "最长" : "日均") : ""}${bks[bks.length - 1].partial ? "（进行中）" : ""}</div>
-    <div class="kpi"><span class="v">${fmtV(S.metric, cur)}</span><span class="muted">${M.unit}</span>
-      ${dv !== "" ? `<span class="d ${dv > 0 ? "up" : dv < 0 ? "down" : ""}" style="color:var(--muted)">比${per[1]} ${dv > 0 ? "+" : dv < 0 ? "−" : "±"}${fmtV(S.metric, Math.abs(dv))}${pct(cur, prev)}</span>` : ""}</div>
+    <div class="small muted">${mLabel(S.metric)} · ${per[0]}${S.gran === "week" ? (M.max ? t("最长") : t("日均")) : ""}${bks[bks.length - 1].partial ? t("（进行中）") : ""}</div>
+    <div class="kpi"><span class="v">${fmtV(S.metric, cur)}</span><span class="muted">${mUnit(S.metric)}</span>
+      ${dv !== "" ? `<span class="d ${dv > 0 ? "up" : dv < 0 ? "down" : ""}" style="color:var(--muted)">${t("比{per} {delta}{pct}", { per: per[1], delta: (dv > 0 ? "+" : dv < 0 ? "−" : "±") + fmtV(S.metric, Math.abs(dv)), pct: pct(cur, prev) })}</span>` : ""}</div>
     ${barChart(S.metric, bks, vals)}
   </div>
   <h2>${per[0]} vs ${per[1]}</h2>
   <div class="panel"><div class="cmp">
-    <div class="h">指标</div><div class="h">${per[0]}${S.gran === "week" ? "日均" : ""}</div><div class="h">${per[1]}${S.gran === "week" ? "日均" : ""}</div><div class="h">变化</div>
+    <div class="h">${t("指标")}</div><div class="h">${per[0]}${daily}</div><div class="h">${per[1]}${daily}</div><div class="h">${t("变化")}</div>
     ${cmpRows}
   </div>
-  <p class="small muted" style="margin-top:8px">${S.gran === "week" ? "周数据按“有记录的天数”求日均（最长一觉取一周内最长），避免漏记的日子拉低平均。" : "今天还没过完，和昨天比会偏低，看趋势更准。"}箭头只表示多或少，不代表好坏：例如喂奶次数随月龄减少是正常的。点指标名可切换上方图表。上方只列出当前阶段常用的指标，下表会显示所有有数据的指标。</p></div>`;
+  <p class="small muted" style="margin-top:8px">${S.gran === "week" ? t("周数据按“有记录的天数”求日均（最长一觉取一周内最长），避免漏记的日子拉低平均。") : t("今天还没过完，和昨天比会偏低，看趋势更准。")}${t("箭头只表示多或少，不代表好坏：例如喂奶次数随月龄减少是正常的。点指标名可切换上方图表。上方只列出当前阶段常用的指标，下表会显示所有有数据的指标。")}</p></div>`;
 }
 
 export { METRICS, actMinutes, inRange, hasData, weekStart, buckets, metricValue, fmtV, barChart, viewTrend };

@@ -7,6 +7,7 @@ const byTime = (a, b) => b.ts - a.ts;
 const last = (pred) => vis().filter(pred).sort(byTime)[0];
 const within = (ms) => vis().filter(e => e.ts >= Date.now() - ms && e.ts <= Date.now() + 60e3);
 
+// canonical "左侧" / "右侧"; the caller translates for display
 function suggestSide(f){
   if (!f || !["亲喂", "混合"].includes(f.method)) return null;
   const l = +f.left || 0, r = +f.right || 0;

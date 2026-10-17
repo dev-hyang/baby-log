@@ -18,6 +18,9 @@
   --slate:#93B3DC; --slate-soft:#243245; --honey:#F0C75A; --honey-soft:#3A321E;
   --sage:#7EBC98; --sage-soft:#1E3328; --rose:#E58A9C; --rose-soft:#3A2228; --sky:#8DB8E4;
 }
+/* body font follows the interface language (set on <html lang> by js/i18n.js) */
+html[lang="zh-TW"]{--f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;--f-num:"Outfit","Noto Sans TC",system-ui,sans-serif}
+html[lang="en"]{--f-body:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans SC",sans-serif}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *,*::before,*::after{box-sizing:inherit}
 html,body{margin:0}
@@ -192,7 +195,7 @@ body.sheet-open .wrap,body.sheet-open nav.tabs{display:none}
 .sheet-head h3{font-size:18px;margin:0}
 .field{margin:12px 0}
 .field > label,.field > .lab{display:block;font-size:14px;color:var(--muted);margin-bottom:6px}
-.field input[type=text],.field input[type=number],.field input[type=datetime-local],.field input[type=date],.field textarea,.field select{width:100%;border:1px solid var(--line);background:var(--honey-soft);border-radius:var(--radius-sm);padding:11px 12px;font-size:16px;min-height:46px}
+.field input[type=text],.field input[type=number],.field input[type=email],.field input[type=password],.field input[type=datetime-local],.field input[type=date],.field textarea,.field select{box-sizing:border-box;width:100%;border:1px solid var(--line);background:var(--honey-soft);border-radius:var(--radius-sm);padding:11px 12px;font-size:16px;min-height:46px}
 .field textarea{min-height:70px;resize:vertical}
 .seg{display:flex;flex-wrap:wrap;gap:6px}
 .seg button{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-sm);padding:9px 12px;cursor:pointer;min-height:42px;font-size:15px}
@@ -207,6 +210,7 @@ body.sheet-open .wrap,body.sheet-open nav.tabs{display:none}
 .btn.primary{background:var(--ink);color:var(--surface);border-color:var(--ink);flex:1}
 .btn.danger{color:var(--rose);border-color:var(--rose)}
 .warnline{font-size:13px;color:var(--rose);margin-top:6px}
+details > summary{cursor:pointer;color:var(--slate);min-height:32px;display:flex;align-items:center}
 
 .toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:999px;font-size:14px;z-index:30;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw}
 .toast.on{opacity:1}
