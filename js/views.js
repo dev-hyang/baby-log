@@ -1,11 +1,11 @@
+import { aboutHTML } from "./about.js";
 import { APPS, THIS_APP } from "./apps.js";
 import { ask } from "./ask.js";
 import { byTime, last, medStatus, suggestSide, within } from "./derived.js";
-import { aboutHTML } from "./about.js";
 import { t } from "./i18n.js";
 import { settingsHTML, viewMe } from "./me.js";
 import { viewMeal } from "./meal.js";
-import { doctorListHTML, milestoneRefHTML, quickHTML, stageTypes, statsHTML } from "./stages.js";
+import { doctorListHTML, milestoneRef, milestoneRefHTML, quickHTML, stageTypes, statsHTML } from "./stages.js";
 import { CHECKUPS, S, STAGES, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
 import { SB, loadTombs, memberName, memberNames } from "./sync.js";
 import { viewTrend } from "./trend.js";
@@ -23,7 +23,7 @@ function renderStatus(){
   $("#bage").textContent = ageText();
   $("#kids").innerHTML = S.settings.children.map(c => `<button role="menuitemradio" aria-checked="${c.id === S.childId}" data-kidsel="${esc(c.id)}"><b>${esc(c.name || t("宝宝"))}</b><small>${esc(ageText(c.id))}</small></button>`).join("")
     + `<button class="manage" role="menuitem" data-act="settings">${t("管理孩子…")}</button>`;
-  // sister apps beside the title: ‹ previous site, next site › (wrapping); same account on all three
+  // sister apps in the top-right corner: ‹ previous site, next site › (wrapping); same account on all three
   const i = APPS.findIndex(a => a.key === THIS_APP), n = APPS.length, prev = APPS[(i - 1 + n) % n], next = APPS[(i + 1) % n];
   const badge = (a, label) => `<a class="badge" href="${a.url}" title="${esc(t("切到{name}", { name: t(a.name) }))}" aria-label="${esc(t("切到{name}", { name: t(a.name) }))}">${label}</a>`;
   $("#apps").innerHTML = badge(prev, `‹ ${esc(t(prev.short))}`) + badge(next, `${esc(t(next.short))} ›`);
@@ -33,18 +33,26 @@ function toggleKids(open = $("#kids").hidden){
   $("#bname").setAttribute("aria-expanded", String(open));
   if (open) { const cur = $("#kids [aria-checked='true']"); cur && cur.focus(); }
 }
-// pages reached from 我的: the bottom tab stays on 我的 and a "‹ 我的" chip sits on top
-const ME_SUB = { settings: settingsHTML, learn: viewLearn, about: aboutHTML };
+// one entry row of a hub page (我的 / 成长 / 妈妈): icon, title, one-line description, ›
+const mrow = (attr, title, desc, icon) => `<button class="mrow" ${attr}><span class="mi" aria-hidden="true">${icon}</span><span class="mt"><b>${title}</b>${desc ? `<small>${desc}</small>` : ""}</span><span class="mch" aria-hidden="true">›</span></button>`;
+// sub-pages reached from a hub: the hub's bottom tab stays highlighted and a "‹ hub" chip sits on top
+const SUB = {
+  settings: ["me", () => settingsHTML()], learn: ["me", () => viewLearn()], about: ["me", () => aboutHTML()],
+  "grow-milestones": ["grow", () => growMilestones()], "grow-foods": ["grow", () => growFoods()], "grow-sleep": ["grow", () => growSleep()],
+  "grow-body": ["grow", () => growBody()], "grow-checkups": ["grow", () => growCheckups()], "grow-vax": ["grow", () => growVax()],
+  "mom-charts": ["mom", () => momCharts()], "mom-signs": ["mom", () => momSigns()]
+};
+const TAB_LABEL = { me: "我的", grow: "成长", mom: "妈妈" };
 function render(){
   renderStatus();
   // the postpartum tab matters in the newborn stage, or while mother records are still being written
   const showMom = stageOf().key === "newborn" || S.entries.some(e => (e.type === "mmed" || e.type === "mbody") && e.ts > Date.now() - 30 * D);
   $('nav.tabs [data-tab="mom"]').hidden = !showMom;
-  if (S.tab === "mom" && !showMom) S.tab = "today";
-  const cur = ME_SUB[S.tab] ? "me" : S.tab;
+  const sub = SUB[S.tab], cur = sub ? sub[0] : S.tab;
+  if (cur === "mom" && !showMom) S.tab = "today";
   document.querySelectorAll("nav.tabs button").forEach(b => { if (b.dataset.tab === cur) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
-  const v = { today: viewToday, log: viewLog, mom: viewMom, grow: viewGrow, me: viewMe, ...ME_SUB }[S.tab] || viewToday;
-  const back = ME_SUB[S.tab] ? `<div style="margin-top:12px"><button class="chip" data-tab="me">‹ ${t("我的")}</button></div>` : "";
+  const v = sub ? sub[1] : ({ today: viewToday, log: viewLog, mom: viewMom, grow: viewGrow, me: viewMe }[S.tab] || viewToday);
+  const back = sub ? `<div style="margin-top:12px"><button class="chip" data-tab="${sub[0]}">‹ ${t(TAB_LABEL[sub[0]])}</button></div>` : "";
   $("#main").innerHTML = back + v();
   if (S.tab === "log") { const s = $("#q"); if (s && document.activeElement !== s && S.logFocus) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); S.logFocus = false; } }
 }
@@ -75,6 +83,7 @@ function heroHTML(){
 }
 function bigDur(ms){ const m = Math.max(0, Math.floor(ms / 60000)); const h = Math.floor(m / 60); return h ? `${h}<small>${t("小时")}</small>${m % 60}<small>${t("分")}</small>` : `${m}<small>${t("分钟")}</small>`; }
 
+/* ---- Today: the dashboard. Order: clock → warnings and reminders → quick buttons → stats → today's entries ---- */
 function viewToday(){
   const day = within(D);
   const alerts = within(2 * D).flatMap(e => flags(e).map(msg => ({ t: msg, e })));
@@ -87,8 +96,9 @@ function viewToday(){
 
   return `
   ${heroHTML()}
-  <div class="quick" role="group" aria-label="${t("快速记录")}">${quickHTML()}</div>
   ${alerts.map(a => `<div class="alert red" role="alert"><b>${t("需要留意")}</b> · ${hm(a.e.ts)} ${esc(a.t)}</div>`).join("")}
+  ${nc ? `<div class="alert info">${checkup}<button class="chip" data-tab="grow-checkups" style="margin-left:6px">${t("查看全部")}</button></div>` : ""}
+  <div class="quick" role="group" aria-label="${t("快速记录")}">${quickHTML()}</div>
 
   <h2>${t("最近 24 小时")}</h2>
   <div class="stats">${statsHTML(day)}</div>
@@ -96,9 +106,7 @@ function viewToday(){
   ${meds.length ? `<h2>${t("妈妈用药")}</h2><div class="panel">${meds.map(medRow).join("")}
      <p class="small muted" style="margin-top:8px">${t("间隔来自你在设置里填写的医嘱。没有填写的只显示距上次服药多久。")}</p></div>` : ""}
 
-  ${nc ? `<div class="alert info" style="margin-top:14px">${checkup}<button class="chip" data-tab="grow" style="margin-left:6px">${t("查看全部")}</button></div>` : ""}
-
-  <h2>${t("今天")}</h2>
+  <h2 id="todaySec">${t("今天")}</h2>
   ${today.length ? today.map(entryRow).join("") : `<div class="empty">${t("今天还没有记录。")}</div>`}
   ${!S.entries.length ? `<div class="empty">${t("想先看看效果？")}<br><button class="btn" data-act="demo">${t("载入演示数据")}</button></div>` : ""}`;
 }
@@ -111,7 +119,7 @@ function entryRow(e){
   const T = TYPES[e.type] || { color: "var(--muted)" };
   const fl = flags(e);
   const by = S.mode === "family" && e.by && memberName(e.by);
-  return `<button class="entry" data-edit="${e.id}">
+  return `<button class="entry ${e.id === S.flashId ? "flash" : ""}" data-edit="${e.id}">
     <span class="t">${hm(e.ts)}</span><span class="c" style="background:${T.color}" aria-hidden="true"></span>
     <span><span class="s">${esc(typeLabel(e.type))} · ${esc(summary(e))}</span>${by ? `<span class="n"> · ${esc(by)}</span>` : ""}${e.note ? `<br><span class="n">${esc(e.note)}</span>` : ""}${fl.map(f => `<br><span class="n" style="color:var(--rose)">${esc(f)}</span>`).join("")}</span></button>`;
 }
@@ -179,6 +187,7 @@ function sleepBarcode(){
   <div class="legend"><span style="--c:var(--slate)">${t("睡眠")}</span><span style="--c:var(--honey)">${t("喂奶")}</span></div>`;
 }
 
+/* ---- 妈妈: hub with the actionable parts (buttons, medicine timers); charts and warning signs are sub-pages ---- */
 const HEAR_HER = [
   "持续不缓解或越来越重的头痛，头晕、晕厥",
   "视力变化（看东西模糊、眼前闪光）",
@@ -191,51 +200,76 @@ const HEAR_HER = [
   "一侧腿部肿胀、发红、疼痛",
   "极度疲惫、无法照顾自己"
 ];
+const momBodies = () => S.entries.filter(e => e.type === "mbody").sort((a, b) => a.ts - b.ts);
 function viewMom(){
-  const meds = medStatus();
-  const bodies = S.entries.filter(e => e.type === "mbody").sort((a, b) => a.ts - b.ts);
-  const wpts = bodies.filter(e => num(e.weight) != null).map(e => ({ t: e.ts, v: toDisp("wmom", e.weight) }));
-  const ppts = bodies.filter(e => num(e.pain) != null).map(e => ({ t: e.ts, v: +e.pain }));
-  const mpts = bodies.filter(e => num(e.mood) != null).map(e => ({ t: e.ts, v: +e.mood }));
-  const lowMood = mpts.slice(-5).filter(p => p.v <= 2).length >= 3;
+  const meds = medStatus(), bodies = momBodies();
+  const mpts = bodies.filter(e => num(e.mood) != null).map(e => +e.mood);
+  const lowMood = mpts.slice(-5).filter(v => v <= 2).length >= 3;
+  const lastB = bodies[bodies.length - 1];
   return `<h2>${t("妈妈的恢复")}</h2>
   <div class="btns" style="margin-top:0"><button class="btn primary" data-add="mbody">${t("记录今天的身体状况")}</button><button class="btn" data-add="mmed">${t("记录用药")}</button></div>
   ${lowMood ? `<div class="alert info">${t("最近几次心情记录偏低。产后情绪波动很常见，但如果低落持续超过两周，或影响到吃饭、睡觉、照顾宝宝，值得和医生聊聊产后抑郁筛查（如 EPDS 量表）。")}</div>` : ""}
   <h2>${t("用药计时")}</h2>
   <div class="panel">${meds.length ? meds.map(medRow).join("") : `<p class="muted">${t("最近 48 小时没有用药记录。")}</p>`}
     <p class="small muted" style="margin-top:8px">${t("在“设置”里给每种药填上医生或说明书给的最短间隔，这里就会显示下次可以服用的时间。哺乳期用药请先确认医生的意见。")}</p></div>
-  <h2>${t("{label}（{u}）", { label: t("体重"), u: unitOf("wmom") })}</h2><div class="panel">${lineChart(wpts, { color: "#9B7BB8", unit: unitOf("wmom"), label: t("妈妈体重") })}</div>
+  <div class="panel mlist" style="margin-top:14px">
+    ${mrow('data-tab="mom-charts"', t("体重、疼痛与心情"), lastB ? t("最近一次 {date} · 共 {n} 次记录", { date: dayKey(lastB.ts), n: bodies.length }) : t("记录几次后显示曲线"), "📈")}
+    ${mrow('data-tab="mom-signs"', t("需要立即就医的警示信号"), t("CDC「Hear Her」产后紧急警示信号"), "⚠")}
+  </div>`;
+}
+function momCharts(){
+  const bodies = momBodies();
+  const wpts = bodies.filter(e => num(e.weight) != null).map(e => ({ t: e.ts, v: toDisp("wmom", e.weight) }));
+  const ppts = bodies.filter(e => num(e.pain) != null).map(e => ({ t: e.ts, v: +e.pain }));
+  const mpts = bodies.filter(e => num(e.mood) != null).map(e => ({ t: e.ts, v: +e.mood }));
+  return `<h2>${t("{label}（{u}）", { label: t("体重"), u: unitOf("wmom") })}</h2><div class="panel">${lineChart(wpts, { color: "#9B7BB8", unit: unitOf("wmom"), label: t("妈妈体重") })}</div>
   <h2>${t("疼痛与心情")}</h2>
   <div class="panel"><h3 class="small muted">${t("疼痛 0–10")}</h3>${lineChart(ppts, { color: "var(--rose)", unit: "", label: t("疼痛评分"), min: 0, max: 10 })}
     <h3 class="small muted" style="margin-top:10px">${t("心情 1–5")}</h3>${lineChart(mpts, { color: "var(--sage)", unit: "", label: t("心情评分"), min: 1, max: 5 })}</div>
-  <h2>${t("需要立即就医的警示信号")}</h2>
+  <div class="btns"><button class="btn primary" data-add="mbody">${t("记录今天的身体状况")}</button></div>`;
+}
+function momSigns(){
+  return `<h2>${t("需要立即就医的警示信号")}</h2>
   <div class="panel"><p class="small muted">${t("参考美国 CDC “Hear Her” 产后紧急警示信号。出现任何一项，请马上联系医生或去急诊。")}</p>
   <ul class="plain">${HEAR_HER.map(s => `<li>${t(s)}</li>`).join("")}</ul></div>`;
 }
 
+/* ---- 成长: hub with the stage strip and one row per topic; each topic is a sub-page ---- */
+const vaxList = all => all.filter(e => e.type === "vax" || (e.type === "bmed" && e.cat === "疫苗")).sort((a, b) => a.ts - b.ts);
+const newFoods = all => all.filter(e => e.type === "food" && (e.newFood || (e.reaction && e.reaction !== "无"))).sort((a, b) => a.ts - b.ts);
 function viewGrow(){
   const ad = babyAgeDays();
   const cur = ad == null ? -1 : STAGES.findIndex(s => ad < s.untilDays);
   const all = vis();
-  const health = all.filter(e => e.type === "baby").sort((a, b) => a.ts - b.ts);
-  const w = health.filter(e => num(e.weight) != null).map(e => ({ t: e.ts, v: toDisp("wbaby", e.weight) }));
-  const len = health.filter(e => num(e.length) != null).map(e => ({ t: e.ts, v: toDisp("len", e.length) }));
-  const done = checkupsDone();
-  const stage = stageOf().key, newborn = stage === "newborn";
+  const ms = all.filter(e => e.type === "milestone").length, foods = newFoods(all).length, vax = vaxList(all).length;
+  const lastW = all.filter(e => e.type === "baby" && num(e.weight) != null).sort(byTime)[0];
+  const nc = nextCheckup(), ref = milestoneRef();
   return `<h2>${t("成长阶段")}</h2>
   <div class="stages">${STAGES.map((s, i) => `<div class="stage ${i === cur ? "now" : ""}"><b>${t(s.name)}</b>${t(s.range)}<ul>${s.items.map(x => `<li>${t(x)}</li>`).join("")}</ul></div>`).join("")}</div>
   <p class="small muted" style="margin-top:6px">${cur >= 0 ? t("现在是「{stage}」，首页的快捷按钮、统计和趋势指标会按阶段变化。", { stage: t(STAGES[cur].name) }) : t("在设置里填写宝宝生日后，会自动定位到当前阶段。")}</p>
-
-  <h2>${t("发育里程碑")}</h2>
+  <div class="panel mlist" style="margin-top:14px">
+    ${mrow('data-tab="grow-milestones"', t("发育里程碑"), ms ? t("已记录 {n} 个 · 附 CDC 月龄参考", { n: ms }) : t("记下第一次翻身、第一次叫妈妈 · 附 CDC 月龄参考"), "⭐")}
+    ${mrow('data-tab="grow-foods"', t("新食物与反应"), foods ? t("{n} 条新食物或反应记录", { n: foods }) : t("第一次尝试的食物和过敏反应"), "🥣")}
+    ${mrow('data-tab="grow-sleep"', t("睡眠"), t("最近 7 天分布 · 各月龄睡眠参考"), "🌙")}
+    ${mrow('data-tab="grow-body"', t("体重 / 身高"), lastW ? t("最近 {w} · {date}", { w: fmtU("wbaby", lastW.weight), date: dayKey(lastW.ts) }) : t("体重、身高、头围曲线"), "📏")}
+    ${mrow('data-tab="grow-checkups"', t("儿科体检与就诊"), nc ? t("下次 {label} · {date}", { label: t(nc.label), date: dayKey(nc.at) }) : t("提醒与历史记录"), "🩺")}
+    ${mrow('data-tab="grow-vax"', t("疫苗接种记录"), vax ? t("共 {n} 次", { n: vax }) : t("还没有接种记录"), "💉")}
+  </div>`;
+}
+function growMilestones(){
+  const all = vis();
+  return `<h2>${t("发育里程碑")}</h2>
   <div class="panel">${milestonesHTML(all)}${milestoneRefHTML()}
-    <div class="btns"><button class="btn" data-add="milestone">${t("＋ 记录一个里程碑")}</button></div></div>
-
-  ${foodsHTML(all)}
-
-  <h2>${t("最近 7 天睡眠")}</h2>
+    <div class="btns"><button class="btn" data-add="milestone">${t("＋ 记录一个里程碑")}</button></div></div>`;
+}
+function growFoods(){
+  return `<h2>${t("新食物与反应")}</h2><div class="panel">${foodsHTML(vis())}
+    <div class="btns"><button class="btn" data-add="food" data-preset='{"newFood":true}'>${t("＋ 记录一种新食物")}</button></div></div>`;
+}
+function growSleep(){
+  return `<h2>${t("最近 7 天睡眠")}</h2>
   <div class="panel">${sleepBarcode()}
     <p class="small muted" style="margin-top:8px">${t("每一行是一天，从 0 点到 24 点。看得出白天和夜里的睡眠慢慢分开，就是作息在形成。")}</p></div>
-
   <h2>${t("睡眠参考")}</h2>
   <div class="panel scroll-x"><table>
     <thead><tr><th>${t("月龄")}</th><th>${t("24小时总睡眠")}</th><th>${t("常见清醒时长")}</th></tr></thead>
@@ -245,20 +279,27 @@ function viewGrow(){
       <tr><td>${t("1–2 岁")}</td><td>${t("11–14 小时（含小睡）")}</td><td>${t("3–5 小时")}</td></tr>
       <tr><td>${t("3–5 岁")}</td><td>${t("10–13 小时（含小睡）")}</td><td>${t("多数逐渐不午睡")}</td></tr>
     </tbody></table>
-    <p class="small muted" style="margin-top:8px">${t("总睡眠：4个月以上为美国睡眠医学会（AASM）建议、AAP 认可；0–3 个月为美国国家睡眠基金会建议。清醒时长是常见经验范围，个体差异很大。安全睡眠：仰睡、独自睡在婴儿床、床里不放枕头被子毛绒玩具。多数专家建议约 4–6 个月后再考虑睡眠训练。")}</p></div>
-
-  <h2>${t("{label}（{u}）", { label: t("体重"), u: unitOf("wbaby") })}</h2><div class="panel">${lineChart(w, { color: "var(--sky)", unit: unitOf("wbaby"), label: t("宝宝体重") })}
+    <p class="small muted" style="margin-top:8px">${t("总睡眠：4个月以上为美国睡眠医学会（AASM）建议、AAP 认可；0–3 个月为美国国家睡眠基金会建议。清醒时长是常见经验范围，个体差异很大。安全睡眠：仰睡、独自睡在婴儿床、床里不放枕头被子毛绒玩具。多数专家建议约 4–6 个月后再考虑睡眠训练。")}</p></div>`;
+}
+function growBody(){
+  const health = vis().filter(e => e.type === "baby").sort((a, b) => a.ts - b.ts);
+  const w = health.filter(e => num(e.weight) != null).map(e => ({ t: e.ts, v: toDisp("wbaby", e.weight) }));
+  const len = health.filter(e => num(e.length) != null).map(e => ({ t: e.ts, v: toDisp("len", e.length) }));
+  const newborn = stageOf().key === "newborn";
+  return `<h2>${t("{label}（{u}）", { label: t("体重"), u: unitOf("wbaby") })}</h2><div class="panel">${lineChart(w, { color: "var(--sky)", unit: unitOf("wbaby"), label: t("宝宝体重") })}
     <p class="small muted">${newborn ? t("新生儿出生后几天体重下降常见；通常约 10–14 天回到出生体重。") : ""}${t("是否正常请以儿科医生对照生长曲线的判断为准。")}</p>
     ${len.length >= 2 ? `<h3 class="small muted" style="margin-top:10px">${t("{label}（{u}）", { label: t("身高 / 身长"), u: unitOf("len") })}</h3>${lineChart(len, { color: "var(--sage)", unit: unitOf("len"), label: t("身高") })}` : ""}
-    <div class="btns"><button class="btn" data-add="baby">${t("记录体重 / 身高 / 头围")}</button></div></div>
-
-  <h2>${t("儿科体检与就诊")}</h2>
+    <div class="btns"><button class="btn" data-add="baby">${t("记录体重 / 身高 / 头围")}</button></div></div>`;
+}
+function growCheckups(){
+  const all = vis(), done = checkupsDone();
+  return `<h2>${t("儿科体检与就诊")}</h2>
   <div class="chips" role="group" aria-label="${t("体检视图")}" style="margin-top:0">
     <button class="chip" data-ckview="plan" aria-pressed="${S.checkupView !== "history"}">${t("提醒")}</button>
     <button class="chip" data-ckview="history" aria-pressed="${S.checkupView === "history"}">${t("历史记录")}</button></div>
-  ${S.checkupView === "history" ? checkupHistoryHTML(all) : checkupPlanHTML(all, done)}
-  ${vaxHTML()}`;
+  ${S.checkupView === "history" ? checkupHistoryHTML(all) : checkupPlanHTML(all, done)}`;
 }
+function growVax(){ return vaxHTML(); }
 // the Bright Futures schedule, with the actual visit date next to any checkpoint that already has a clinic record
 function checkupPlanHTML(all, done){
   if (!birthTs()) return `<div class="panel"><p class="muted">${t("在设置里填写宝宝生日后，会自动算出每次体检的大概日期。")}</p><button class="btn" data-act="settings">${t("去填写")}</button></div>`;
@@ -295,14 +336,14 @@ function milestonesHTML(all){
 }
 // first-time foods and any reactions: the allergy log a pediatrician asks for
 function foodsHTML(all){
-  const foods = all.filter(e => e.type === "food" && (e.newFood || (e.reaction && e.reaction !== "无"))).sort((a, b) => a.ts - b.ts);
-  if (!foods.length) return "";
-  return `<h2>${t("新食物与反应")}</h2><div class="panel"><div class="scroll-x"><table><thead><tr><th>${t("日期")}</th><th>${t("食物")}</th><th>${t("反应")}</th></tr></thead><tbody>
+  const foods = newFoods(all);
+  if (!foods.length) return `<p class="muted">${t("还没有新食物记录。记录饮食时勾上“第一次尝试的新食物”或填写反应，就会出现在这里。")}</p>`;
+  return `<div class="scroll-x"><table><thead><tr><th>${t("日期")}</th><th>${t("食物")}</th><th>${t("反应")}</th></tr></thead><tbody>
     ${foods.map(e => `<tr><td class="num"><button class="cellbtn" style="all:unset;cursor:pointer" data-edit="${e.id}" aria-label="${t("修改 {date} 的饮食记录", { date: dayKey(e.ts) })}">${dayKey(e.ts)}</button></td><td>${esc(e.foods || "")}${e.newFood ? ` <span class="small muted">${t("新")}</span>` : ""}</td><td${e.reaction && e.reaction !== "无" && e.reaction !== "拒绝" ? ' style="color:var(--rose)"' : ""}>${esc(t(e.reaction || "无"))}</td></tr>`).join("")}
-  </tbody></table></div><p class="small muted" style="margin-top:6px">${t("只列出勾了“第一次尝试”或有反应的记录。新食物建议一次只加一种、连续观察 2–3 天，以医生建议为准。")}</p></div>`;
+  </tbody></table></div><p class="small muted" style="margin-top:6px">${t("只列出勾了“第一次尝试”或有反应的记录。新食物建议一次只加一种、连续观察 2–3 天，以医生建议为准。")}</p>`;
 }
 function vaxHTML(){
-  const list = vis().filter(e => e.type === "vax" || (e.type === "bmed" && e.cat === "疫苗")).sort((a, b) => a.ts - b.ts);
+  const list = vaxList(vis());
   return `<h2>${t("疫苗接种记录")}</h2>
   <div class="panel">
     ${list.length ? `<div class="scroll-x"><table><thead><tr><th>${t("日期")}</th><th>${t("疫苗")}</th><th>${t("剂次")}</th><th>${t("部位")}</th><th>${t("反应")}</th></tr></thead><tbody>
@@ -343,4 +384,4 @@ function viewLearn(){
     ${["丁香妈妈", "崔玉涛育学园", "年糕妈妈"].map(n => `<div class="medrow"><span>${n}</span><button class="chip" data-copy="${n}">${t("复制名称")}</button></div>`).join("")}</div>`;
 }
 
-export { renderStatus, render, toggleKids, heroHTML, bigDur, viewToday, medRow, entryRow, viewLog, viewList, lineChart, sleepBarcode, viewMom, viewGrow, milestonesHTML, foodsHTML, vaxHTML, viewLearn };
+export { renderStatus, render, toggleKids, mrow, SUB, heroHTML, bigDur, viewToday, medRow, entryRow, viewLog, viewList, lineChart, sleepBarcode, viewMom, viewGrow, milestonesHTML, foodsHTML, vaxHTML, viewLearn };

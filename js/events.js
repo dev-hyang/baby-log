@@ -56,6 +56,12 @@ document.addEventListener("click", async ev => {
       if (e.type === "sleep" && e.end && e.end < e.ts) { toast(t("醒来时间要晚于入睡时间")); return; }
       closeSheet(); await putEntry(e);
       for (const id of also) await putEntry({ ...e, id: newId(), child: id }); // one copy per extra child
+      // on Today the quick buttons sit above the list: scroll to the 今天 section and light the saved row up
+      if (S.tab === "today" && e.ts >= startOfDay(Date.now())) {
+        S.flashId = e.id; render();
+        const h = $("#todaySec"); if (h) { const top = h.getBoundingClientRect().top + window.scrollY - 8; window.scrollTo(0, top); requestAnimationFrame(() => window.scrollTo(0, top)); }
+        setTimeout(() => { S.flashId = null; }, 3000);
+      }
       // a well-child visit ticks its checkpoint in the schedule, so the reminder table needs no second step
       if (e.type === "baby" && e.src === "儿科体检") {
         const cid = childOf(e), c = matchCheckup(e.ts, cid), done = (S.settings.checkups || {})[cid] || {};
@@ -64,7 +70,7 @@ document.addEventListener("click", async ev => {
       toast(also.length ? t("已保存 {n} 条", { n: also.length + 1 }) : t("已保存")); break; }
     case "who-change": readDraftInputs(); draft._pick = true; drawForm("child"); break;
     case "del": if (confirm(t("删除这条记录？"))) { closeSheet(); await removeEntry(draft.id); toast(t("已删除")); } break;
-    case "sleepnow": { if (last(e => e.type === "sleep" && !e.end)) { toast(t("已经在记录睡眠了")); return; } await putEntry({ id: newId(), type: "sleep", ts: Date.now(), child: S.childId }); toast(t("开始记录睡眠")); break; }
+    case "sleepnow": { if (last(e => e.type === "sleep" && !e.end)) { toast(t("已经在记录睡眠了")); return; } await putEntry({ id: newId(), type: "sleep", ts: Date.now(), child: S.childId }); window.scrollTo(0, 0); toast(t("开始记录睡眠")); break; }
     case "wake": { const e = S.entries.find(x => x.id === t0.dataset.id); if (e) { await putEntry({ ...e, end: Date.now() }); toast(t("这一觉睡了 {d}", { d: dur(Date.now() - e.ts) })); } break; }
     case "addpick": pickType(); break;
     case "settings": goTab("settings"); break;

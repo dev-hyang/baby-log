@@ -4,14 +4,14 @@ import { APP_VERSION, S, ageText, childName } from "./state.js";
 import { familyHTML } from "./sync.js";
 import { isUS, unitPref } from "./units.js";
 import { $, esc } from "./util.js";
-import { render } from "./views.js";
+import { mrow, render } from "./views.js";
 
 /* ============ 我的: the hub for everything that is not daily logging ============
    Same design as homeschool: one list row per entry (icon, title, one-line description, ›), then the print
    pages, then the sister apps. Settings / Q&A / About open as full pages with a "‹ 我的" chip on top and the
-   我的 tab stays highlighted (see ME_SUB in views.js). */
+   我的 tab stays highlighted (see SUB in views.js). */
 function viewMe(){
-  const row = (attr, title, desc, icon) => `<button class="mrow" ${attr}><span class="mi" aria-hidden="true">${icon}</span><span class="mt"><b>${title}</b>${desc ? `<small>${desc}</small>` : ""}</span><span class="mch" aria-hidden="true">›</span></button>`;
+  const row = mrow;
   const link = a => `<a class="mrow" href="${a.url}"><span class="mi" aria-hidden="true">↗</span><span class="mt"><b>${esc(t(a.name))}</b><small>${esc(t(a.desc))}</small></span><span class="mch" aria-hidden="true">›</span></a>`;
   return `
   <h2>${t("我的")} <span class="small muted" style="font-weight:400">${esc(childName())} · ${esc(ageText())}</span></h2>

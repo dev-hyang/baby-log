@@ -109,6 +109,9 @@ p{margin:0 0 8px}
 .day{font-size:13px;color:var(--muted);margin:18px 0 6px;font-weight:500}
 .entry{display:grid;grid-template-columns:52px 10px 1fr;gap:10px;align-items:start;padding:10px 4px;border-bottom:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-top:0;width:100%;text-align:left}
 .entry:hover{background:var(--slate-soft)}
+/* the row just saved from Today fades in from honey so the eye lands on it */
+.entry.flash{animation:flash 2.6s ease-out}
+@keyframes flash{0%,45%{background:var(--honey-soft)}100%{background:transparent}}
 .entry .t{font-family:var(--f-num);font-size:15px;padding-top:1px}
 .entry .c{width:10px;height:10px;border-radius:3px;margin-top:7px}
 .entry .s{font-size:15px}
