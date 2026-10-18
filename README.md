@@ -26,6 +26,7 @@ js/
   trend.js      趋势对比视图与柱状图
   sheet.js      记录表单与设置页（以页面形式替换内容区）
   ask.js        AI 问答
+  about.js      介绍页：网站是什么、每页怎么用、小技巧、注意事项、数据与隐私（头部「介绍」/ ⋮ 菜单 / 设置页打开）
   print.js      打印：按餐表格 / 趋势对比 / 时间线 / 就医记录（#print + body.printing，打印样式只显示它）
   apps.js       姐妹应用列表（标题旁的 ‹ › 徽章、⋮ 菜单、设置页）
   events.js     全局点击 / change / input 事件分发

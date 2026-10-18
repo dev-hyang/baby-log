@@ -45,7 +45,7 @@ function toggleMenu(kind){
     <button role="menuitem" data-act="print-timeline">${t("时间线")}<small>${t("最近 30 天")}</small></button>
     <button role="menuitem" data-act="print-medical">${t("就医记录")}<small>${t("体检 · 疫苗 · 生长")}</small></button>`;
   const others = APPS.filter(a => a.key !== THIS_APP);
-  m.innerHTML = kind === "print" ? printItems : `${printItems}<div class="sep"></div>
+  m.innerHTML = kind === "print" ? printItems : `<button role="menuitem" data-act="about">${t("介绍")}</button><div class="sep"></div>${printItems}<div class="sep"></div>
     <div class="lab">${t("姐妹应用")}</div>
     ${others.map(a => `<a role="menuitem" href="${a.url}">${esc(t(a.name))}<small>›</small></a>`).join("")}`;
   m.dataset.kind = kind; m.hidden = false;

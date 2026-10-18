@@ -1,3 +1,4 @@
+import { openAbout } from "./about.js";
 import { ask } from "./ask.js";
 import { last } from "./derived.js";
 import { setLang, t } from "./i18n.js";
@@ -65,6 +66,7 @@ document.addEventListener("click", async ev => {
     case "wake": { const e = S.entries.find(x => x.id === t0.dataset.id); if (e) { await putEntry({ ...e, end: Date.now() }); toast(t("这一觉睡了 {d}", { d: dur(Date.now() - e.ts) })); } break; }
     case "addpick": pickType(); break;
     case "settings": openSettings(); break;
+    case "about": toggleMenu(false); openAbout(); break;
     case "print-menu": toggleMenu("print"); break;
     case "more-menu": toggleMenu("more"); break;
     case "print-meal": case "print-trend": case "print-timeline": case "print-medical": openPrint(t0.dataset.act.slice(6)); break;

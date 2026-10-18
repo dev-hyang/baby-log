@@ -171,7 +171,7 @@ function openSettings(){
   <h2>${t("姐妹应用")}</h2>
   <div class="panel">${APPS.filter(a => a.key !== THIS_APP).map(a => `<div class="medrow"><div><b>${esc(t(a.name))}</b><div class="small muted">${esc(a.url.replace(/^https:\/\//, ""))}</div></div><a class="chip" href="${a.url}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;display:inline-flex;align-items:center">${t("打开")}</a></div>`).join("")}
     <p class="small muted" style="margin-top:8px">${t("同一个账号、同一个家庭，三个站点互通；标题旁的左右箭头也能切换。")}</p></div>
-  <p class="small muted" style="margin-top:24px">${t("版本 {v}", { v: APP_VERSION })}</p>`;
+  <p class="small muted" style="margin-top:24px">${t("版本 {v}", { v: APP_VERSION })} · <button class="chip" data-act="about">${t("关于小月亮")}</button></p>`;
   showSheet("settings");
 }
 function readSettingsInputs(){
@@ -181,4 +181,4 @@ function readSettingsInputs(){
   S.settings.medIntervals = rules.filter(r => r && (r.name || r.hours));
 }
 
-export { sheetScrollY, showSheet, closeSheet, draft, openForm, drawForm, readDraftInputs, pickType, openSettings, readSettingsInputs };
+export { sheetScrollY, showSheet, closeSheet, head, draft, openForm, drawForm, readDraftInputs, pickType, openSettings, readSettingsInputs };
