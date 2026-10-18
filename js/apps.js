@@ -5,7 +5,7 @@
 const APPS = [
   { key: "baby", name: "小月亮 · 母婴记录", short: "小月亮", url: "https://dev-hyang.github.io/baby-log/" },
   { key: "homeschool", name: "家庭学堂 · 在家教育", short: "学堂", url: "https://dev-hyang.github.io/homeschool/" },
-  { key: "pantry", name: "家庭妈妈小助手", short: "小助手", url: "https://dev-hyang.github.io/home-pantry/" }
+  { key: "pantry", name: "爱家小助手", short: "小助手", url: "https://dev-hyang.github.io/home-pantry/" }
 ];
 const THIS_APP = "baby";
 

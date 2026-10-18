@@ -418,7 +418,7 @@ export default {
 "改称呼": "Rename",
 "记录来源": "Source",
 "家庭学堂 · 在家教育": "Homeschool · Learning at home",
-"家庭妈妈小助手": "Family Pantry Helper",
+"爱家小助手": "Loving Home Helper",
 "学堂": "School",
 "小助手": "Helper",
 "切换姐妹应用": "Switch sister app",
