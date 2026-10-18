@@ -12,8 +12,8 @@ import { $, D, H, dayKey, dur, newId, startOfDay, toast } from "./util.js";
 import { openPrint } from "./print.js";
 import { render, toggleKids } from "./views.js";
 
-// 我的 → one of its sub-pages, from anywhere (settings buttons, the kids menu, the grow page)
-function goMe(view){ closeSheet(); S.tab = "me"; S.meView = view; render(); window.scrollTo(0, 0); }
+// a page reached from 我的 (settings, about …), from anywhere: the kids menu, the grow page, a form
+function goTab(tab){ closeSheet(); S.tab = tab; render(); window.scrollTo(0, 0); }
 
 /* ============ events ============ */
 document.addEventListener("click", async ev => {
@@ -21,8 +21,7 @@ document.addEventListener("click", async ev => {
   if (!$("#kids").hidden && !ev.target.closest("#bname")) toggleKids(false);
   const t0 = ev.target.closest("button,[data-checkup]"); if (!t0) return;
   if (t0.id === "bname") { toggleKids(); return; }
-  if (t0.dataset.tab) { S.tab = t0.dataset.tab; render(); window.scrollTo(0, 0); return; }
-  if (t0.dataset.meview) { goMe(t0.dataset.meview); return; }
+  if (t0.dataset.tab) { goTab(t0.dataset.tab); return; }
   if (t0.dataset.add) { openForm(t0.dataset.add, null, t0.dataset.preset ? JSON.parse(t0.dataset.preset) : {}); return; }
   if (t0.dataset.edit) { const e = S.entries.find(x => x.id === t0.dataset.edit); e && openForm(e.type, e); return; }
   if (t0.dataset.filter) { S.filter = t0.dataset.filter; render(); return; }
@@ -68,7 +67,7 @@ document.addEventListener("click", async ev => {
     case "sleepnow": { if (last(e => e.type === "sleep" && !e.end)) { toast(t("已经在记录睡眠了")); return; } await putEntry({ id: newId(), type: "sleep", ts: Date.now(), child: S.childId }); toast(t("开始记录睡眠")); break; }
     case "wake": { const e = S.entries.find(x => x.id === t0.dataset.id); if (e) { await putEntry({ ...e, end: Date.now() }); toast(t("这一觉睡了 {d}", { d: dur(Date.now() - e.ts) })); } break; }
     case "addpick": pickType(); break;
-    case "settings": goMe("settings"); break;
+    case "settings": goTab("settings"); break;
     case "print-meal": case "print-trend": case "print-timeline": case "print-medical": openPrint(t0.dataset.act.slice(6)); break;
     case "addrule": readSettingsInputs(); S.settings.medIntervals.push({ name: "", hours: "" }); render(); break;
     case "addkid": readSettingsInputs(); S.settings.children.push({ id: newId(), name: "", birth: "" }); render(); break;

@@ -9,7 +9,7 @@ const S = {
   childId: null, // which child this device is looking at
   mode: "local", col: null, prof: null, sample: null,
   tab: "today", filter: "all", q: "",
-  logView: "meal", mealDay: null, gran: "day", metric: "sleep", checkupView: "plan", meView: "settings",
+  logView: "meal", mealDay: null, gran: "day", metric: "sleep", checkupView: "plan",
   logFocus: false // re-focus the search box after the log view re-renders on typing
 };
 function loadLocal(){
@@ -97,6 +97,6 @@ function matchCheckup(ts, cid = S.childId){
 }
 function nextCheckup(){ const done = checkupsDone(); return CHECKUPS.map(c => ({ ...c, at: checkupDate(c) })).find(c => c.at && !done[c.k] && c.at > Date.now() - 14 * D); }
 
-const APP_VERSION = "2026-10-17.6";
+const APP_VERSION = "2026-10-17.7";
 
 export { LS_KEY, S, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupsDone, matchCheckup, nextCheckup, APP_VERSION };

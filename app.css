@@ -118,7 +118,17 @@ p{margin:0 0 8px}
 .empty{padding:28px 8px;text-align:center;color:var(--muted)}
 /* view switcher */
 .vtabs{display:grid;grid-template-columns:repeat(3,1fr);background:var(--slate-soft);border-radius:999px;padding:4px;margin:14px 0 4px}
-.vtabs.four{grid-template-columns:repeat(4,1fr)}
+/* 我的: entry list, one row each: icon + title + one-line description + › (same as homeschool) */
+.mlist{padding:4px 6px}
+.mrow{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:10px 10px;border-radius:var(--radius-sm);color:var(--ink);border-bottom:1px solid var(--line)}
+.mrow:last-child{border-bottom:0}
+.mrow:hover{background:var(--bg)}
+.mrow:focus-visible{outline:3px solid var(--slate);outline-offset:-3px}
+.mrow .mi{flex:none;width:34px;height:34px;border-radius:10px;background:var(--slate-soft);color:var(--slate);display:inline-flex;align-items:center;justify-content:center;font-size:16px;font-weight:700}
+.mrow .mt{flex:1;min-width:0;display:flex;flex-direction:column}
+.mrow .mt b{font-size:16px;font-weight:600}
+.mrow .mt small{font-size:12.5px;color:var(--muted);line-height:1.4}
+.mrow .mch{color:var(--muted);font-size:18px}
 .vtabs button{border:0;background:none;border-radius:999px;min-height:40px;cursor:pointer;font-size:15px;color:var(--muted)}
 .vtabs button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .daynav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:12px 0 8px}

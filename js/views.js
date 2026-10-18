@@ -1,8 +1,9 @@
 import { APPS, THIS_APP } from "./apps.js";
 import { ask } from "./ask.js";
 import { byTime, last, medStatus, suggestSide, within } from "./derived.js";
+import { aboutHTML } from "./about.js";
 import { t } from "./i18n.js";
-import { viewMe } from "./me.js";
+import { settingsHTML, viewMe } from "./me.js";
 import { viewMeal } from "./meal.js";
 import { doctorListHTML, milestoneRefHTML, quickHTML, stageTypes, statsHTML } from "./stages.js";
 import { CHECKUPS, S, STAGES, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
@@ -32,16 +33,19 @@ function toggleKids(open = $("#kids").hidden){
   $("#bname").setAttribute("aria-expanded", String(open));
   if (open) { const cur = $("#kids [aria-checked='true']"); cur && cur.focus(); }
 }
+// pages reached from 我的: the bottom tab stays on 我的 and a "‹ 我的" chip sits on top
+const ME_SUB = { settings: settingsHTML, learn: viewLearn, about: aboutHTML };
 function render(){
   renderStatus();
-  if (S.tab === "learn") { S.tab = "me"; S.meView = "learn"; } // the old 问答 tab now lives under 我的
   // the postpartum tab matters in the newborn stage, or while mother records are still being written
   const showMom = stageOf().key === "newborn" || S.entries.some(e => (e.type === "mmed" || e.type === "mbody") && e.ts > Date.now() - 30 * D);
   $('nav.tabs [data-tab="mom"]').hidden = !showMom;
   if (S.tab === "mom" && !showMom) S.tab = "today";
-  document.querySelectorAll("nav.tabs button").forEach(b => { if (b.dataset.tab === S.tab) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
-  const v = { today: viewToday, log: viewLog, mom: viewMom, grow: viewGrow, me: viewMe }[S.tab] || viewToday;
-  $("#main").innerHTML = v();
+  const cur = ME_SUB[S.tab] ? "me" : S.tab;
+  document.querySelectorAll("nav.tabs button").forEach(b => { if (b.dataset.tab === cur) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
+  const v = { today: viewToday, log: viewLog, mom: viewMom, grow: viewGrow, me: viewMe, ...ME_SUB }[S.tab] || viewToday;
+  const back = ME_SUB[S.tab] ? `<div style="margin-top:12px"><button class="chip" data-tab="me">‹ ${t("我的")}</button></div>` : "";
+  $("#main").innerHTML = back + v();
   if (S.tab === "log") { const s = $("#q"); if (s && document.activeElement !== s && S.logFocus) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); S.logFocus = false; } }
 }
 
