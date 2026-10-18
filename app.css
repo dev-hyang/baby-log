@@ -139,6 +139,14 @@ p{margin:0 0 8px}
 .daypick{text-align:center;display:flex;flex-direction:column;align-items:center}
 .daypick input[type=date]{border:0;background:none;font:inherit;font-family:var(--f-num);font-weight:700;font-size:17px;color:inherit;text-align:center;padding:2px 6px;border-radius:var(--radius-sm);cursor:pointer;min-height:32px}
 .daypick input[type=date]:hover{background:var(--slate-soft)}
+/* checkup schedule: the date cell is a date input (the clinic's real appointment); ↺ goes back to the schedule */
+.ckdate{display:inline-flex;align-items:center;gap:4px}
+.ckdate input[type=date]{border:1px solid transparent;background:none;font:inherit;font-family:var(--f-num);font-size:14px;color:inherit;padding:2px 4px;border-radius:var(--radius-sm);cursor:pointer;min-height:30px;max-width:150px}
+.ckdate input[type=date]:hover,.ckdate input[type=date]:focus{border-color:var(--line);background:var(--surface)}
+.ckdate.changed input[type=date]{color:var(--slate);font-weight:700}
+.ckreset{all:unset;cursor:pointer;color:var(--muted);font-size:16px;line-height:1;padding:2px 4px;border-radius:var(--radius-sm)}
+.ckreset:hover{color:var(--ink);background:var(--slate-soft)}
+.ckreset:focus-visible{outline:3px solid var(--slate);outline-offset:1px}
 .daypick input::-webkit-calendar-picker-indicator{opacity:.55}
 .empty .eicon{font-size:36px;line-height:1;margin-bottom:8px;opacity:.75}
 /* meal grid: fixed columns, one row per feeding */

@@ -28,6 +28,10 @@ document.addEventListener("click", async ev => {
   if (t0.dataset.logview) { S.logView = t0.dataset.logview; render(); return; }
   if (t0.dataset.gran) { S.gran = t0.dataset.gran; render(); return; }
   if (t0.dataset.ckview) { S.checkupView = t0.dataset.ckview; render(); return; }
+  if (t0.dataset.ckreset) { // back to the schedule's date for this visit
+    const cd = { ...(S.settings.checkupDates || {}) }, mine = { ...(cd[S.childId] || {}) }; delete mine[t0.dataset.ckreset]; cd[S.childId] = mine; S.settings.checkupDates = cd;
+    await saveSettings(); toast(t("已恢复时间表日期")); return;
+  }
   if (t0.dataset.metric) { S.metric = t0.dataset.metric; render(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   if (t0.dataset.mealday) {
     const cur = S.mealDay ?? startOfDay(Date.now());
@@ -108,6 +112,12 @@ document.addEventListener("change", async ev => {
   if (ev.target.dataset.daypick !== undefined) { const ts = fromInput(ev.target.value + "T00:00"); if (ts) { S.mealDay = Math.min(startOfDay(ts), startOfDay(Date.now())); render(); } return; }
   const c = ev.target.closest("[data-checkup]");
   if (c) { const ck = { ...(S.settings.checkups || {}) }; ck[S.childId] = { ...(ck[S.childId] || {}), [c.dataset.checkup]: c.checked }; S.settings.checkups = ck; await saveSettings(); return; }
+  // checkup date changed to the clinic's actual appointment (per child); an empty value clears the override
+  if (ev.target.dataset.ckdate !== undefined) {
+    const cd = { ...(S.settings.checkupDates || {}) }, mine = { ...(cd[S.childId] || {}) }, v = ev.target.value;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) mine[ev.target.dataset.ckdate] = v; else delete mine[ev.target.dataset.ckdate];
+    cd[S.childId] = mine; S.settings.checkupDates = cd; await saveSettings(); toast(v ? t("体检日期已改为 {date}", { date: v }) : t("已恢复时间表日期")); return;
+  }
   if (ev.target.id === "importFile" && ev.target.files[0]) { await importJSON(ev.target.files[0]); ev.target.value = ""; return; }
   if (draft && ev.target.closest("#sheetIn") && ev.target.type === "checkbox") { readDraftInputs(); drawForm(); }
 });
