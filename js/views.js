@@ -2,6 +2,7 @@ import { APPS, THIS_APP } from "./apps.js";
 import { ask } from "./ask.js";
 import { byTime, last, medStatus, suggestSide, within } from "./derived.js";
 import { t } from "./i18n.js";
+import { viewMe } from "./me.js";
 import { viewMeal } from "./meal.js";
 import { doctorListHTML, milestoneRefHTML, quickHTML, stageTypes, statsHTML } from "./stages.js";
 import { CHECKUPS, S, STAGES, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
@@ -27,39 +28,19 @@ function renderStatus(){
   $("#apps").innerHTML = badge(prev, `‹ ${esc(t(prev.short))}`) + badge(next, `${esc(t(next.short))} ›`);
 }
 function toggleKids(open = $("#kids").hidden){
-  if (open) toggleMenu(false);
   $("#kids").hidden = !open;
   $("#bname").setAttribute("aria-expanded", String(open));
   if (open) { const cur = $("#kids [aria-checked='true']"); cur && cur.focus(); }
 }
-/* header dropdown: kind = "print" (wide screens, the 打印 button) | "more" (narrow screens, the ⋮ button:
-   print items plus the sister apps) | false to close */
-function toggleMenu(kind){
-  const m = $("#hmenu");
-  document.querySelectorAll('header [data-act="print-menu"], header [data-act="more-menu"]').forEach(b => b.setAttribute("aria-expanded", "false"));
-  if (!kind || (!m.hidden && m.dataset.kind === kind)) { m.hidden = true; m.dataset.kind = ""; return; }
-  toggleKids(false);
-  const printItems = `<div class="lab">${t("打印")}</div>
-    <button role="menuitem" data-act="print-meal">${t("按餐表格")}<small>${t("当天")}</small></button>
-    <button role="menuitem" data-act="print-trend">${t("趋势对比")}<small>${S.gran === "week" ? t("最近 8 周") : t("最近 7 天")}</small></button>
-    <button role="menuitem" data-act="print-timeline">${t("时间线")}<small>${t("最近 30 天")}</small></button>
-    <button role="menuitem" data-act="print-medical">${t("就医记录")}<small>${t("体检 · 疫苗 · 生长")}</small></button>`;
-  const others = APPS.filter(a => a.key !== THIS_APP);
-  m.innerHTML = kind === "print" ? printItems : `<button role="menuitem" data-act="about">${t("介绍")}</button><div class="sep"></div>${printItems}<div class="sep"></div>
-    <div class="lab">${t("姐妹应用")}</div>
-    ${others.map(a => `<a role="menuitem" href="${a.url}">${esc(t(a.name))}<small>›</small></a>`).join("")}`;
-  m.dataset.kind = kind; m.hidden = false;
-  const opener = $(`header [data-act="${kind === "print" ? "print-menu" : "more-menu"}"]`); if (opener) opener.setAttribute("aria-expanded", "true");
-  const first = m.querySelector("[role=menuitem]"); first && first.focus();
-}
 function render(){
   renderStatus();
+  if (S.tab === "learn") { S.tab = "me"; S.meView = "learn"; } // the old 问答 tab now lives under 我的
   // the postpartum tab matters in the newborn stage, or while mother records are still being written
   const showMom = stageOf().key === "newborn" || S.entries.some(e => (e.type === "mmed" || e.type === "mbody") && e.ts > Date.now() - 30 * D);
   $('nav.tabs [data-tab="mom"]').hidden = !showMom;
   if (S.tab === "mom" && !showMom) S.tab = "today";
   document.querySelectorAll("nav.tabs button").forEach(b => { if (b.dataset.tab === S.tab) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
-  const v = { today: viewToday, log: viewLog, mom: viewMom, grow: viewGrow, learn: viewLearn }[S.tab];
+  const v = { today: viewToday, log: viewLog, mom: viewMom, grow: viewGrow, me: viewMe }[S.tab] || viewToday;
   $("#main").innerHTML = v();
   if (S.tab === "log") { const s = $("#q"); if (s && document.activeElement !== s && S.logFocus) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); S.logFocus = false; } }
 }
@@ -358,4 +339,4 @@ function viewLearn(){
     ${["丁香妈妈", "崔玉涛育学园", "年糕妈妈"].map(n => `<div class="medrow"><span>${n}</span><button class="chip" data-copy="${n}">${t("复制名称")}</button></div>`).join("")}</div>`;
 }
 
-export { renderStatus, render, toggleKids, toggleMenu, heroHTML, bigDur, viewToday, medRow, entryRow, viewLog, viewList, lineChart, sleepBarcode, viewMom, viewGrow, milestonesHTML, foodsHTML, vaxHTML, viewLearn };
+export { renderStatus, render, toggleKids, heroHTML, bigDur, viewToday, medRow, entryRow, viewLog, viewList, lineChart, sleepBarcode, viewMom, viewGrow, milestonesHTML, foodsHTML, vaxHTML, viewLearn };

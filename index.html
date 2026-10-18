@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=2026-10-17.5">
+<link rel="stylesheet" href="app.css?v=2026-10-17.6">
 <script>try { var th = localStorage.getItem("xiaoyueliang.v1.theme"); if (th) document.documentElement.dataset.theme = th; } catch (e) {}</script>
 </head>
 <body>
@@ -23,11 +23,6 @@
     </div>
     <div class="hdr">
       <span class="status" id="status"><span class="dot"></span><span data-i18n="本机保存">本机保存</span></span>
-      <button class="iconbtn" data-act="settings" data-i18n="设置" data-i18n-aria="设置" aria-label="设置">设置</button>
-      <button class="iconbtn wide" data-act="about" data-i18n="介绍">介绍</button>
-      <button class="iconbtn wide" data-act="print-menu" data-i18n="打印" aria-haspopup="menu" aria-expanded="false" aria-controls="hmenu">打印</button>
-      <button class="iconbtn narrow" data-act="more-menu" data-i18n-aria="更多" aria-label="更多" aria-haspopup="menu" aria-expanded="false" aria-controls="hmenu"><span aria-hidden="true">⋮</span></button>
-      <div class="hmenu" id="hmenu" role="menu" hidden></div>
     </div>
   </header>
   <main id="main"></main>
@@ -38,13 +33,13 @@
   <button data-tab="log"><i aria-hidden="true">≡</i><span data-i18n="记录">记录</span></button>
   <button data-tab="mom"><i aria-hidden="true">♡</i><span data-i18n="妈妈">妈妈</span></button>
   <button data-tab="grow"><i aria-hidden="true">↗</i><span data-i18n="成长">成长</span></button>
-  <button data-tab="learn"><i aria-hidden="true">?</i><span data-i18n="问答">问答</span></button>
+  <button data-tab="me"><i aria-hidden="true">⚙︎</i><span data-i18n="我的">我的</span></button>
 </div></nav>
 
 <dialog class="sheet" id="sheet" aria-labelledby="sheetTitle"><div class="sheet-in" id="sheetIn"></div></dialog>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <input type="file" id="importFile" accept="application/json,.json" hidden>
 
-<script type="module" src="js/app.js?v=2026-10-17.5"></script>
+<script type="module" src="js/app.js?v=2026-10-17.6"></script>
 </body>
 </html>

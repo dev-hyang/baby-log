@@ -1,7 +1,7 @@
 import { SUPABASE_ANON_KEY, SUPABASE_JS, SUPABASE_URL } from "./config.js";
 import { last } from "./derived.js";
 import { t } from "./i18n.js";
-import { openSettings } from "./sheet.js";
+import { refreshSettingsIfOpen } from "./me.js";
 import { LS_KEY, S, child, normalizeSettings, saveLocal } from "./state.js";
 import { clean } from "./store.js";
 import { trim } from "./units.js";
@@ -153,7 +153,6 @@ function setupRealtime(){
     .subscribe();
 }
 function teardownRealtime(){ if (SB.channel && SB.client) { SB.client.removeChannel(SB.channel); SB.channel = null; } }
-function refreshSettingsIfOpen(){ if ($("#sheet").open && $("#kidRows")) openSettings(); }
 
 /* ---- email account: only needed to create a family ---- */
 async function sbAuth(kind){
@@ -290,4 +289,4 @@ function familyHTML(){
     <div class="btns"><button class="btn" data-act="sb-sync">${t("立即同步")}</button><button class="btn" data-act="sb-logout">${t("退出登录")}</button></div>`;
 }
 
-export { SB, SYNC_KEY, TOMB_KEY, loadJSON, saveJSON, loadTombs, saveTombs, isAnon, isOwner, memberName, memberNames, initSupabase, afterAuth, enterFamily, leaveFamily, loadMembers, toRow, applyRow, syncNow, setupRealtime, teardownRealtime, refreshSettingsIfOpen, sbAuth, sbCreate, sbJoin, sbLogout, sbResetCode, sbMember, familyHTML };
+export { SB, SYNC_KEY, TOMB_KEY, loadJSON, saveJSON, loadTombs, saveTombs, isAnon, isOwner, memberName, memberNames, initSupabase, afterAuth, enterFamily, leaveFamily, loadMembers, toRow, applyRow, syncNow, setupRealtime, teardownRealtime, sbAuth, sbCreate, sbJoin, sbLogout, sbResetCode, sbMember, familyHTML };

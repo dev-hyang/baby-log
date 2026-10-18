@@ -1,25 +1,28 @@
-import { openAbout } from "./about.js";
 import { ask } from "./ask.js";
 import { last } from "./derived.js";
 import { setLang, t } from "./i18n.js";
+import { readSettingsInputs } from "./me.js";
 import { mealCheck } from "./meal.js";
-import { closeSheet, draft, drawForm, openForm, openSettings, pickType, readDraftInputs, readSettingsInputs } from "./sheet.js";
+import { closeSheet, draft, drawForm, openForm, pickType, readDraftInputs } from "./sheet.js";
 import { LS_KEY, S, child, childOf, isKidType, kidCount, matchCheckup, setChild } from "./state.js";
 import { importJSON, loadDemo, offerFile, putEntry, removeEntry, removeWhere, saveSettings, toCSV } from "./store.js";
 import { sbAuth, sbCreate, sbJoin, sbLogout, sbMember, sbResetCode, syncNow } from "./sync.js";
 import { UNIT_KEY, isUS } from "./units.js";
 import { $, D, H, dayKey, dur, newId, startOfDay, toast } from "./util.js";
 import { openPrint } from "./print.js";
-import { render, toggleKids, toggleMenu } from "./views.js";
+import { render, toggleKids } from "./views.js";
+
+// 我的 → one of its sub-pages, from anywhere (settings buttons, the kids menu, the grow page)
+function goMe(view){ closeSheet(); S.tab = "me"; S.meView = view; render(); window.scrollTo(0, 0); }
 
 /* ============ events ============ */
 document.addEventListener("click", async ev => {
-  // the child menu and the header dropdown close on any click outside them; a click on an item falls through to its handler below
+  // the child menu closes on any click outside it; a click on an item falls through to its handler below
   if (!$("#kids").hidden && !ev.target.closest("#bname")) toggleKids(false);
-  if (!$("#hmenu").hidden && !ev.target.closest('[data-act="print-menu"], [data-act="more-menu"]')) toggleMenu(false);
   const t0 = ev.target.closest("button,[data-checkup]"); if (!t0) return;
   if (t0.id === "bname") { toggleKids(); return; }
   if (t0.dataset.tab) { S.tab = t0.dataset.tab; render(); window.scrollTo(0, 0); return; }
+  if (t0.dataset.meview) { goMe(t0.dataset.meview); return; }
   if (t0.dataset.add) { openForm(t0.dataset.add, null, t0.dataset.preset ? JSON.parse(t0.dataset.preset) : {}); return; }
   if (t0.dataset.edit) { const e = S.entries.find(x => x.id === t0.dataset.edit); e && openForm(e.type, e); return; }
   if (t0.dataset.filter) { S.filter = t0.dataset.filter; render(); return; }
@@ -43,9 +46,9 @@ document.addEventListener("click", async ev => {
     else if (also.has(id)) also.delete(id); else also.add(id);
     draft.also = [...also]; drawForm(); return;
   }
-  if (t0.dataset.unitsSet) { try { localStorage.setItem(UNIT_KEY, t0.dataset.unitsSet); } catch (e) {} openSettings(); render(); toast(t("单位已切换为{u}", { u: isUS() ? t("美制") : t("公制") })); return; }
-  if (t0.dataset.langSet) { setLang(t0.dataset.langSet); render(); openSettings(); return; }
-  if (t0.dataset.themeSet !== undefined) { const v = t0.dataset.themeSet; if (v) document.documentElement.dataset.theme = v; else delete document.documentElement.dataset.theme; try { localStorage.setItem(LS_KEY + ".theme", v); } catch (e) {} openSettings(); return; }
+  if (t0.dataset.unitsSet) { try { localStorage.setItem(UNIT_KEY, t0.dataset.unitsSet); } catch (e) {} readSettingsInputs(); render(); toast(t("单位已切换为{u}", { u: isUS() ? t("美制") : t("公制") })); return; }
+  if (t0.dataset.langSet) { readSettingsInputs(); setLang(t0.dataset.langSet); render(); return; }
+  if (t0.dataset.themeSet !== undefined) { const v = t0.dataset.themeSet; if (v) document.documentElement.dataset.theme = v; else delete document.documentElement.dataset.theme; try { localStorage.setItem(LS_KEY + ".theme", v); } catch (e) {} readSettingsInputs(); render(); return; }
   switch (t0.dataset.act) {
     case "close": closeSheet(); break;
     case "save": { readDraftInputs(); const e = { ...draft };
@@ -65,13 +68,10 @@ document.addEventListener("click", async ev => {
     case "sleepnow": { if (last(e => e.type === "sleep" && !e.end)) { toast(t("已经在记录睡眠了")); return; } await putEntry({ id: newId(), type: "sleep", ts: Date.now(), child: S.childId }); toast(t("开始记录睡眠")); break; }
     case "wake": { const e = S.entries.find(x => x.id === t0.dataset.id); if (e) { await putEntry({ ...e, end: Date.now() }); toast(t("这一觉睡了 {d}", { d: dur(Date.now() - e.ts) })); } break; }
     case "addpick": pickType(); break;
-    case "settings": openSettings(); break;
-    case "about": toggleMenu(false); openAbout(); break;
-    case "print-menu": toggleMenu("print"); break;
-    case "more-menu": toggleMenu("more"); break;
+    case "settings": goMe("settings"); break;
     case "print-meal": case "print-trend": case "print-timeline": case "print-medical": openPrint(t0.dataset.act.slice(6)); break;
-    case "addrule": readSettingsInputs(); S.settings.medIntervals.push({ name: "", hours: "" }); openSettings(); break;
-    case "addkid": readSettingsInputs(); S.settings.children.push({ id: newId(), name: "", birth: "" }); openSettings(); break;
+    case "addrule": readSettingsInputs(); S.settings.medIntervals.push({ name: "", hours: "" }); render(); break;
+    case "addkid": readSettingsInputs(); S.settings.children.push({ id: newId(), name: "", birth: "" }); render(); break;
     case "delkid": {
       readSettingsInputs();
       const c = S.settings.children[+t0.dataset.i]; if (!c || S.settings.children.length < 2) break;
@@ -80,12 +80,12 @@ document.addEventListener("click", async ev => {
       if (n) await removeWhere(e => isKidType(e.type) && childOf(e) === c.id);
       S.settings.children = S.settings.children.filter(x => x.id !== c.id);
       if (S.childId === c.id) S.childId = null;
-      await saveSettings(); openSettings(); toast(n ? t("已移除并删除 {n} 条记录", { n }) : t("已移除")); break; }
-    case "savesettings": readSettingsInputs(); closeSheet(); await saveSettings(); toast(t("设置已保存")); break;
+      await saveSettings(); toast(n ? t("已移除并删除 {n} 条记录", { n }) : t("已移除")); break; }
+    case "savesettings": readSettingsInputs(); await saveSettings(); S.tab = "today"; render(); window.scrollTo(0, 0); toast(t("设置已保存")); break;
     case "export": offerFile(`${t("母婴记录备份")}-${dayKey(Date.now())}.json`, JSON.stringify({ app: "xiaoyueliang", version: 1, exported: Date.now(), settings: S.settings, entries: S.entries }, null, 1), "application/json"); break;
     case "csv": offerFile(`${t("母婴记录")}-${dayKey(Date.now())}.csv`, toCSV(), "text/csv"); break;
     case "import": $("#importFile").click(); break;
-    case "demo": closeSheet(); await loadDemo(); break;
+    case "demo": closeSheet(); await loadDemo(); S.tab = "today"; render(); window.scrollTo(0, 0); break;
     case "cleardemo": { const n = await removeWhere(e => e.demo); toast(t("已清除 {n} 条演示记录", { n })); break; }
     case "clearall": if (confirm(t("确定清空全部记录（所有孩子和妈妈的记录）？建议先导出备份。此操作无法撤销。"))) { closeSheet(); const n = await removeWhere(() => true); toast(t("已清空 {n} 条", { n })); } break;
     case "ask": ask(); break;
@@ -104,17 +104,7 @@ document.addEventListener("change", async ev => {
   if (ev.target.id === "importFile" && ev.target.files[0]) { await importJSON(ev.target.files[0]); ev.target.value = ""; return; }
   if (draft && ev.target.closest("#sheetIn") && ev.target.type === "checkbox") { readDraftInputs(); drawForm(); }
 });
-document.addEventListener("keydown", e => {
-  if (e.key === "Escape" && !$("#kids").hidden) { toggleKids(false); $("#bname").focus(); return; }
-  if (e.key === "Escape" && !$("#hmenu").hidden) { toggleMenu(false); const o = [...document.querySelectorAll('header [data-act="more-menu"], header [data-act="print-menu"]')].find(b => b.offsetParent); o && o.focus(); return; }
-  // arrow keys walk the header dropdown: ↓ / → next, ↑ / ← previous
-  const arrows = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 };
-  if (arrows[e.key] && !$("#hmenu").hidden && e.target.closest("#hmenu")) {
-    e.preventDefault();
-    const items = [...$("#hmenu").querySelectorAll("[role=menuitem]")], i = items.indexOf(document.activeElement);
-    items[(i + arrows[e.key] + items.length) % items.length].focus();
-  }
-});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#kids").hidden) { toggleKids(false); $("#bname").focus(); } });
 document.addEventListener("input", ev => {
   if (ev.target.id === "q") { S.q = ev.target.value; S.logFocus = true; render(); return; }
   if (ev.target.type === "range") { const o = ev.target.parentElement.querySelector("output"); if (o) o.textContent = ev.target.value; }

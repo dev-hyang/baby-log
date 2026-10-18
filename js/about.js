@@ -1,12 +1,11 @@
 import { APPS, THIS_APP } from "./apps.js";
 import { t } from "./i18n.js";
-import { head, showSheet } from "./sheet.js";
 import { APP_VERSION } from "./state.js";
-import { $, esc } from "./util.js";
+import { esc } from "./util.js";
 
 /* ============ about page: what the app is, how each page is used, what to watch out for ============
-   Opened from the header (介绍 on wide screens, inside ⋮ on narrow ones) and from settings. The text lives
-   here in simplified Chinese and is translated through the dictionaries like every other string. */
+   Rendered inside 我的 → 介绍. The text lives here in simplified Chinese and is translated through the
+   dictionaries like every other string. */
 const ABOUT = {
   intro: "小月亮是一家人共用的宝宝日常记录：喂奶、尿布、睡眠、体温体重、疫苗、辅食、里程碑，以及妈妈产后的用药和身体状况。它按孩子的年龄自动切换阶段（新生儿 → 婴儿 → 幼儿 → 学前），首页按钮、统计和参考内容跟着变。它是家庭学堂、爱家小助手的姐妹应用，三个站点共用同一个账号和家庭。",
   principles: [
@@ -21,8 +20,7 @@ const ABOUT = {
     ["记录", "三种视图：按餐表格一餐一行，尿布、睡眠、用药归到两餐之间，点 ○ 直接打勾；趋势对比按天看 14 天或按周看 8 周，并列出今天和昨天的差别；时间线可搜索、按类型筛选、补记过去的记录。"],
     ["妈妈", "产后恢复：用药计时（最短间隔按医嘱填在设置里）、体重、疼痛与心情曲线，以及 CDC「Hear Her」产后紧急警示信号。新生儿期一直显示，之后只要最近 30 天有妈妈记录也会显示。"],
     ["成长", "成长阶段、CDC 里程碑参考（点一下就记录）、新食物与反应、最近 7 天睡眠分布、睡眠参考、体重身高曲线、儿科体检提醒与历史记录、疫苗接种记录。"],
-    ["问答", "什么时候要联系儿科医生（按阶段）、向 AI 提问（只在支持的打开方式下可用）、权威资料和公众号。"],
-    ["设置", "孩子（可以有多个，点页面顶部的名字切换）、妈妈用药间隔、家庭协作、备份导出与恢复、语言、单位、显示、姐妹应用。"]
+    ["我的", "设置（孩子、妈妈用药间隔、家庭协作、备份、语言、单位、显示、姐妹应用）、问答（什么时候联系儿科医生、向 AI 提问、权威资料）、打印（按餐表格、趋势对比、时间线、就医记录）和这页介绍。"]
   ],
   tips: [
     "亲喂时表单会按上一次喂的那一侧，建议这次先喂另一侧。",
@@ -30,7 +28,7 @@ const ABOUT = {
     "有多个孩子时，一起做的活动可以多选孩子，会各记一条。",
     "宝宝健康的来源选「儿科体检」会自动勾选对应的体检提醒；成长页的历史记录和「就医记录」打印页可以带去医院。",
     "补记：时间线里点「＋ 补记一条」，时间可以改到过去任何时刻。",
-    "打印：右上角「打印」（窄屏在 ⋮ 菜单里）可以打按餐表格、趋势对比、时间线和就医记录。",
+    "打印：「我的 → 打印」可以打按餐表格、趋势对比、时间线和就医记录。",
     "家主可以重置邀请码、修改家人称呼、把家人设为家主或移出家庭。"
   ],
   caveats: [
@@ -43,9 +41,9 @@ const ABOUT = {
   data: "记录保存在 Supabase（家庭云端），数据库的行级权限保证只有本家庭的成员能读写；手机上保留一份离线副本和显示偏好（语言、单位、主题、当前看哪个孩子）。除了登录用的邮箱之外不收集个人信息，没有统计埋点和广告。随时可以在设置里导出全部数据（JSON）。"
 };
 
-function openAbout(){
+function aboutHTML(){
   const A = ABOUT;
-  $("#sheetIn").innerHTML = `${head(t("关于小月亮"))}
+  return `<h2>${t("关于小月亮")}</h2>
   <p>${t(A.intro)}</p>
   <h2>${t("设计原则")}</h2>
   <div class="panel"><ol class="plain" style="padding-left:20px">${A.principles.map(([k, d]) => `<li style="margin:6px 0"><b>${t(k)}</b> ${t(d)}</li>`).join("")}</ol></div>
@@ -58,7 +56,6 @@ function openAbout(){
   <h2>${t("数据与隐私")}</h2>
   <div class="panel"><p class="small">${t(A.data)}</p>
     <p class="small muted">${t("姐妹应用：")}${APPS.filter(a => a.key !== THIS_APP).map(a => `<a href="${a.url}">${esc(t(a.name))}</a>`).join(" · ")} · ${t("版本 {v}", { v: APP_VERSION })}</p></div>`;
-  showSheet("about");
 }
 
-export { ABOUT, openAbout };
+export { ABOUT, aboutHTML };
