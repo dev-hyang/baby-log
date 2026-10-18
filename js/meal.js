@@ -23,6 +23,16 @@ function mealRows(){
     };
   });
 }
+/* day navigation shared by the meal table and the timeline: ‹ previous day, a date picker to jump straight
+   to a day, next day › (disabled on today). The chosen day lives in S.mealDay so both views stay on it. */
+function dayNavHTML(d0){
+  const isToday = d0 === startOfDay(Date.now());
+  return `<div class="daynav">
+    <button class="iconbtn" data-mealday="-1" aria-label="${t("前一天")}">‹</button>
+    <div class="daypick"><input type="date" data-daypick value="${dayKey(d0)}" max="${dayKey(Date.now())}" aria-label="${t("选择日期")}"><div class="small muted">${weekday(d0)}${isToday ? " · " + t("今天") : ""}</div></div>
+    <button class="iconbtn" data-mealday="1" aria-label="${t("后一天")}" ${isToday ? "disabled" : ""}>›</button>
+  </div>`;
+}
 function viewMeal(){
   const d0 = S.mealDay ?? startOfDay(Date.now());
   const rows = mealRows().filter(r => r.f.ts >= d0 && r.f.ts < d0 + D);
@@ -53,11 +63,7 @@ function viewMeal(){
   const peeN = rows.reduce((a, r) => a + r.pee.length, 0), poopN = rows.reduce((a, r) => a + r.poop.length, 0);
   const sleepT = rows.reduce((a, r) => a + r.sleepMs, 0);
   return `
-  <div class="daynav">
-    <button class="iconbtn" data-mealday="-1" aria-label="${t("前一天")}">‹</button>
-    <div style="text-align:center"><b class="num">${dayKey(d0)}</b> <span class="muted">${weekday(d0)}${isToday ? " · " + t("今天") : ""}</span></div>
-    <button class="iconbtn" data-mealday="1" aria-label="${t("后一天")}" ${isToday ? "disabled" : ""}>›</button>
-  </div>
+  ${dayNavHTML(d0)}
   ${rows.length ? `<div class="meal-wrap"><table class="meal">
     <caption class="small muted" style="caption-side:bottom;text-align:left;padding:8px 10px">${t("每行是一餐：尿布、睡眠、用药按“这一餐到下一餐之间”归到该行。点 ○ 直接打勾，点其他格子修改这一餐。")}</caption>
     <thead><tr><th class="t">${t("时间")}</th><th>${t("距上餐")}</th><th>${t("方式")}</th><th>${t("左<br>分钟")}</th><th>${t("右<br>分钟")}</th><th>${t("奶量")}<br>${unitOf("vol")}</th><th>${t("尿")}</th><th>${t("便")}</th><th>${t("之后<br>睡眠")}</th><th style="text-align:left">${t("备注 / 用药")}</th></tr></thead>
@@ -65,7 +71,7 @@ function viewMeal(){
     <tfoot><tr><td class="t">${t("{n} 餐", { n: rows.length })}</td><td></td><td></td><td>${sum("left") || ""}</td><td>${sum("right") || ""}</td><td>${sum("ml") ? trim(toDisp("vol", sum("ml")), isUS() ? 1 : 0) : ""}</td><td>${peeN}</td><td>${poopN}</td><td>${sleepT ? (sleepT / H).toFixed(1) + "h" : ""}</td><td></td></tr></tfoot>
   </table></div>
   ${newborn ? `<p class="small muted" style="margin-top:8px">${t("距上餐 ≥ 4 小时标红，方便发现间隔偏长的时段。新生儿一般 24 小时喂 8–12 次，具体以医生建议为准。")}</p>` : ""}`
-  : `<div class="empty">${t("这一天没有喂奶记录。")}${isToday ? `<br><button class="btn" data-add="feed" data-preset='{"method":"亲喂"}'>${t("记录一次喂奶")}</button>` : ""}</div>`}`;
+  : `<div class="empty"><div class="eicon" aria-hidden="true">🍼</div>${t("这一天没有喂奶记录。")}${isToday ? `<br><button class="btn" data-add="feed" data-preset='{"method":"亲喂"}'>${t("记录一次喂奶")}</button>` : ""}</div>`}`;
 }
 
 /* tap ○ to tick 尿/便 for this meal; tap ✓ to open that diaper record */
@@ -78,4 +84,4 @@ async function mealCheck(feedId, kind){
   toast(kind === "poop" ? t("已打勾，点 ✓ 可补充大便颜色") : t("已打勾"));
 }
 
-export { mealRows, viewMeal, mealCheck };
+export { mealRows, dayNavHTML, viewMeal, mealCheck };

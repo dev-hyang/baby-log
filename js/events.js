@@ -8,7 +8,7 @@ import { LS_KEY, S, child, childOf, isKidType, kidCount, matchCheckup, setChild 
 import { importJSON, loadDemo, offerFile, putEntry, removeEntry, removeWhere, saveSettings, toCSV } from "./store.js";
 import { sbAuth, sbCreate, sbJoin, sbLogout, sbMember, sbResetCode, syncNow } from "./sync.js";
 import { UNIT_KEY, isUS } from "./units.js";
-import { $, D, H, dayKey, dur, newId, startOfDay, toast } from "./util.js";
+import { $, D, H, dayKey, dur, fromInput, newId, startOfDay, toast } from "./util.js";
 import { openPrint } from "./print.js";
 import { render, toggleKids } from "./views.js";
 
@@ -104,6 +104,8 @@ document.addEventListener("click", async ev => {
   }
 });
 document.addEventListener("change", async ev => {
+  // date picker in the meal table / timeline: jump straight to that day (never past today)
+  if (ev.target.dataset.daypick !== undefined) { const ts = fromInput(ev.target.value + "T00:00"); if (ts) { S.mealDay = Math.min(startOfDay(ts), startOfDay(Date.now())); render(); } return; }
   const c = ev.target.closest("[data-checkup]");
   if (c) { const ck = { ...(S.settings.checkups || {}) }; ck[S.childId] = { ...(ck[S.childId] || {}), [c.dataset.checkup]: c.checked }; S.settings.checkups = ck; await saveSettings(); return; }
   if (ev.target.id === "importFile" && ev.target.files[0]) { await importJSON(ev.target.files[0]); ev.target.value = ""; return; }

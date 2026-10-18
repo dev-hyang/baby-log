@@ -4,7 +4,7 @@ import { ask } from "./ask.js";
 import { byTime, last, medStatus, suggestSide, within } from "./derived.js";
 import { t } from "./i18n.js";
 import { settingsHTML, viewMe } from "./me.js";
-import { viewMeal } from "./meal.js";
+import { dayNavHTML, viewMeal } from "./meal.js";
 import { doctorListHTML, milestoneRef, milestoneRefHTML, quickHTML, stageTypes, statsHTML } from "./stages.js";
 import { CHECKUPS, S, STAGES, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
 import { SB, loadTombs, memberName, memberNames } from "./sync.js";
@@ -132,21 +132,27 @@ function viewLog(){
   return sw + viewList();
 }
 
+/* timeline: one day at a time with the same ‹ date › navigation as the meal table; a search spans every day */
 function viewList(){
-  const q = S.q.trim().toLowerCase();
+  const q = S.q.trim().toLowerCase(), d0 = S.mealDay ?? startOfDay(Date.now());
   let list = vis().sort(byTime);
+  if (!q) list = list.filter(e => e.ts >= d0 && e.ts < d0 + D);
   if (S.filter !== "all") list = list.filter(e => S.filter === "momall" ? ["mmed", "mbody"].includes(e.type) : e.type === S.filter);
   if (q) list = list.filter(e => (typeLabel(e.type) + " " + summary(e) + " " + (e.note || "") + " " + dayKey(e.ts)).toLowerCase().includes(q));
   const groups = {};
   for (const e of list) (groups[dayKey(e.ts)] ||= []).push(e);
   const chips = [["all", t("全部")], ...stageTypes().map(ty => [ty, typeLabel(ty)]), ["momall", t("妈妈")]];
   if (!chips.some(([k]) => k === S.filter)) { S.filter = "all"; return viewList(); } // filter from another stage / child
-  return `<label for="q" class="small muted">${t("搜索备注、药名、日期（如 2026-10-11）")}</label>
-  <input id="q" class="search" type="search" value="${esc(S.q)}" placeholder="${t("搜索…")}" autocomplete="off">
+  const body = !list.length
+    ? `<div class="empty"><div class="eicon" aria-hidden="true">${q ? "🔍" : "🗓"}</div>${q ? t("没有符合条件的记录，换个关键词试试。") : S.filter !== "all" ? t("这一天没有这类记录。") : t("这一天没有记录。")}<br><button class="btn" data-act="addpick">${t("＋ 补记一条")}</button></div>`
+    : q ? Object.entries(groups).map(([d, es]) => `<div class="day">${d} ${weekday(es[0].ts)} · ${t("{n} 条", { n: es.length })}</div>${es.map(entryRow).join("")}`).join("")
+    : `<div class="day">${t("{n} 条", { n: list.length })}</div>${list.map(entryRow).join("")}`;
+  return `${dayNavHTML(d0)}
+  <input id="q" class="search" type="search" value="${esc(S.q)}" placeholder="${t("搜索备注、药名、日期（如 2026-10-11）")}" aria-label="${t("搜索备注、药名、日期（如 2026-10-11）")}" autocomplete="off">
+  ${q ? `<p class="small muted" style="margin:6px 0 0">${t("搜索时显示所有日期的结果。")}</p>` : ""}
   <div class="chips" role="group" aria-label="${t("按类型筛选")}">${chips.map(([k, l]) => `<button class="chip" data-filter="${k}" aria-pressed="${S.filter === k}">${l}</button>`).join("")}</div>
-  <div class="btns" style="margin-top:0"><button class="btn" data-act="addpick">${t("＋ 补记一条")}</button></div>
-  ${Object.keys(groups).length ? Object.entries(groups).map(([d, es]) => `<div class="day">${d} ${weekday(es[0].ts)} · ${t("{n} 条", { n: es.length })}</div>${es.map(entryRow).join("")}`).join("")
-   : `<div class="empty">${q || S.filter !== "all" ? t("没有符合条件的记录，换个关键词试试。") : t("还没有记录。回到“今天”开始记第一条。")}</div>`}`;
+  ${list.length ? `<div class="btns" style="margin-top:0"><button class="btn" data-act="addpick">${t("＋ 补记一条")}</button></div>` : ""}
+  ${body}`;
 }
 
 /* ---- charts ---- */
