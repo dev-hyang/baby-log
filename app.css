@@ -245,6 +245,29 @@ body.sheet-open .wrap,body.sheet-open nav.tabs{display:none}
 .btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:11px 18px;cursor:pointer;font-weight:500;min-height:46px}
 .btn.primary{background:var(--ink);color:var(--surface);border-color:var(--ink);flex:1}
 .btn.danger{color:var(--rose);border-color:var(--rose)}
+/* settings page: soft, rounded fields. The kids and mother's-medicine rows used the browser's square default inputs;
+   everything on this page now shares one pill-shaped input, a roomier card and pill choice buttons. */
+.softform .panel{border-radius:var(--radius-lg);padding:18px 18px 16px;box-shadow:0 1px 3px rgba(29,39,51,.05)}
+.softform .lab{font-size:14px;color:var(--muted);margin:2px 0 8px 6px}
+.softform input[type=text],.softform input[type=number],.softform input[type=date],.softform input[type=email],.softform input[type=password],.softform textarea{
+  box-sizing:border-box;width:100%;min-width:0;min-height:48px;padding:11px 18px;font-size:16px;text-align:left;
+  border:1.5px solid var(--line);border-radius:24px;background:var(--bg);
+  transition:border-color .2s ease,box-shadow .2s ease,background-color .2s ease}
+.softform textarea{min-height:96px;padding:14px 18px;border-radius:20px;resize:vertical}
+.softform input::placeholder,.softform textarea::placeholder{color:var(--muted);opacity:.6}
+.softform input:hover,.softform textarea:hover{background:var(--surface)}
+.softform input:focus,.softform textarea:focus{outline:none;background:var(--surface);border-color:var(--slate);box-shadow:0 0 0 4px var(--slate-soft)}
+.softform input[type=date]::-webkit-calendar-picker-indicator{opacity:.55;cursor:pointer}
+:root[data-theme="dark"] .softform input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .softform input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}}
+.softform .kidrow{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:10px;margin-bottom:10px}
+.softform .row2{gap:10px}
+.softform .field{margin:14px 0}
+.softform .field > label{margin-left:6px}
+.softform .seg{gap:8px}
+.softform .seg button{border-radius:999px;padding:9px 18px;transition:background-color .2s ease,border-color .2s ease}
+.softform .chip{transition:background-color .2s ease,border-color .2s ease}
+@media (prefers-reduced-motion:reduce){.softform input,.softform textarea,.softform .seg button,.softform .chip{transition:none}}
 .warnline{font-size:13px;color:var(--rose);margin-top:6px}
 details > summary{cursor:pointer;color:var(--slate);min-height:32px;display:flex;align-items:center}
 

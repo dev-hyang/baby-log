@@ -75,7 +75,7 @@ function faithHTML(){
 function settingsHTML(){
   const st = S.settings;
   const seg = (attr, cur, items, label) => `<div class="seg" role="group" aria-label="${label}">${items.map(([v, l]) => `<button ${attr}="${v}" aria-pressed="${cur === v}">${l}</button>`).join("")}</div>`;
-  return `
+  return `<div class="softform">
   <h2>${t("设置")}</h2>
   <div class="panel"><div class="lab">${t("孩子（小名 · 出生日期）")}</div>
     <div id="kidRows">${st.children.map((c, i) => `<div class="kidrow"><input type="text" aria-label="${t("第{n}个孩子的小名", { n: i + 1 })}" data-kr="${i}" data-kk="name" value="${esc(c.name)}" placeholder="${t("小名")}"><input type="date" aria-label="${t("第{n}个孩子的出生日期", { n: i + 1 })}" data-kr="${i}" data-kk="birth" value="${esc(c.birth)}">${st.children.length > 1 ? `<button class="chip" data-act="delkid" data-i="${i}" aria-label="${t("移除{name}", { name: esc(c.name || t("这个孩子")) })}">${t("移除")}</button>` : ""}</div>`).join("")}</div>
@@ -102,7 +102,8 @@ function settingsHTML(){
   <div class="panel">${seg("data-units-set", unitPref(), [["auto", t("自动（当前：{u}）", { u: isUS() ? t("美制") : t("公制") })], ["metric", t("公制 kg · cm · ml · ℃")], ["us", t("美制 lb · in · fl oz · ℉")]], t("单位"))}
   <p class="small muted" style="margin-top:6px">${t("只影响这台设备的显示和输入。数据统一按公制保存，切换不会改动已有记录，家人可以各用各的单位。“自动”按手机的语言和时区判断（北美时区默认美制）。")}</p></div>
   <h2>${t("显示")}</h2>
-  <div class="panel">${seg("data-theme-set", document.documentElement.dataset.theme || "", [["", t("跟随系统")], ["light", t("浅色")], ["dark", t("深色（夜里喂奶）")]], t("外观"))}</div>`;
+  <div class="panel">${seg("data-theme-set", document.documentElement.dataset.theme || "", [["", t("跟随系统")], ["light", t("浅色")], ["dark", t("深色（夜里喂奶）")]], t("外观"))}</div>
+  </div>`;
 }
 function readSettingsInputs(){
   const kids = []; document.querySelectorAll("[data-kr]").forEach(el => { const i = +el.dataset.kr; (kids[i] ||= { ...S.settings.children[i] })[el.dataset.kk] = el.value.trim(); });
