@@ -110,7 +110,7 @@ function viewToday(){
   ${nc ? `<div class="alert info">${checkup}<button class="chip" data-tab="grow-checkups" style="margin-left:6px">${t("查看全部")}</button></div>` : ""}
   <div class="quick" role="group" aria-label="${t("快速记录")}">${quickHTML()}</div>
   <div style="text-align:right"><button class="chip" data-tab="cards">${t("⚙ 管理卡片")}</button></div>
-  ${stats ? `<h2>${t("最近 24 小时")}</h2><div class="stats">${stats}</div>` : ""}
+  ${stats ? `<h2>${t("最近 24 小时")}</h2><div class="stats">${stats}</div>${S.mode === "family" && SB.vis && memberNames().length > 1 ? `<p class="small muted" style="margin:6px 0 0">${t("统计只包含你能看到的记录。")}</p>` : ""}` : ""}
 
   ${meds.length ? `<h2>${t("妈妈用药")}</h2><div class="panel">${meds.map(medRow).join("")}
      <p class="small muted" style="margin-top:8px">${t("间隔来自你在设置里填写的医嘱。没有填写的只显示距上次服药多久。")}</p></div>` : ""}
@@ -128,9 +128,12 @@ function entryRow(e){
   const T = TYPES[e.type] || { color: "var(--muted)" };
   const fl = flags(e);
   const by = S.mode === "family" && e.by && memberName(e.by);
+  // who can see it, for records that are not family-wide: "🔒 仅我" / "👥 指定家人" for the author, "👥 分享给你" for a recipient
+  const mine = !e.cby || !SB.user || e.cby === SB.user.id;
+  const vb = e.vis === "private" ? `🔒 ${t("仅我")}` : e.vis === "shared" ? `👥 ${mine ? t("指定家人") : t("分享给你")}` : "";
   return `<button class="entry ${e.id === S.flashId ? "flash" : ""}" data-edit="${e.id}">
     <span class="t">${hm(e.ts)}</span><span class="c" style="background:${T.color}" aria-hidden="true"></span>
-    <span><span class="s">${esc(typeLabel(e.type))} · ${esc(summary(e))}</span>${by ? `<span class="n"> · ${esc(by)}</span>` : ""}${e.note ? `<br><span class="n">${esc(e.note)}</span>` : ""}${fl.map(f => `<br><span class="n" style="color:var(--rose)">${esc(f)}</span>`).join("")}</span></button>`;
+    <span><span class="s">${esc(typeLabel(e.type))} · ${esc(summary(e))}</span>${by ? `<span class="n"> · ${esc(by)}</span>` : ""}${vb ? `<span class="n"> · ${vb}</span>` : ""}${e.note ? `<br><span class="n">${esc(e.note)}</span>` : ""}${fl.map(f => `<br><span class="n" style="color:var(--rose)">${esc(f)}</span>`).join("")}</span></button>`;
 }
 
 function viewLog(){

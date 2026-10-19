@@ -3,11 +3,11 @@ import { last } from "./derived.js";
 import { setLang, t } from "./i18n.js";
 import { readSettingsInputs } from "./me.js";
 import { mealCheck } from "./meal.js";
-import { closeSheet, draft, drawForm, openForm, pickType, readDraftInputs } from "./sheet.js";
+import { closeSheet, draft, drawForm, openForm, pickType, readDraftInputs, rememberVis } from "./sheet.js";
 import { resetCards, setCard } from "./stages.js";
 import { LS_KEY, S, child, childOf, isKidType, kidCount, matchCheckup, setChild } from "./state.js";
 import { importJSON, loadDemo, offerFile, putEntry, removeEntry, removeWhere, saveSettings, toCSV } from "./store.js";
-import { sbAuth, sbCreate, sbJoin, sbLogout, sbMember, sbResetCode, syncNow } from "./sync.js";
+import { sbAuth, sbCreate, sbJoin, sbLogout, sbMember, sbResetCode, syncNow, visSupported } from "./sync.js";
 import { UNIT_KEY, isUS } from "./units.js";
 import { $, D, H, dayKey, dur, fromInput, newId, startOfDay, toast } from "./util.js";
 import { openPrint } from "./print.js";
@@ -50,7 +50,12 @@ document.addEventListener("click", async ev => {
   if (t0.dataset.copy) { try { await navigator.clipboard.writeText(t0.dataset.copy); toast(t("已复制：{s}", { s: t0.dataset.copy })); } catch (e) { toast(t("请手动搜索：{s}", { s: t0.dataset.copy })); } return; }
   if (t0.dataset.kidsel) { setChild(t0.dataset.kidsel); S.mealDay = null; render(); $("#bname").focus(); return; }
   if (t0.dataset.member) { await sbMember(t0.dataset.member, t0.dataset.uid); return; }
-  if (t0.dataset.seg) { readDraftInputs(); const k = t0.dataset.seg; draft[k] = (draft[k] === t0.dataset.v && k !== "child") ? null : t0.dataset.v; drawForm(k); return; }
+  if (t0.dataset.seg) { readDraftInputs(); const k = t0.dataset.seg; draft[k] = (draft[k] === t0.dataset.v && k !== "child" && k !== "vis") ? null : t0.dataset.v; drawForm(k); return; }
+  if (t0.dataset.with) { // family members a record is shared with
+    readDraftInputs(); const w = new Set(draft.with || []);
+    if (w.has(t0.dataset.with)) w.delete(t0.dataset.with); else w.add(t0.dataset.with);
+    draft.with = [...w]; drawForm(); return;
+  }
   if (t0.dataset.who) { // multi-select children for a shared activity; the primary child can be swapped but never emptied
     readDraftInputs(); const id = t0.dataset.who, also = new Set(draft.also || []);
     if (id === childOf(draft)) { if (also.size) { draft.child = [...also][0]; also.delete(draft.child); } }
@@ -62,10 +67,14 @@ document.addEventListener("click", async ev => {
   if (t0.dataset.themeSet !== undefined) { const v = t0.dataset.themeSet; if (v) document.documentElement.dataset.theme = v; else delete document.documentElement.dataset.theme; try { localStorage.setItem(LS_KEY + ".theme", v); } catch (e) {} readSettingsInputs(); render(); return; }
   switch (t0.dataset.act) {
     case "close": closeSheet(); break;
-    case "save": { readDraftInputs(); const e = { ...draft };
+    case "save": { readDraftInputs(); const e = { ...draft }; const isNewRecord = !S.entries.some(x => x.id === e.id);
       const also = e.also || []; delete e.also; delete e._pick; // form-only state never reaches storage
       if (isKidType(e.type)) e.child = childOf(e); // legacy records become explicit once edited
       if (e.type === "sleep" && e.end && e.end < e.ts) { toast(t("醒来时间要晚于入睡时间")); return; }
+      if (e.vis === "shared" && !(e.with || []).length) { toast(t("请选择至少一位家人，或改成“仅我”")); return; }
+      if (e.vis !== "shared") delete e.with;
+      if (!e.vis || e.vis === "family") delete e.vis; // family-wide is the default and is not stored on the record
+      if (isNewRecord && visSupported()) rememberVis({ type: e.type, vis: e.vis });
       closeSheet(); await putEntry(e);
       for (const id of also) await putEntry({ ...e, id: newId(), child: id }); // one copy per extra child
       // on Today the quick buttons sit above the list: scroll to the 今天 section and light the saved row up
@@ -113,7 +122,7 @@ document.addEventListener("click", async ev => {
     case "sb-join": await sbJoin(); break;
     case "sb-logout": await sbLogout(); break;
     case "sb-reset-code": await sbResetCode(); break;
-    case "sb-sync": await syncNow(); toast(t("已同步")); break;
+    case "sb-sync": await syncNow(true); toast(t("已同步")); break;
   }
 });
 document.addEventListener("change", async ev => {

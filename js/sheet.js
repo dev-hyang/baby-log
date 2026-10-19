@@ -1,9 +1,10 @@
 import { t } from "./i18n.js";
-import { S, childName, childOf, isKidType } from "./state.js";
+import { LS_KEY, S, childName, childOf, isKidType } from "./state.js";
 import { milestoneNames, stageTypes } from "./stages.js";
-import { TYPES, flags, typeLabel } from "./types.js";
+import { SB, canEdit, memberName, otherMembers, visSupported } from "./sync.js";
+import { TYPES, flags, summary, typeLabel } from "./types.js";
 import { DISP_DEC, KG_LB, fromDisp, isUS, toDisp, trim, unitOf } from "./units.js";
-import { $, esc, fromInput, newId, num, toInput } from "./util.js";
+import { $, dayKey, esc, fromInput, hm, newId, num, toInput } from "./util.js";
 
 /* ============ sheet as a page ============
    The record form replaces the page content instead of floating over it, so nothing depends on how a given
@@ -48,7 +49,9 @@ const datalist = (id, items) => `<datalist id="${id}">${items.map(v => `<option 
 let draft = null;
 function openForm(type, existing, preset){
   const T = TYPES[type];
+  if (existing && !canEdit(existing)) { drawReadOnly(existing); showSheet("form"); return; }
   draft = existing ? { ...existing } : { id: newId(), type, ts: Date.now(), ...(isKidType(type) ? { child: S.childId } : {}), ...preset };
+  if (!existing && visSupported()) { const v = visDefault(type); if (v !== "family") draft.vis = v; }
   if (!existing) for (const f of T.fields) { const d = typeof f.def === "function" ? f.def(draft) : f.def; if (d !== undefined && draft[f.k] === undefined) draft[f.k] = d; }
   drawForm(); showSheet("form");
 }
@@ -93,8 +96,41 @@ function drawForm(focusKey){
     ${out.join("")}
     ${fl.map(f => `<div class="warnline" role="alert">${esc(f)}</div>`).join("")}
     ${datalist("vaxlist", VAX_LIST.map(v => t(v)))}${datalist("medlist", MED_LIST.map(v => t(v)))}${datalist("foodlist", FOOD_LIST.map(v => t(v)))}${datalist("milestonelist", milestoneNames())}
+    ${visHTML()}
     <div class="btns"><button class="btn primary" data-act="save">${t("保存")}</button>${isNew ? "" : `<button class="btn danger" data-act="del">${t("删除")}</button>`}</div>`;
   if (focusKey) { const el = $("#sheetIn").querySelector(`[data-seg="${focusKey}"][aria-pressed="true"]`); el && el.focus(); }
+}
+/* Who can see the record (family mode with migration 012 only). New records start from the type's default
+   (the private-by-default types, see types.js) or the last choice made for that type on this device; only the
+   author can change it, so someone else's family-wide record shows no control. */
+const VIS_KEY = LS_KEY + ".vis.";
+function visDefault(type){
+  let last = null; try { last = localStorage.getItem(VIS_KEY + type); } catch (e) {}
+  return last === "private" || last === "family" ? last : (TYPES[type] || {}).vis || "family";
+}
+function rememberVis(e){ try { localStorage.setItem(VIS_KEY + e.type, e.vis === "private" ? "private" : "family"); } catch (err) {} }
+const VIS_OPTS = [["private", "仅我"], ["shared", "指定家人"], ["family", "全家"]];
+const VIS_HINT = { private: "只有你能看到，家主也看不到。", shared: "你选的家人能看到，但不能修改。", family: "家里所有加入的人都能看到。" };
+function visHTML(){
+  if (!visSupported() || (draft.cby && SB.user && draft.cby !== SB.user.id)) return "";
+  const cur = draft.vis || "family", others = otherMembers();
+  return `<div class="field"><div class="lab" id="f_vis">${t("谁能看到")}</div>
+    <div class="seg" role="group" aria-labelledby="f_vis">${VIS_OPTS.map(([v, l]) => `<button type="button" data-seg="vis" data-v="${v}" aria-pressed="${cur === v}">${t(l)}</button>`).join("")}</div>
+    ${cur === "shared" ? (others.length
+      ? `<div class="seg" role="group" aria-label="${t("选择家人")}" style="margin-top:8px">${others.map(m => `<button type="button" data-with="${esc(m.id)}" aria-pressed="${(draft.with || []).includes(m.id)}">${esc(m.name)}</button>`).join("")}</div>`
+      : `<p class="small muted" style="margin:8px 0 0">${t("家里还没有其他成员。")}</p>`) : ""}
+    <p class="small muted" style="margin:6px 0 0">${t(VIS_HINT[cur])}</p></div>`;
+}
+// a record shared with this member by someone else: readable, not editable (the server refuses the write)
+function drawReadOnly(e){
+  draft = null;
+  const T = TYPES[e.type], name = memberName(e.cby) || t("家人");
+  $("#sheetIn").innerHTML = `${head(`${T.icon} ${typeLabel(e.type)}`)}
+    <div class="panel"><p><b>${esc(summary(e) || typeLabel(e.type))}</b></p>
+      <p class="small muted">${esc(dayKey(e.ts))} ${esc(hm(e.ts))}</p>
+      ${e.note ? `<p>${esc(e.note)}</p>` : ""}
+      <p class="small muted">${t("{name} 分享给你的记录，只有对方可以修改。", { name: esc(name) })}</p></div>
+    <div class="btns"><button class="btn" data-act="close">${t("关闭")}</button></div>`;
 }
 /* Which child the record belongs to. The form opens for the child shown on the page, so by default this is
    one quiet line; "换一个孩子" expands the choice. A new activity can be shared by several children (reading
@@ -136,4 +172,4 @@ function pickType(){
   showSheet("pick");
 }
 
-export { sheetScrollY, showSheet, closeSheet, head, draft, openForm, drawForm, readDraftInputs, pickType };
+export { sheetScrollY, showSheet, closeSheet, head, draft, openForm, drawForm, readDraftInputs, pickType, rememberVis };

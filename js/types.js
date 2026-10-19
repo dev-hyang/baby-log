@@ -94,19 +94,19 @@ const TYPES = {
     { k: "minutes", label: "时长（分钟）", type: "num", half: 1 },
     { k: "what", label: "内容", type: "text", half: 1, ph: "聊了什么、玩了什么…" },
     { k: "note", label: "备注", type: "area", ph: "孩子的反应、想记住的话…" } ] },
-  mood: { label: "情绪", icon: "🌤", color: "#4F8FA8", fields: [
+  mood: { label: "情绪", icon: "🌤", color: "#4F8FA8", vis: "private", fields: [
     { k: "level", label: "心情（1 很低落 – 5 很好）", type: "range", min: 1, max: 5 },
     { k: "kind", label: "状态", type: "seg", opts: ["平静", "开心", "低落", "烦躁生气", "焦虑压力", "委屈难过"], def: "平静" },
     { k: "trigger", label: "起因", type: "text", ph: "考试、和朋友闹矛盾、被批评…" },
     { k: "how", label: "怎么调整的", type: "text", ph: "聊聊、运动、听音乐、独处…" },
-    { k: "note", label: "心里话 / 备注", type: "area", ph: "孩子说的、你观察到的…", hint: () => t("提醒：目前这条记录家里所有加入的人都能看到。") } ] },
-  habit: { label: "自律", icon: "🎯", color: "#5F7F9B", fields: [
+    { k: "note", label: "心里话 / 备注", type: "area", ph: "孩子说的、你观察到的…" } ] },
+  habit: { label: "自律", icon: "🎯", color: "#5F7F9B", vis: "private", fields: [
     { k: "kind", label: "哪方面", type: "seg", opts: ["作息", "学习作业", "运动", "屏幕", "家务", "节制"], def: "作息" },
     { k: "what", label: "内容", type: "text", ph: "11 点前睡、作业先做完、少喝饮料…" },
     { k: "minutes", label: "时长（分钟，选填）", type: "num", half: 1 },
     { k: "self", label: "不用提醒，自己做到的", type: "check" },
     { k: "note", label: "备注", type: "text" } ] },
-  social: { label: "社交", icon: "👫", color: "#5B8E5A", fields: [
+  social: { label: "社交", icon: "👫", color: "#5B8E5A", vis: "private", fields: [
     { k: "kind", label: "情况", type: "seg", opts: ["和朋友相处", "发生矛盾", "帮助别人", "认识新朋友", "团体活动", "网络社交"], def: "和朋友相处" },
     { k: "who", label: "和谁", type: "text", half: 1, ph: "同学、队友、邻居…" },
     { k: "how", label: "怎么处理的", type: "text", half: 1, ph: "道歉、聊开了、找老师…" },

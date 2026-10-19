@@ -13,7 +13,12 @@ import { render, renderStatus } from "./views.js";
    new phone). Everyone else joins with the invite code only: the device gets an anonymous Supabase user,
    which is linked to the family by join_family(). Roles: the creator is an owner (家主); owners can reset
    the invite code, promote / demote and remove members (server-side checks in migration 009). */
-const SB = { configured: false, client: null, uid: undefined, user: null, family: null, members: {}, channel: null, syncing: false, again: false, busy: false };
+/* Record visibility (migration 012): entries.visibility is 'private' (only the author), 'shared' (the author and
+   shared_with) or 'family' (everyone, the default). The server enforces it in row-level security, so a device
+   only ever receives records its member may see. SB.vis says the columns exist; without the migration the app
+   behaves as before and hides the control. A record keeps e.vis / e.with only when it is not family-wide, and
+   e.cby is its author. */
+const SB = { configured: false, client: null, uid: undefined, user: null, family: null, members: {}, channel: null, syncing: false, again: false, busy: false, vis: false, reconciledAt: 0, forceReconcile: false };
 const SYNC_KEY = LS_KEY + ".sync", TOMB_KEY = LS_KEY + ".tomb";
 const loadJSON = (k, d) => { try { return JSON.parse(localStorage.getItem(k) || "null") ?? d; } catch (e) { return d; } };
 const saveJSON = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
@@ -75,6 +80,8 @@ async function enterFamily(fam){
   if (!cloudHasKids) await SB.client.from("families").update({ settings: JSON.parse(JSON.stringify(S.settings)) }).eq("id", fam.id);
   saveLocal();
   await loadMembers();
+  SB.vis = !(await SB.client.from("entries").select("visibility").limit(1)).error; // migration 012 applied?
+  SB.forceReconcile = true; // a fresh start checks that no record this member lost access to is still cached
   await syncNow();
   setupRealtime();
   render(); refreshSettingsIfOpen();
@@ -91,16 +98,49 @@ async function loadMembers(){
   SB.members = Object.fromEntries((data || []).map(m => [m.user_id, { name: m.display_name || t("家人"), role: m.role || "member" }]));
   if (SB.user && !SB.members[SB.user.id]) leaveFamily(t("你已不在这个家庭里，这台设备上的家庭记录副本已清除"));
 }
-function toRow(e){ return { family_id: SB.family.id, id: e.id, type: e.type, ts: e.ts, updated: e.updated || Date.now(), deleted: false, data: clean(e) }; }
+function toRow(e){
+  const row = { family_id: SB.family.id, id: e.id, type: e.type, ts: e.ts, updated: e.updated || Date.now(), deleted: false, data: clean(e) };
+  if (SB.vis) { row.visibility = e.vis || "family"; row.shared_with = row.visibility === "shared" ? (e.with || []) : []; }
+  return row;
+}
 function applyRow(r){
   const i = S.entries.findIndex(x => x.id === r.id);
   if (i >= 0 && S.entries[i]._dirty) return; // local unsent edit wins until it is pushed
   if (r.deleted) { if (i >= 0) S.entries.splice(i, 1); return; }
-  const e = { ...r.data, id: r.id, type: r.type, ts: Number(r.ts), updated: Number(r.updated), by: r.updated_by };
+  const e = { ...r.data, id: r.id, type: r.type, ts: Number(r.ts), updated: Number(r.updated), by: r.updated_by, cby: r.created_by };
+  if (r.visibility && r.visibility !== "family") { e.vis = r.visibility; e.with = r.shared_with || []; }
   if (i >= 0) S.entries[i] = e; else S.entries.push(e);
 }
-async function syncNow(){
+/* ---- visibility helpers ---- */
+const visSupported = () => S.mode === "family" && SB.vis && !!SB.user;
+// private / shared records can only be changed by their author (the server refuses anyone else); family-wide ones by any member
+const canEdit = e => !e.vis || !SB.user || !e.cby || e.cby === SB.user.id;
+const otherMembers = () => Object.entries(SB.members).filter(([uid]) => !SB.user || uid !== SB.user.id).map(([id, m]) => ({ id, name: m.name }));
+/* A record made private (or un-shared) after this device pulled it stays in the local copy: the server only
+   stops returning it. Compare with what the server still shows this member and drop the rest. The candidates
+   are re-checked by id, so a record missed while paging is never dropped by mistake. */
+async function reconcile(){
+  const seen = new Set(); let from = 0;
+  for (;;) {
+    const { data, error } = await SB.client.from("entries").select("id").eq("family_id", SB.family.id).eq("deleted", false).order("id").range(from, from + 999);
+    if (error) throw error;
+    data.forEach(r => seen.add(r.id));
+    if (data.length < 1000) break; from += 1000;
+  }
+  const missing = S.entries.filter(e => !e._dirty && !seen.has(e.id)).map(e => e.id);
+  const alive = new Set();
+  for (let i = 0; i < missing.length; i += 100) {
+    const { data, error } = await SB.client.from("entries").select("id").eq("family_id", SB.family.id).eq("deleted", false).in("id", missing.slice(i, i + 100));
+    if (error) throw error;
+    data.forEach(r => alive.add(r.id));
+  }
+  const gone = new Set(missing.filter(id => !alive.has(id)));
+  if (gone.size) S.entries = S.entries.filter(e => !gone.has(e.id));
+  SB.reconciledAt = Date.now();
+}
+async function syncNow(force){
   if (!SB.family) return;
+  if (force) SB.forceReconcile = true;
   if (SB.syncing) { SB.again = true; return; }
   SB.syncing = true;
   try {
@@ -126,6 +166,8 @@ async function syncNow(){
       if (data.length < 1000) break; from += 1000;
     }
     saveJSON(SYNC_KEY, { familyId: SB.family.id, lastPull: newest });
+    // 3) drop cached records this member can no longer see (only when visibility exists, at most every 5 minutes)
+    if (SB.vis && (SB.forceReconcile || Date.now() - SB.reconciledAt > 5 * 60e3)) { SB.forceReconcile = false; await reconcile(); }
     saveLocal(); render();
   } catch (err) {
     renderStatus(); // unsent records stay marked and retry on the next sync
@@ -289,4 +331,4 @@ function familyHTML(){
     <div class="btns"><button class="btn" data-act="sb-sync">${t("立即同步")}</button><button class="btn" data-act="sb-logout">${t("退出登录")}</button></div>`;
 }
 
-export { SB, SYNC_KEY, TOMB_KEY, loadJSON, saveJSON, loadTombs, saveTombs, isAnon, isOwner, memberName, memberNames, initSupabase, afterAuth, enterFamily, leaveFamily, loadMembers, toRow, applyRow, syncNow, setupRealtime, teardownRealtime, sbAuth, sbCreate, sbJoin, sbLogout, sbResetCode, sbMember, familyHTML };
+export { SB, SYNC_KEY, TOMB_KEY, loadJSON, saveJSON, loadTombs, saveTombs, isAnon, isOwner, memberName, memberNames, visSupported, canEdit, otherMembers, reconcile, initSupabase, afterAuth, enterFamily, leaveFamily, loadMembers, toRow, applyRow, syncNow, setupRealtime, teardownRealtime, sbAuth, sbCreate, sbJoin, sbLogout, sbResetCode, sbMember, familyHTML };

@@ -33,7 +33,8 @@ async function initCloud(){
   } catch (err) { S.mode = "local"; S.col = null; S.prof = null; renderStatus(); }
 }
 // Strip local-only bookkeeping fields before anything leaves the device
-function clean(e){ const o = JSON.parse(JSON.stringify(e)); delete o._dirty; delete o.by; return o; }
+// (by / cby come from the server's updated_by / created_by; vis / with travel in their own columns, see toRow)
+function clean(e){ const o = JSON.parse(JSON.stringify(e)); delete o._dirty; delete o.by; delete o.cby; delete o.vis; delete o.with; return o; }
 
 /* One place that decides where changes go: family cloud (Supabase), Claude db, or local only */
 async function persist(changed = [], deleted = []){
