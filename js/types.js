@@ -1,5 +1,5 @@
 import { t } from "./i18n.js";
-import { S, ageMonths, babyAgeDays, childOf } from "./state.js";
+import { S, ageMonths, babyAgeDays, childOf, stageOf } from "./state.js";
 import { fmtU } from "./units.js";
 import { $, D, dur, hm, num } from "./util.js";
 
@@ -111,6 +111,14 @@ const TYPES = {
     { k: "who", label: "和谁", type: "text", half: 1, ph: "同学、队友、邻居…" },
     { k: "how", label: "怎么处理的", type: "text", half: 1, ph: "道歉、聊开了、找老师…" },
     { k: "note", label: "备注", type: "area", ph: "发生了什么、孩子的感受…" } ] },
+  /* ---- 信仰（可选模块，设置里打开才出现；只记录一起做了什么，不给孩子打分） ---- */
+  faith: { label: "信仰", icon: "🕊", color: "#8A6FB0", vis: () => stageOf().key === "teen" ? "private" : "family", fields: [
+    { k: "kind", label: "做了什么", type: "seg", opts: ["家庭敬拜", "祷告", "读经", "背经", "服事", "主日聚会", "感恩", "个人灵修"], def: "家庭敬拜" },
+    { k: "minutes", label: "时长（分钟）", type: "num", half: 1 },
+    { k: "who", label: "和谁一起", type: "text", half: 1, ph: "全家、爸爸和老二…" },
+    { k: "what", label: "内容", type: "text", ph: "诗篇 23 篇、为外婆祷告、帮邻居浇花…" },
+    { k: "answered", label: "祷告已蒙应允", type: "check", show: m => m.kind === "祷告" },
+    { k: "note", label: "备注", type: "area", ph: "孩子说的话、学到的…" } ] },
   /* ---- 妈妈（家庭级，不随孩子切换） ---- */
   mmed:  { label: "妈妈用药", icon: "💊", color: "var(--rose)", fields: [
     { k: "cat", label: "类别", type: "seg", opts: ["止疼药", "维生素", "铁剂", "其他"], def: "止疼药" },
@@ -156,6 +164,7 @@ function summary(e){
     case "companion": p.push(v(e.kind) || t("陪伴"), v(e.who), e.what || "", e.minutes ? t("{n}分钟", { n: e.minutes }) : ""); break;
     case "mood": if (e.level != null) p.push(`${t("心情")} ${e.level}/5`); p.push(v(e.kind), e.trigger ? t("起因：{s}", { s: e.trigger }) : "", e.how ? t("调整：{s}", { s: e.how }) : ""); break;
     case "habit": p.push(v(e.kind) || t("自律"), e.what || "", e.minutes ? t("{n}分钟", { n: e.minutes }) : "", e.self ? t("自己做到") : ""); break;
+    case "faith": p.push(v(e.kind) || t("信仰"), e.what || "", e.minutes ? t("{n}分钟", { n: e.minutes }) : "", e.answered ? t("已蒙应允") : ""); break;
     case "social": p.push(v(e.kind), e.who || "", e.how ? t("处理：{s}", { s: e.how }) : ""); break;
   }
   return p.filter(Boolean).join(" · ");

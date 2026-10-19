@@ -47,6 +47,10 @@ function normalizeSettings(){
     prefs[c.id] = { quick: kind("quick"), stats: kind("stats") };
   }
   st.cardPrefs = prefs;
+  // faith: opt-in module, off by default. statement is the family's own words (everyone in the family sees it);
+  // off lists the children it is switched off for.
+  const fa = st.faith && typeof st.faith === "object" ? st.faith : {};
+  st.faith = { on: !!fa.on, statement: typeof fa.statement === "string" ? fa.statement.slice(0, 400) : "", off: strs(fa.off).filter(id => st.children.some(c => c.id === id)) };
   // keep the single-child fields mirrored to the first child for older exports / clients
   st.babyName = st.children[0].name; st.birth = st.children[0].birth;
   let cid = S.childId; if (cid == null) { try { cid = localStorage.getItem(CHILD_KEY); } catch (e) {} }
@@ -118,6 +122,6 @@ function matchCheckup(ts, cid = S.childId){
 }
 function nextCheckup(){ const done = checkupsDone(); return CHECKUPS.map(c => ({ ...c, at: checkupDate(c) })).find(c => c.at && !done[c.k] && c.at > Date.now() - 14 * D); }
 
-const APP_VERSION = "2026-10-18.2";
+const APP_VERSION = "2026-10-18.3";
 
 export { LS_KEY, S, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, matchCheckup, nextCheckup, APP_VERSION };

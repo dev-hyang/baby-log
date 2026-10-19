@@ -28,7 +28,8 @@ const METRICS = {
   companion: { label: "陪伴", unit: "分钟", dec: 0, color: "#C2677B", day: (a, b) => inRange(a, b, "companion").reduce((s, e) => s + (+e.minutes || 0), 0) },
   mood:    { label: "心情", unit: "分（1–5）", dec: 1, color: "#4F8FA8", day: (a, b) => { const lv = inRange(a, b, "mood").map(e => e.level).filter(v => v != null); return lv.length ? lv.reduce((s, v) => s + v, 0) / lv.length : null; } },
   habit:   { label: "自律：自己做到", unit: "次", dec: 1, color: "#5F7F9B", day: (a, b) => inRange(a, b, "habit").filter(e => e.self).length },
-  social:  { label: "社交", unit: "次", dec: 1, color: "#5B8E5A", day: (a, b) => inRange(a, b, "social").length }
+  social:  { label: "社交", unit: "次", dec: 1, color: "#5B8E5A", day: (a, b) => inRange(a, b, "social").length },
+  faith:   { label: "信仰记录", unit: "次", dec: 1, color: "#8A6FB0", day: (a, b) => inRange(a, b, "faith").length }
 };
 const mLabel = k => t(METRICS[k].label), mUnit = k => t(METRICS[k].unit);
 function actMinutes(a, b, kind){ return inRange(a, b, "activity").filter(e => e.kind === kind).reduce((s, e) => s + (+e.minutes || 0), 0); }

@@ -54,6 +54,23 @@ function cardsHTML(){
   ${hasCardPrefs() ? `<div class="btns"><button class="btn" data-act="cards-reset">${t("恢复{stage}的默认卡片", { stage: t(stageOf().name) })}</button></div>` : ""}`;
 }
 
+/* ---- faith module (opt-in): family statement, on / off, which children ---- */
+const FAITH_TEMPLATE = "我们是一个基督徒家庭，愿意带孩子认识神、爱神、爱人，从小学做荣神益人的小门徒。";
+function faithHTML(){
+  const f = S.settings.faith, kids = S.settings.children;
+  return `<p class="small muted" style="margin-top:0">${t("可选功能。关闭时，这个 App 里看不到任何信仰相关的内容；打开后会出现家庭敬拜、祷告、读经、服事等记录卡片。这里只记录家庭一起做了什么，不给孩子的信心打分，也不做连续打卡。")}</p>
+    <div class="chips" role="group" aria-label="${t("信仰（可选）")}"><button class="chip" data-faith="toggle" aria-pressed="${f.on}">${f.on ? t("已打开信仰记录") : t("打开信仰记录")}</button></div>
+    ${f.on ? `
+    <div class="field"><label for="faithStatement">${t("我们的信仰宣告（选填，家里所有人都能看到）")}</label>
+      <textarea id="faithStatement" maxlength="400" placeholder="${esc(t(FAITH_TEMPLATE))}">${esc(f.statement)}</textarea>
+      <button class="chip" data-faith="template" style="margin-top:6px">${t("用模板")}</button>
+      <p class="small muted" style="margin:6px 0 0">${t("它会显示在信仰记录的表单顶部，提醒我们为什么要记这些。")}</p></div>
+    ${kids.length > 1 ? `<div class="lab">${t("给哪些孩子显示")}</div>
+      <div class="chips" role="group" aria-label="${t("给哪些孩子显示")}">${kids.map(c => `<button class="chip" data-faith-kid="${esc(c.id)}" aria-pressed="${!f.off.includes(c.id)}">${esc(c.name || t("宝宝"))}</button>`).join("")}</div>` : ""}
+    <p class="small muted">${t("信仰记录和别的记录一样，可以设为“仅我”或“指定家人”可见；青少年阶段默认“仅我”。想关掉时，已记的内容仍保留在记录页。")}</p>
+    <div class="btns"><button class="btn primary" data-act="savesettings">${t("保存设置")}</button></div>` : ""}`;
+}
+
 /* ---- settings page ---- */
 function settingsHTML(){
   const st = S.settings;
@@ -68,6 +85,9 @@ function settingsHTML(){
     <div id="medRules">${(st.medIntervals || []).map((r, i) => `<div class="row2" style="margin-bottom:6px"><input type="text" aria-label="${t("药名")}" data-mr="${i}" data-mk="name" value="${esc(r.name)}" placeholder="${t("药名")}"><input type="number" inputmode="decimal" aria-label="${t("间隔小时")}" data-mr="${i}" data-mk="hours" value="${esc(r.hours)}" placeholder="${t("间隔（小时）")}"></div>`).join("")}</div>
     <button class="chip" data-act="addrule">${t("＋ 添加一种药")}</button>
     <div class="btns"><button class="btn primary" data-act="savesettings">${t("保存设置")}</button></div></div>
+
+  <h2>${t("信仰（可选）")}</h2>
+  <div class="panel">${faithHTML()}</div>
 
   <h2>${t("家庭协作")}</h2>
   <div class="panel">${familyHTML()}</div>
@@ -89,8 +109,9 @@ function readSettingsInputs(){
   if (kids.length) S.settings.children = kids.filter(c => c && c.id);
   const rules = []; document.querySelectorAll("[data-mr]").forEach(el => { const i = +el.dataset.mr; (rules[i] ||= { name: "", hours: "" })[el.dataset.mk] = el.value.trim(); });
   S.settings.medIntervals = rules.filter(r => r && (r.name || r.hours));
+  const fs = $("#faithStatement"); if (fs) S.settings.faith.statement = fs.value.trim();
 }
 // re-render the settings page after cloud state changed (login, members, invite code), unless a form is open on top
 function refreshSettingsIfOpen(){ if (S.tab === "settings" && !$("#sheet").open) render(); }
 
-export { viewMe, cardsHTML, settingsHTML, readSettingsInputs, refreshSettingsIfOpen };
+export { viewMe, cardsHTML, faithHTML, FAITH_TEMPLATE, settingsHTML, readSettingsInputs, refreshSettingsIfOpen };

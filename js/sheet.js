@@ -1,6 +1,6 @@
 import { t } from "./i18n.js";
 import { LS_KEY, S, childName, childOf, isKidType } from "./state.js";
-import { milestoneNames, stageTypes } from "./stages.js";
+import { faithOn, milestoneNames, stageTypes } from "./stages.js";
 import { SB, canEdit, memberName, otherMembers, visSupported } from "./sync.js";
 import { TYPES, flags, summary, typeLabel } from "./types.js";
 import { DISP_DEC, KG_LB, fromDisp, isUS, toDisp, trim, unitOf } from "./units.js";
@@ -91,6 +91,7 @@ function drawForm(focusKey){
   }
   const fl = flags(draft);
   $("#sheetIn").innerHTML = `${head(`${T.icon} ${t(isNew ? "记录{type}" : "修改{type}", { type: typeLabel(draft.type) })}`)}
+    ${draft.type === "faith" && S.settings.faith.statement ? `<p class="small muted" style="margin:0 0 10px">${esc(S.settings.faith.statement)}</p>` : ""}
     ${whoHTML(isNew)}
     <div class="field"><label for="f_ts">${draft.type === "sleep" ? t("入睡时间") : t("时间")}</label><input id="f_ts" type="datetime-local" data-f="ts" data-kind="dt" value="${toInput(draft.ts)}"></div>
     ${out.join("")}
@@ -106,7 +107,8 @@ function drawForm(focusKey){
 const VIS_KEY = LS_KEY + ".vis.";
 function visDefault(type){
   let last = null; try { last = localStorage.getItem(VIS_KEY + type); } catch (e) {}
-  return last === "private" || last === "family" ? last : (TYPES[type] || {}).vis || "family";
+  const dflt = (TYPES[type] || {}).vis; // a fixed value, or a function of the child's stage
+  return last === "private" || last === "family" ? last : (typeof dflt === "function" ? dflt() : dflt) || "family";
 }
 function rememberVis(e){ try { localStorage.setItem(VIS_KEY + e.type, e.vis === "private" ? "private" : "family"); } catch (err) {} }
 const VIS_OPTS = [["private", "仅我"], ["shared", "指定家人"], ["family", "全家"]];
@@ -139,7 +141,7 @@ function whoHTML(isNew){
   const kids = S.settings.children;
   if (!isKidType(draft.type) || kids.length < 2) return "";
   const cur = childOf(draft);
-  if (["activity", "companion"].includes(draft.type) && isNew) {
+  if (["activity", "companion", "faith"].includes(draft.type) && isNew) {
     const sel = new Set([cur, ...(draft.also || [])]);
     return `<div class="field"><div class="lab" id="f_child">${t("哪个孩子（可多选，一起做的活动会各记一条）")}</div><div class="seg" role="group" aria-labelledby="f_child">${kids.map(c => `<button type="button" data-who="${esc(c.id)}" aria-pressed="${sel.has(c.id)}">${esc(c.name || t("宝宝"))}</button>`).join("")}</div></div>`;
   }
@@ -164,7 +166,7 @@ function readDraftInputs(){
 }
 function pickType(){
   draft = null;
-  const first = stageTypes(), rest = Object.keys(TYPES).filter(k => !first.includes(k));
+  const first = stageTypes(), rest = Object.keys(TYPES).filter(k => !first.includes(k) && (k !== "faith" || faithOn()));
   const grid = keys => `<div class="quick">${keys.map(k => `<button data-add="${k}"><i>${TYPES[k].icon}</i>${typeLabel(k)}</button>`).join("")}</div>`;
   $("#sheetIn").innerHTML = `${head(t("补记哪一类？"))}
   ${grid(first)}

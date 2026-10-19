@@ -1,7 +1,7 @@
 import { ask } from "./ask.js";
 import { last } from "./derived.js";
 import { setLang, t } from "./i18n.js";
-import { readSettingsInputs } from "./me.js";
+import { FAITH_TEMPLATE, readSettingsInputs } from "./me.js";
 import { mealCheck } from "./meal.js";
 import { closeSheet, draft, drawForm, openForm, pickType, readDraftInputs, rememberVis } from "./sheet.js";
 import { resetCards, setCard } from "./stages.js";
@@ -45,6 +45,16 @@ document.addEventListener("click", async ev => {
     await saveSettings();
     const again = document.querySelector(`[data-card="${t0.dataset.card}"]`); again && again.focus(); // the page re-rendered: keep the keyboard place
     return;
+  }
+  if (t0.dataset.faith) { // settings → 信仰: switch the module on or off, or fill the statement template
+    readSettingsInputs(); const f = S.settings.faith;
+    if (t0.dataset.faith === "toggle") f.on = !f.on; else if (!f.statement) f.statement = t(FAITH_TEMPLATE);
+    await saveSettings(); return;
+  }
+  if (t0.dataset.faithKid) { // show / hide the faith cards for one child
+    readSettingsInputs(); const f = S.settings.faith, id = t0.dataset.faithKid;
+    f.off = f.off.includes(id) ? f.off.filter(x => x !== id) : [...f.off, id];
+    await saveSettings(); return;
   }
   if (t0.dataset.mealcheck) { await mealCheck(t0.dataset.feed, t0.dataset.mealcheck); return; }
   if (t0.dataset.copy) { try { await navigator.clipboard.writeText(t0.dataset.copy); toast(t("已复制：{s}", { s: t0.dataset.copy })); } catch (e) { toast(t("请手动搜索：{s}", { s: t0.dataset.copy })); } return; }

@@ -34,6 +34,10 @@ const Q = {
   school:  { add: "activity", preset: { kind: "幼儿园" }, icon: "🏫", label: "幼儿园" },
   screen:  { add: "activity", preset: { kind: "屏幕" }, icon: "📱", label: "屏幕" },
   behavior:{ add: "behavior", icon: "🙂", label: "情绪行为" },
+  prayer:  { add: "faith", preset: { kind: "祷告" }, icon: "🙏", label: "祷告" },
+  worship: { add: "faith", preset: { kind: "家庭敬拜" }, icon: "🎶", label: "家庭敬拜" },
+  scripture: { add: "faith", preset: { kind: "读经" }, icon: "📖", label: "读经" },
+  serve:   { add: "faith", preset: { kind: "服事" }, icon: "🤲", label: "服事" },
   companion: { add: "companion", icon: "🤗", label: "陪伴" },
   mood:    { add: "mood", icon: "🌤", label: "情绪" },
   habit:   { add: "habit", icon: "🎯", label: "自律" },
@@ -52,29 +56,35 @@ const STAGE = {
                types: ["feed", "food", "diaper", "sleep", "milestone", "baby", "bmed", "vax"],
                metrics: ["sleep", "longest", "ml", "nurse", "feeds", "food", "wet", "poop"] },
   toddler:   { hero: "meal",
-               quick: ["meal", "milk", "potty", "diaper", "sleep", "speech", "activity", "health"],
+               quick: ["meal", "milk", "potty", "diaper", "sleep", "speech", "activity", "health", "prayer", "scripture"],
                stats: ["hero", "meals", "milk", "potty", "diapers", "outdoorRead", "sleep"],
-               types: ["food", "feed", "potty", "diaper", "sleep", "speech", "activity", "milestone", "behavior", "baby", "bmed", "vax"],
+               types: ["food", "feed", "potty", "diaper", "sleep", "speech", "activity", "milestone", "behavior", "baby", "bmed", "vax", "faith"],
                metrics: ["sleep", "longest", "food", "ml", "potty", "outdoor", "read", "words", "tantrum"] },
   preschool: { hero: "meal",
-               quick: ["meal", "read", "outdoor", "school", "behavior", "potty", "sleep", "health"],
-               stats: ["hero", "meals", "read", "outdoor", "screen", "upset", "sleep"],
-               types: ["food", "activity", "behavior", "potty", "sleep", "speech", "milestone", "baby", "bmed", "vax", "feed", "diaper"],
-               metrics: ["sleep", "read", "outdoor", "screen", "food", "tantrum", "words", "potty"] },
+               quick: ["meal", "read", "outdoor", "school", "behavior", "potty", "sleep", "health", "prayer", "scripture"],
+               stats: ["hero", "meals", "read", "outdoor", "screen", "upset", "sleep", "faith"],
+               types: ["food", "activity", "behavior", "potty", "sleep", "speech", "milestone", "baby", "bmed", "vax", "feed", "diaper", "faith"],
+               metrics: ["sleep", "read", "outdoor", "screen", "food", "tantrum", "words", "potty", "faith"] },
   school:    { hero: "companion",
-               quick: ["companion", "mood", "habit", "social", "read", "outdoor", "screen", "health"],
-               stats: ["hero", "companion", "mood", "habit", "social", "screen", "sleep"],
-               types: ["companion", "mood", "habit", "social", "activity", "food", "sleep", "milestone", "baby", "bmed", "vax", "behavior", "speech"],
-               metrics: ["companion", "mood", "habit", "social", "read", "outdoor", "screen", "sleep"] },
+               quick: ["companion", "mood", "habit", "social", "read", "outdoor", "screen", "health", "worship", "prayer", "scripture", "serve"],
+               stats: ["hero", "companion", "mood", "habit", "social", "screen", "sleep", "faith"],
+               types: ["companion", "mood", "habit", "social", "activity", "food", "sleep", "milestone", "baby", "bmed", "vax", "behavior", "speech", "faith"],
+               metrics: ["companion", "mood", "habit", "social", "read", "outdoor", "screen", "sleep", "faith"] },
   teen:      { hero: "companion",
-               quick: ["companion", "mood", "habit", "social", "screen", "read", "outdoor", "health"],
-               stats: ["hero", "companion", "mood", "habit", "social", "screen", "outdoor"],
-               types: ["companion", "mood", "habit", "social", "activity", "sleep", "baby", "bmed", "vax", "milestone", "food"],
-               metrics: ["companion", "mood", "habit", "social", "screen", "sleep", "outdoor", "read"] }
+               quick: ["companion", "mood", "habit", "social", "screen", "read", "outdoor", "health", "prayer", "scripture", "serve"],
+               stats: ["hero", "companion", "mood", "habit", "social", "screen", "outdoor", "faith"],
+               types: ["companion", "mood", "habit", "social", "activity", "sleep", "baby", "bmed", "vax", "milestone", "food", "faith"],
+               metrics: ["companion", "mood", "habit", "social", "screen", "sleep", "outdoor", "read", "faith"] }
 };
+/* ---- faith module: opt-in, family-level (settings.faith), switchable per child ----
+   Everything faith-related is simply absent while it is off: its quick cards, stat, trend metric, record type in
+   the 补记 picker. Records already written stay in the log and the timeline either way. */
+const FAITH_KEYS = { quick: ["prayer", "worship", "scripture", "serve"], stats: ["faith"], metrics: ["faith"], types: ["faith"] };
+const faithOn = (cid = S.childId) => { const f = S.settings.faith; return !!f && f.on && !(f.off || []).includes(cid); };
+const withoutFaith = (kind, keys, cid) => faithOn(cid) ? keys : keys.filter(k => !FAITH_KEYS[kind].includes(k));
 const stageCfg = () => STAGE[stageOf().key];
-const stageTypes = () => stageCfg().types;
-const stageMetrics = () => stageCfg().metrics;
+const stageTypes = () => withoutFaith("types", stageCfg().types);
+const stageMetrics = () => withoutFaith("metrics", stageCfg().metrics);
 
 /* ---- cards: the stage's defaults, adjusted per child ----
    settings.cardPrefs[child][kind] = { on: [keys added from outside the stage], off: [stage keys hidden] }.
@@ -83,7 +93,7 @@ const REG = () => ({ quick: Q, stats: STATS });
 const prefOf = (kind, cid) => ((S.settings.cardPrefs || {})[cid] || {})[kind] || { on: [], off: [] };
 function activeCards(kind, cid = S.childId){
   const reg = REG()[kind], def = STAGE[stageOf(cid).key][kind], p = prefOf(kind, cid);
-  return [...def.filter(k => !p.off.includes(k)), ...p.on.filter(k => !def.includes(k))].filter(k => reg[k]);
+  return withoutFaith(kind, [...def.filter(k => !p.off.includes(k)), ...p.on.filter(k => !def.includes(k))].filter(k => reg[k]), cid);
 }
 function setCard(kind, key, on, cid = S.childId){
   const def = STAGE[stageOf(cid).key][kind];
@@ -99,7 +109,7 @@ const hasCardPrefs = (cid = S.childId) => { const p = (S.settings.cardPrefs || {
 function allCards(kind, cid = S.childId){
   const reg = REG()[kind], def = STAGE[stageOf(cid).key][kind], on = new Set(activeCards(kind, cid));
   const row = k => ({ key: k, label: reg[k].label, icon: reg[k].icon, on: on.has(k) });
-  return { common: def.map(row), other: Object.keys(reg).filter(k => !def.includes(k)).map(row) };
+  return { common: withoutFaith(kind, def, cid).map(row), other: withoutFaith(kind, Object.keys(reg).filter(k => !def.includes(k)), cid).map(row) };
 }
 
 function quickHTML(){
@@ -172,6 +182,10 @@ const STATS = {
     return stat(t("自律 自己做到 / 总"), `${n(h.filter(e => e.self).length)} ${n(h.length)}`);
   } },
   social:   { label: "社交", icon: "👫", render: day => stat(t("社交"), n(ofType(day, "social").length)) },
+  faith:    { label: "敬拜 / 祷告", icon: "🕊", render: day => {
+    const f = ofType(day, "faith");
+    return stat(t("敬拜 / 祷告"), `${n(f.filter(e => e.kind === "家庭敬拜").length)} ${n(f.filter(e => e.kind === "祷告").length)}`);
+  } },
   sleep:    { label: "睡眠", icon: "🌙", render: () => stat(t("睡眠"), `${Math.round(sleepMsIn(Date.now() - D, Date.now()) / H * 10) / 10}<small>${t("小时")}</small>`) }
 };
 function statsHTML(day){
@@ -235,4 +249,4 @@ function doctorListHTML(){
   return `<ul class="plain">${list.map(s => `<li>${t(s)}</li>`).join("")}</ul>`;
 }
 
-export { STAGE, stageCfg, stageTypes, stageMetrics, activeCards, setCard, resetCards, hasCardPrefs, allCards, quickHTML, statsHTML, MILESTONE_REF, milestoneRef, milestoneNames, milestoneRefHTML, doctorListHTML };
+export { STAGE, faithOn, stageCfg, stageTypes, stageMetrics, activeCards, setCard, resetCards, hasCardPrefs, allCards, quickHTML, statsHTML, MILESTONE_REF, milestoneRef, milestoneNames, milestoneRefHTML, doctorListHTML };
