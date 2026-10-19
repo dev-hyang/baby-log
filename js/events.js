@@ -4,6 +4,7 @@ import { setLang, t } from "./i18n.js";
 import { readSettingsInputs } from "./me.js";
 import { mealCheck } from "./meal.js";
 import { closeSheet, draft, drawForm, openForm, pickType, readDraftInputs } from "./sheet.js";
+import { resetCards, setCard } from "./stages.js";
 import { LS_KEY, S, child, childOf, isKidType, kidCount, matchCheckup, setChild } from "./state.js";
 import { importJSON, loadDemo, offerFile, putEntry, removeEntry, removeWhere, saveSettings, toCSV } from "./store.js";
 import { sbAuth, sbCreate, sbJoin, sbLogout, sbMember, sbResetCode, syncNow } from "./sync.js";
@@ -37,6 +38,13 @@ document.addEventListener("click", async ev => {
     const cur = S.mealDay ?? startOfDay(Date.now());
     const next = startOfDay(cur + (+t0.dataset.mealday) * D + 2 * H); // +2h guards against DST shifts
     S.mealDay = Math.min(next, startOfDay(Date.now())); render(); return;
+  }
+  if (t0.dataset.card) { // card manager chip: "quick:meal" / "stats:hero"
+    const [kind, key] = t0.dataset.card.split(":");
+    setCard(kind, key, t0.getAttribute("aria-pressed") !== "true");
+    await saveSettings();
+    const again = document.querySelector(`[data-card="${t0.dataset.card}"]`); again && again.focus(); // the page re-rendered: keep the keyboard place
+    return;
   }
   if (t0.dataset.mealcheck) { await mealCheck(t0.dataset.feed, t0.dataset.mealcheck); return; }
   if (t0.dataset.copy) { try { await navigator.clipboard.writeText(t0.dataset.copy); toast(t("已复制：{s}", { s: t0.dataset.copy })); } catch (e) { toast(t("请手动搜索：{s}", { s: t0.dataset.copy })); } return; }
@@ -78,6 +86,7 @@ document.addEventListener("click", async ev => {
     case "wake": { const e = S.entries.find(x => x.id === t0.dataset.id); if (e) { await putEntry({ ...e, end: Date.now() }); toast(t("这一觉睡了 {d}", { d: dur(Date.now() - e.ts) })); } break; }
     case "addpick": pickType(); break;
     case "settings": goTab("settings"); break;
+    case "cards-reset": resetCards(); await saveSettings(); toast(t("已恢复默认卡片")); break;
     case "print-meal": case "print-trend": case "print-timeline": case "print-medical": openPrint(t0.dataset.act.slice(6)); break;
     case "addrule": readSettingsInputs(); S.settings.medIntervals.push({ name: "", hours: "" }); render(); break;
     case "addkid": readSettingsInputs(); S.settings.children.push({ id: newId(), name: "", birth: "" }); render(); break;

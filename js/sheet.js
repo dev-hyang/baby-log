@@ -103,7 +103,7 @@ function whoHTML(isNew){
   const kids = S.settings.children;
   if (!isKidType(draft.type) || kids.length < 2) return "";
   const cur = childOf(draft);
-  if (draft.type === "activity" && isNew) {
+  if (["activity", "companion"].includes(draft.type) && isNew) {
     const sel = new Set([cur, ...(draft.also || [])]);
     return `<div class="field"><div class="lab" id="f_child">${t("哪个孩子（可多选，一起做的活动会各记一条）")}</div><div class="seg" role="group" aria-labelledby="f_child">${kids.map(c => `<button type="button" data-who="${esc(c.id)}" aria-pressed="${sel.has(c.id)}">${esc(c.name || t("宝宝"))}</button>`).join("")}</div></div>`;
   }

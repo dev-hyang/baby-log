@@ -8,7 +8,9 @@ import { D, H, esc } from "./util.js";
 /* ============ stage configuration ============
    One place that says what each growth stage shows: quick buttons and 24h stats on Today, which record
    types the list filter / 补记 picker offer first, which trend metrics are relevant, and the milestone
-   references on the grow page. Everything else (forms, sync, charts) is shared across stages. */
+   references on the grow page. Everything else (forms, sync, charts) is shared across stages.
+   The quick buttons and stats are "cards": each child can switch cards off or add ones from another stage
+   (settings.cardPrefs, see activeCards). Switching a card off only hides it; records are never touched. */
 
 const mealByHour = () => { const h = new Date().getHours(); return h < 10 ? "早餐" : h < 14 ? "午餐" : h < 16 ? "加餐" : h < 20 ? "晚餐" : "加餐"; };
 const Q = {
@@ -30,28 +32,78 @@ const Q = {
   read:    { add: "activity", preset: { kind: "阅读" }, icon: "📚", label: "阅读" },
   outdoor: { add: "activity", preset: { kind: "户外" }, icon: "🌳", label: "户外" },
   school:  { add: "activity", preset: { kind: "幼儿园" }, icon: "🏫", label: "幼儿园" },
-  behavior:{ add: "behavior", icon: "🙂", label: "情绪行为" }
+  screen:  { add: "activity", preset: { kind: "屏幕" }, icon: "📱", label: "屏幕" },
+  behavior:{ add: "behavior", icon: "🙂", label: "情绪行为" },
+  companion: { add: "companion", icon: "🤗", label: "陪伴" },
+  mood:    { add: "mood", icon: "🌤", label: "情绪" },
+  habit:   { add: "habit", icon: "🎯", label: "自律" },
+  social:  { add: "social", icon: "👫", label: "社交" }
 };
+// hero: what the big clock on Today counts since — the last feed, the last meal, or the last time together
 const STAGE = {
-  newborn:   { quick: ["nurse", "bottle", "formula", "diaper", "sleep", "mmed", "mbody", "health"],
+  newborn:   { hero: "feed",
+               quick: ["nurse", "bottle", "formula", "diaper", "sleep", "mmed", "mbody", "health"],
+               stats: ["hero", "feeds", "bottle", "nursing", "wetpoop", "sleep"],
                types: ["feed", "diaper", "sleep", "baby", "bmed", "vax"],
                metrics: ["sleep", "longest", "ml", "nurse", "feeds", "wet", "poop", "pump"] },
-  infant:    { quick: ["nurse", "bottle", "formula", "solids", "diaper", "sleep", "milestone", "health"],
+  infant:    { hero: "feed",
+               quick: ["nurse", "bottle", "formula", "solids", "diaper", "sleep", "milestone", "health"],
+               stats: ["hero", "feeds", "bottle", "solids", "wetpoop", "sleep"],
                types: ["feed", "food", "diaper", "sleep", "milestone", "baby", "bmed", "vax"],
                metrics: ["sleep", "longest", "ml", "nurse", "feeds", "food", "wet", "poop"] },
-  toddler:   { quick: ["meal", "milk", "potty", "diaper", "sleep", "speech", "activity", "health"],
+  toddler:   { hero: "meal",
+               quick: ["meal", "milk", "potty", "diaper", "sleep", "speech", "activity", "health"],
+               stats: ["hero", "meals", "milk", "potty", "diapers", "outdoorRead", "sleep"],
                types: ["food", "feed", "potty", "diaper", "sleep", "speech", "activity", "milestone", "behavior", "baby", "bmed", "vax"],
                metrics: ["sleep", "longest", "food", "ml", "potty", "outdoor", "read", "words", "tantrum"] },
-  preschool: { quick: ["meal", "read", "outdoor", "school", "behavior", "potty", "sleep", "health"],
+  preschool: { hero: "meal",
+               quick: ["meal", "read", "outdoor", "school", "behavior", "potty", "sleep", "health"],
+               stats: ["hero", "meals", "read", "outdoor", "screen", "upset", "sleep"],
                types: ["food", "activity", "behavior", "potty", "sleep", "speech", "milestone", "baby", "bmed", "vax", "feed", "diaper"],
-               metrics: ["sleep", "read", "outdoor", "screen", "food", "tantrum", "words", "potty"] }
+               metrics: ["sleep", "read", "outdoor", "screen", "food", "tantrum", "words", "potty"] },
+  school:    { hero: "companion",
+               quick: ["companion", "mood", "habit", "social", "read", "outdoor", "screen", "health"],
+               stats: ["hero", "companion", "mood", "habit", "social", "screen", "sleep"],
+               types: ["companion", "mood", "habit", "social", "activity", "food", "sleep", "milestone", "baby", "bmed", "vax", "behavior", "speech"],
+               metrics: ["companion", "mood", "habit", "social", "read", "outdoor", "screen", "sleep"] },
+  teen:      { hero: "companion",
+               quick: ["companion", "mood", "habit", "social", "screen", "read", "outdoor", "health"],
+               stats: ["hero", "companion", "mood", "habit", "social", "screen", "outdoor"],
+               types: ["companion", "mood", "habit", "social", "activity", "sleep", "baby", "bmed", "vax", "milestone", "food"],
+               metrics: ["companion", "mood", "habit", "social", "screen", "sleep", "outdoor", "read"] }
 };
 const stageCfg = () => STAGE[stageOf().key];
 const stageTypes = () => stageCfg().types;
 const stageMetrics = () => stageCfg().metrics;
 
+/* ---- cards: the stage's defaults, adjusted per child ----
+   settings.cardPrefs[child][kind] = { on: [keys added from outside the stage], off: [stage keys hidden] }.
+   Storing only the differences keeps a child who never touched the settings on the stage defaults. */
+const REG = () => ({ quick: Q, stats: STATS });
+const prefOf = (kind, cid) => ((S.settings.cardPrefs || {})[cid] || {})[kind] || { on: [], off: [] };
+function activeCards(kind, cid = S.childId){
+  const reg = REG()[kind], def = STAGE[stageOf(cid).key][kind], p = prefOf(kind, cid);
+  return [...def.filter(k => !p.off.includes(k)), ...p.on.filter(k => !def.includes(k))].filter(k => reg[k]);
+}
+function setCard(kind, key, on, cid = S.childId){
+  const def = STAGE[stageOf(cid).key][kind];
+  const all = S.settings.cardPrefs ||= {}, kids = all[cid] ||= { quick: { on: [], off: [] }, stats: { on: [], off: [] } };
+  const p = kids[kind] ||= { on: [], off: [] };
+  p.on = p.on.filter(k => k !== key); p.off = p.off.filter(k => k !== key);
+  if (on && !def.includes(key)) p.on.push(key);
+  if (!on && def.includes(key)) p.off.push(key);
+}
+function resetCards(cid = S.childId){ if (S.settings.cardPrefs) delete S.settings.cardPrefs[cid]; }
+const hasCardPrefs = (cid = S.childId) => { const p = (S.settings.cardPrefs || {})[cid]; return !!p && ["quick", "stats"].some(k => p[k] && (p[k].on.length || p[k].off.length)); };
+// every card the child can show, the stage's own first, for the card manager
+function allCards(kind, cid = S.childId){
+  const reg = REG()[kind], def = STAGE[stageOf(cid).key][kind], on = new Set(activeCards(kind, cid));
+  const row = k => ({ key: k, label: reg[k].label, icon: reg[k].icon, on: on.has(k) });
+  return { common: def.map(row), other: Object.keys(reg).filter(k => !def.includes(k)).map(row) };
+}
+
 function quickHTML(){
-  return stageCfg().quick.map(k => {
+  return activeCards("quick").map(k => {
     const q = Q[k];
     if (q.act) return `<button data-act="${q.act}"><i>${q.icon}</i>${t(q.label)}</button>`;
     const preset = typeof q.preset === "function" ? q.preset() : q.preset;
@@ -64,42 +116,66 @@ const stat = (k, v, ref = "") => `<div class="stat"><div class="k">${k}</div><di
 const n = (x, u = t("次")) => `${x}<small>${u}</small>`;
 const vol = ml => `${trim(toDisp("vol", ml), isUS() ? 1 : 0)}<small>${unitOf("vol")}</small>`;
 const sumMin = list => list.reduce((a, e) => a + (+e.minutes || 0), 0);
+const min = x => `${x}<small>${t("分")}</small>`;
+const mins = x => `${x}<small>${t("分钟")}</small>`;
+const feedsOf = day => day.filter(e => e.type === "feed" && e.method !== "吸奶");
+const mlOf = day => feedsOf(day).reduce((a, e) => a + (+e.ml || 0), 0);
+const ofType = (day, type) => day.filter(e => e.type === type);
+const actMin = (day, kind) => sumMin(day.filter(e => e.type === "activity" && e.kind === kind));
+// label is the heading on Today and the name in the card manager; hero is the big clock, not a tile
+const STATS = {
+  hero:     { label: "顶部计时", icon: "⏱" },
+  feeds:    { label: "喂奶次数", icon: "🍼", render: day => {
+    const f = feedsOf(day).length;
+    return stat(t("喂奶次数"), n(f), stageOf().key === "newborn" ? `<div class="ref ${f && f < 8 ? "warn" : ""}">${t("新生儿通常 8–12 次")}</div>` : "");
+  } },
+  bottle:   { label: "瓶喂总量", icon: "🍼", render: day => stat(t("瓶喂总量"), vol(mlOf(day))) },
+  nursing:  { label: "亲喂 左 / 右", icon: "🤱", render: day => {
+    const f = feedsOf(day);
+    return stat(t("亲喂 左 / 右"), `${min(f.reduce((a, e) => a + (+e.left || 0), 0))} ${min(f.reduce((a, e) => a + (+e.right || 0), 0))}`);
+  } },
+  wetpoop:  { label: "湿尿布 / 大便", icon: "🧷", render: day => {
+    const wet = day.filter(e => e.type === "diaper" && e.pee).length, poop = day.filter(e => e.type === "diaper" && e.poop).length;
+    let ref = "";
+    if (stageOf().key === "newborn" && birthTs()) {
+      const exp = expectedDiapers(babyAgeDays());
+      ref = `<div class="ref ${wet < exp.wet ? "warn" : ""}">${t("参考：至少 {n} 次湿尿布", { n: exp.wet })}${exp.poop ? t("、{n} 次大便", { n: exp.poop }) : ""}</div>`;
+    }
+    return stat(t("湿尿布 / 大便"), `${n(wet)} ${n(poop)}`, ref);
+  } },
+  solids:   { label: "辅食", icon: "🥣", render: day => {
+    const foods = ofType(day, "food"), fresh = foods.filter(f => f.newFood).length;
+    return stat(t("辅食"), n(foods.length), fresh ? `<div class="ref">${t("今天试了 {n} 种新食物", { n: fresh })}</div>` : "");
+  } },
+  meals:    { label: "吃饭", icon: "🍚", render: day => stat(t("吃饭"), n(ofType(day, "food").filter(f => f.meal !== "奶").length)) },
+  milk:     { label: "喝奶", icon: "🥛", render: day => stat(t("喝奶"), vol(mlOf(day))) },
+  potty:    { label: "如厕 成功 / 总", icon: "🚽", render: day => {
+    const potty = ofType(day, "potty"), ok = potty.filter(p => ["小马桶", "马桶"].includes(p.where) && p.what !== "坐了没出").length;
+    return stat(t("如厕 成功 / 总"), `${n(ok)} ${n(potty.length)}`);
+  } },
+  diapers:  { label: "尿布", icon: "🧷", render: day => stat(t("尿布"), n(ofType(day, "diaper").length)) },
+  outdoorRead: { label: "户外 / 阅读", icon: "🌳", render: day => stat(t("户外 / 阅读"), `${min(actMin(day, "户外"))} ${min(actMin(day, "阅读"))}`) },
+  read:     { label: "阅读", icon: "📚", render: day => stat(t("阅读"), mins(actMin(day, "阅读"))) },
+  outdoor:  { label: "户外", icon: "🌳", render: day => stat(t("户外"), mins(actMin(day, "户外"))) },
+  screen:   { label: "屏幕", icon: "📱", render: day => {
+    const m = actMin(day, "屏幕"), young = ageMonths() != null && ageMonths() < 72; // the AAP reference is for 2–5 year olds
+    return stat(t("屏幕"), mins(m), young && m > 60 ? `<div class="ref warn">${t("AAP 建议 2–5 岁每天不超过 1 小时高质量内容")}</div>` : "");
+  } },
+  upset:    { label: "发脾气 / 哭闹", icon: "🙂", render: day => stat(t("发脾气 / 哭闹"), n(ofType(day, "behavior").filter(e => ["发脾气", "哭闹"].includes(e.kind)).length)) },
+  companion:{ label: "陪伴", icon: "🤗", render: day => stat(t("陪伴"), mins(sumMin(ofType(day, "companion")))) },
+  mood:     { label: "心情", icon: "🌤", render: day => {
+    const lv = ofType(day, "mood").map(e => e.level).filter(v => v != null);
+    return stat(t("心情"), lv.length ? `${Math.round(lv.reduce((a, b) => a + b, 0) / lv.length * 10) / 10}<small>/5</small>` : "–");
+  } },
+  habit:    { label: "自律 自己做到 / 总", icon: "🎯", render: day => {
+    const h = ofType(day, "habit");
+    return stat(t("自律 自己做到 / 总"), `${n(h.filter(e => e.self).length)} ${n(h.length)}`);
+  } },
+  social:   { label: "社交", icon: "👫", render: day => stat(t("社交"), n(ofType(day, "social").length)) },
+  sleep:    { label: "睡眠", icon: "🌙", render: () => stat(t("睡眠"), `${Math.round(sleepMsIn(Date.now() - D, Date.now()) / H * 10) / 10}<small>${t("小时")}</small>`) }
+};
 function statsHTML(day){
-  const key = stageOf().key;
-  const feeds = day.filter(e => e.type === "feed" && e.method !== "吸奶");
-  const ml = feeds.reduce((a, e) => a + (+e.ml || 0), 0);
-  const wet = day.filter(e => e.type === "diaper" && e.pee).length, poop = day.filter(e => e.type === "diaper" && e.poop).length;
-  const sleep = stat(t("睡眠"), `${Math.round(sleepMsIn(Date.now() - D, Date.now()) / H * 10) / 10}<small>${t("小时")}</small>`);
-  const foods = day.filter(e => e.type === "food");
-  const act = kind => sumMin(day.filter(e => e.type === "activity" && e.kind === kind));
-  const min = x => `${x}<small>${t("分")}</small>`;
-  if (key === "newborn") {
-    const L = feeds.reduce((a, e) => a + (+e.left || 0), 0), R = feeds.reduce((a, e) => a + (+e.right || 0), 0);
-    const exp = expectedDiapers(babyAgeDays());
-    return stat(t("喂奶次数"), n(feeds.length), `<div class="ref ${feeds.length && feeds.length < 8 ? "warn" : ""}">${t("新生儿通常 8–12 次")}</div>`)
-      + stat(t("瓶喂总量"), vol(ml))
-      + stat(t("亲喂 左 / 右"), `${min(L)} ${min(R)}`)
-      + stat(t("湿尿布 / 大便"), `${n(wet)} ${n(poop)}`, birthTs() ? `<div class="ref ${wet < exp.wet ? "warn" : ""}">${t("参考：至少 {n} 次湿尿布", { n: exp.wet })}${exp.poop ? t("、{n} 次大便", { n: exp.poop }) : ""}</div>` : "")
-      + sleep;
-  }
-  if (key === "infant") {
-    const newFoods = foods.filter(f => f.newFood).length;
-    return stat(t("喂奶次数"), n(feeds.length)) + stat(t("瓶喂总量"), vol(ml))
-      + stat(t("辅食"), n(foods.length), newFoods ? `<div class="ref">${t("今天试了 {n} 种新食物", { n: newFoods })}</div>` : "")
-      + stat(t("湿尿布 / 大便"), `${n(wet)} ${n(poop)}`) + sleep;
-  }
-  const potty = day.filter(e => e.type === "potty");
-  const ok = potty.filter(p => ["小马桶", "马桶"].includes(p.where) && p.what !== "坐了没出").length;
-  const upset = day.filter(e => e.type === "behavior" && ["发脾气", "哭闹"].includes(e.kind)).length;
-  if (key === "toddler") {
-    return stat(t("吃饭"), n(foods.filter(f => f.meal !== "奶").length)) + stat(t("喝奶"), vol(ml))
-      + stat(t("如厕 成功 / 总"), `${n(ok)} ${n(potty.length)}`) + stat(t("尿布"), n(day.filter(e => e.type === "diaper").length))
-      + stat(t("户外 / 阅读"), `${min(act("户外"))} ${min(act("阅读"))}`) + sleep;
-  }
-  const mins = x => `${x}<small>${t("分钟")}</small>`;
-  return stat(t("吃饭"), n(foods.length)) + stat(t("阅读"), mins(act("阅读")))
-    + stat(t("户外"), mins(act("户外"))) + stat(t("屏幕"), mins(act("屏幕")), act("屏幕") > 60 ? `<div class="ref warn">${t("AAP 建议 2–5 岁每天不超过 1 小时高质量内容")}</div>` : "")
-    + stat(t("发脾气 / 哭闹"), n(upset)) + sleep;
+  return activeCards("stats").filter(k => k !== "hero").map(k => STATS[k].render(day)).join("");
 }
 
 /* ---- milestone references (CDC "Learn the Signs. Act Early." 2022, abridged) ---- */
@@ -117,9 +193,9 @@ const MILESTONE_REF = [
   { m: 48, items: [["社交情绪", "会玩假装游戏，比如当老师"], ["语言", "会说 4 个词以上的句子"], ["大运动", "会接住大球"], ["自理", "会自己解扣子"]] },
   { m: 60, items: [["社交情绪", "玩游戏时会遵守规则、轮流"], ["语言", "会讲一个有两件事的故事"], ["大运动", "单脚跳"], ["精细动作", "会写自己名字里的一些字"]] }
 ];
-// the checkpoint to show now: the first one at or after the child's age, else the last
+// the checkpoint to show now: the first one at or after the child's age, else the last; none once past school entry (CDC stops at 5)
 function milestoneRef(){
-  const m = ageMonths(); if (m == null) return null;
+  const m = ageMonths(); if (m == null || m > 72) return null;
   return MILESTONE_REF.find(r => r.m >= m) || MILESTONE_REF[MILESTONE_REF.length - 1];
 }
 // suggestions for the free-text milestone field, in the interface language
@@ -159,4 +235,4 @@ function doctorListHTML(){
   return `<ul class="plain">${list.map(s => `<li>${t(s)}</li>`).join("")}</ul>`;
 }
 
-export { STAGE, stageCfg, stageTypes, stageMetrics, quickHTML, statsHTML, MILESTONE_REF, milestoneRef, milestoneNames, milestoneRefHTML, doctorListHTML };
+export { STAGE, stageCfg, stageTypes, stageMetrics, activeCards, setCard, resetCards, hasCardPrefs, allCards, quickHTML, statsHTML, MILESTONE_REF, milestoneRef, milestoneNames, milestoneRefHTML, doctorListHTML };

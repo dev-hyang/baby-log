@@ -23,7 +23,12 @@ const METRICS = {
   outdoor: { label: "户外", unit: "分钟", dec: 0, color: "var(--sage)", day: (a, b) => actMinutes(a, b, "户外") },
   screen:  { label: "屏幕时间", unit: "分钟", dec: 0, color: "var(--muted)", day: (a, b) => actMinutes(a, b, "屏幕") },
   words:   { label: "语言记录", unit: "条", dec: 1, color: "#5B8E5A", day: (a, b) => inRange(a, b, "speech").length },
-  tantrum: { label: "发脾气 / 哭闹", unit: "次", dec: 1, color: "var(--rose)", day: (a, b) => inRange(a, b, "behavior").filter(e => ["发脾气", "哭闹"].includes(e.kind)).length }
+  tantrum: { label: "发脾气 / 哭闹", unit: "次", dec: 1, color: "var(--rose)", day: (a, b) => inRange(a, b, "behavior").filter(e => ["发脾气", "哭闹"].includes(e.kind)).length },
+  /* 学龄期起 */
+  companion: { label: "陪伴", unit: "分钟", dec: 0, color: "#C2677B", day: (a, b) => inRange(a, b, "companion").reduce((s, e) => s + (+e.minutes || 0), 0) },
+  mood:    { label: "心情", unit: "分（1–5）", dec: 1, color: "#4F8FA8", day: (a, b) => { const lv = inRange(a, b, "mood").map(e => e.level).filter(v => v != null); return lv.length ? lv.reduce((s, v) => s + v, 0) / lv.length : null; } },
+  habit:   { label: "自律：自己做到", unit: "次", dec: 1, color: "#5F7F9B", day: (a, b) => inRange(a, b, "habit").filter(e => e.self).length },
+  social:  { label: "社交", unit: "次", dec: 1, color: "#5B8E5A", day: (a, b) => inRange(a, b, "social").length }
 };
 const mLabel = k => t(METRICS[k].label), mUnit = k => t(METRICS[k].unit);
 function actMinutes(a, b, kind){ return inRange(a, b, "activity").filter(e => e.kind === kind).reduce((s, e) => s + (+e.minutes || 0), 0); }
@@ -43,7 +48,7 @@ function metricValue(m, bk){
   const M = METRICS[m];
   if (bk.b - bk.a === D) return hasData(bk.a, bk.b) ? M.day(bk.a, bk.b) : null;
   const vals = [];
-  for (let t = bk.a; t < bk.b && t <= Date.now(); t += D) if (hasData(t, t + D)) vals.push(M.day(t, t + D));
+  for (let t = bk.a; t < bk.b && t <= Date.now(); t += D) if (hasData(t, t + D)) { const v = M.day(t, t + D); if (v != null) vals.push(v); } // a day without that kind of record has no value (e.g. mood)
   if (!vals.length) return null;
   return M.max ? Math.max(...vals) : vals.reduce((x, y) => x + y, 0) / vals.length;
 }

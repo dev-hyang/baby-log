@@ -3,10 +3,10 @@ import { APPS, THIS_APP } from "./apps.js";
 import { ask } from "./ask.js";
 import { byTime, last, medStatus, suggestSide, within } from "./derived.js";
 import { t } from "./i18n.js";
-import { settingsHTML, viewMe } from "./me.js";
+import { cardsHTML, settingsHTML, viewMe } from "./me.js";
 import { dayNavHTML, viewMeal } from "./meal.js";
-import { doctorListHTML, milestoneRef, milestoneRefHTML, quickHTML, stageTypes, statsHTML } from "./stages.js";
-import { CHECKUPS, S, STAGES, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
+import { activeCards, doctorListHTML, milestoneRef, milestoneRefHTML, quickHTML, stageCfg, stageTypes, statsHTML } from "./stages.js";
+import { CHECKUPS, S, STAGES, isKidType, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
 import { SB, loadTombs, memberName, memberNames } from "./sync.js";
 import { viewTrend } from "./trend.js";
 import { TYPES, flags, isVisit, summary, typeLabel } from "./types.js";
@@ -37,7 +37,7 @@ function toggleKids(open = $("#kids").hidden){
 const mrow = (attr, title, desc, icon) => `<button class="mrow" ${attr}><span class="mi" aria-hidden="true">${icon}</span><span class="mt"><b>${title}</b>${desc ? `<small>${desc}</small>` : ""}</span><span class="mch" aria-hidden="true">›</span></button>`;
 // sub-pages reached from a hub: the hub's bottom tab stays highlighted and a "‹ hub" chip sits on top
 const SUB = {
-  settings: ["me", () => settingsHTML()], learn: ["me", () => viewLearn()], about: ["me", () => aboutHTML()],
+  settings: ["me", () => settingsHTML()], cards: ["me", () => cardsHTML()], learn: ["me", () => viewLearn()], about: ["me", () => aboutHTML()],
   "grow-milestones": ["grow", () => growMilestones()], "grow-foods": ["grow", () => growFoods()], "grow-sleep": ["grow", () => growSleep()],
   "grow-body": ["grow", () => growBody()], "grow-checkups": ["grow", () => growCheckups()], "grow-vax": ["grow", () => growVax()],
   "mom-charts": ["mom", () => momCharts()], "mom-signs": ["mom", () => momSigns()]
@@ -64,7 +64,16 @@ function heroHTML(){
     <div class="big num">${bigDur(Date.now() - sl.ts)}</div>
     <div class="meta"><span>${t("{time} 入睡", { time: hm(sl.ts) })}</span>${sl.where ? `<span>${esc(t(sl.where))}</span>` : ""}</div>
     <div class="act"><button data-act="wake" data-id="${sl.id}">${t("醒了，记录结束")}</button></div></section>`;
-  if (["toddler", "preschool"].includes(stageOf().key)) {
+  if (!activeCards("stats").includes("hero")) return ""; // the child's card settings turned the clock off
+  if (stageCfg().hero === "companion") {
+    const m = last(e => e.type === "companion");
+    if (!m) return `<section class="hero"><div class="moon"></div><div class="lbl">${t("距上次陪伴")}</div>
+      <div class="big num">--<small>:</small>--</div><div class="meta">${t("点下面的按钮记录一次陪伴")}</div></section>`;
+    return `<section class="hero"><div class="moon"></div><div class="lbl">${t("距上次陪伴")}</div>
+      <div class="big num">${bigDur(Date.now() - m.ts)}</div>
+      <div class="meta"><span>${hm(m.ts)} · ${esc(summary(m))}</span></div></section>`;
+  }
+  if (stageCfg().hero === "meal") {
     const m = last(e => e.type === "food");
     if (!m) return `<section class="hero"><div class="moon"></div><div class="lbl">${t("距上次吃饭")}</div>
       <div class="big num">--<small>:</small>--</div><div class="meta">${t("点下面的按钮记录今天第一顿")}</div></section>`;
@@ -90,6 +99,7 @@ function viewToday(){
   const nc = nextCheckup();
   const meds = medStatus();
   const today = vis().filter(e => e.ts >= startOfDay(Date.now())).sort(byTime);
+  const stats = statsHTML(day);
   const checkup = nc && (nc.at < Date.now()
     ? t("儿科体检：{label}，应在 {date}（{wd}），去过了记得在成长页勾选。", { label: `<b>${t(nc.label)}</b>`, date: dayKey(nc.at), wd: weekday(nc.at) })
     : t("下次儿科体检：{label}，约 {date}（{wd}）。", { label: `<b>${t(nc.label)}</b>`, date: dayKey(nc.at), wd: weekday(nc.at) }));
@@ -99,9 +109,8 @@ function viewToday(){
   ${alerts.map(a => `<div class="alert red" role="alert"><b>${t("需要留意")}</b> · ${hm(a.e.ts)} ${esc(a.t)}</div>`).join("")}
   ${nc ? `<div class="alert info">${checkup}<button class="chip" data-tab="grow-checkups" style="margin-left:6px">${t("查看全部")}</button></div>` : ""}
   <div class="quick" role="group" aria-label="${t("快速记录")}">${quickHTML()}</div>
-
-  <h2>${t("最近 24 小时")}</h2>
-  <div class="stats">${statsHTML(day)}</div>
+  <div style="text-align:right"><button class="chip" data-tab="cards">${t("⚙ 管理卡片")}</button></div>
+  ${stats ? `<h2>${t("最近 24 小时")}</h2><div class="stats">${stats}</div>` : ""}
 
   ${meds.length ? `<h2>${t("妈妈用药")}</h2><div class="panel">${meds.map(medRow).join("")}
      <p class="small muted" style="margin-top:8px">${t("间隔来自你在设置里填写的医嘱。没有填写的只显示距上次服药多久。")}</p></div>` : ""}
@@ -141,7 +150,9 @@ function viewList(){
   if (q) list = list.filter(e => (typeLabel(e.type) + " " + summary(e) + " " + (e.note || "") + " " + dayKey(e.ts)).toLowerCase().includes(q));
   const groups = {};
   for (const e of list) (groups[dayKey(e.ts)] ||= []).push(e);
-  const chips = [["all", t("全部")], ...stageTypes().map(ty => [ty, typeLabel(ty)]), ["momall", t("妈妈")]];
+  // the stage's types first, then any other type this child has records of, so history stays reachable after a stage change or a hidden card
+  const own = new Set(vis().map(e => e.type)), extra = Object.keys(TYPES).filter(ty => isKidType(ty) && own.has(ty) && !stageTypes().includes(ty));
+  const chips = [["all", t("全部")], ...[...stageTypes(), ...extra].map(ty => [ty, typeLabel(ty)]), ["momall", t("妈妈")]];
   if (!chips.some(([k]) => k === S.filter)) { S.filter = "all"; return viewList(); } // filter from another stage / child
   const body = !list.length
     ? `<div class="empty"><div class="eicon" aria-hidden="true">${q ? "🔍" : "🗓"}</div>${q ? t("没有符合条件的记录，换个关键词试试。") : S.filter !== "all" ? t("这一天没有这类记录。") : t("这一天没有记录。")}<br><button class="btn" data-act="addpick">${t("＋ 补记一条")}</button></div>`
@@ -284,6 +295,8 @@ function growSleep(){
       <tr><td>${t("4–12 个月")}</td><td>${t("12–16 小时（含小睡）")}</td><td>${t("1.5–3.5 小时")}</td></tr>
       <tr><td>${t("1–2 岁")}</td><td>${t("11–14 小时（含小睡）")}</td><td>${t("3–5 小时")}</td></tr>
       <tr><td>${t("3–5 岁")}</td><td>${t("10–13 小时（含小睡）")}</td><td>${t("多数逐渐不午睡")}</td></tr>
+      <tr><td>${t("6–12 岁")}</td><td>${t("9–12 小时")}</td><td>–</td></tr>
+      <tr><td>${t("13–18 岁")}</td><td>${t("8–10 小时")}</td><td>–</td></tr>
     </tbody></table>
     <p class="small muted" style="margin-top:8px">${t("总睡眠：4个月以上为美国睡眠医学会（AASM）建议、AAP 认可；0–3 个月为美国国家睡眠基金会建议。清醒时长是常见经验范围，个体差异很大。安全睡眠：仰睡、独自睡在婴儿床、床里不放枕头被子毛绒玩具。多数专家建议约 4–6 个月后再考虑睡眠训练。")}</p></div>`;
 }
@@ -365,7 +378,11 @@ function vaxHTML(){
 }
 
 function viewLearn(){
-  const eg = stageOf().key === "newborn" ? t("“宝宝打嗝很多正常吗？”“产后多久可以开始运动？”") : stageOf().key === "infant" ? t("“辅食先加什么？”“几个月可以睡整夜？”") : t("“发脾气怎么办？”“如厕训练什么时候开始？”");
+  const EG = {
+    newborn: "“宝宝打嗝很多正常吗？”“产后多久可以开始运动？”", infant: "“辅食先加什么？”“几个月可以睡整夜？”",
+    school: "“孩子不愿意写作业怎么办？”“怎么和孩子聊学校里的烦恼？”", teen: "“青春期孩子不愿意说话怎么办？”“怎么管手机又不吵架？”"
+  };
+  const eg = t(EG[stageOf().key] || "“发脾气怎么办？”“如厕训练什么时候开始？”");
   return `<h2>${t("什么时候要联系儿科医生")}</h2>
   <div class="panel">${doctorListHTML()}<p class="small muted">${t("整理自美国儿科学会家长网站 HealthyChildren.org 的常见建议，按当前阶段显示。不确定时，打电话问医生总是对的。")}</p></div>
 

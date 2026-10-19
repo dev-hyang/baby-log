@@ -39,6 +39,14 @@ function normalizeSettings(){
   if (Object.keys(flat).length) st.checkups[st.legacyChild] = { ...flat, ...(nested[st.legacyChild] || {}) };
   // checkupDates: { childId: { m2: "2026-03-14" } } — the clinic's actual appointment when it differs from the schedule
   if (!st.checkupDates || typeof st.checkupDates !== "object") st.checkupDates = {};
+  // cardPrefs: { childId: { quick: { on: [], off: [] }, stats: { on: [], off: [] } } } — per-child changes to the stage's default cards
+  const strs = a => Array.isArray(a) ? a.filter(x => typeof x === "string") : [], prefs = {};
+  for (const c of st.children) {
+    const p = (st.cardPrefs || {})[c.id]; if (!p || typeof p !== "object") continue;
+    const kind = k => ({ on: strs(p[k] && p[k].on), off: strs(p[k] && p[k].off) });
+    prefs[c.id] = { quick: kind("quick"), stats: kind("stats") };
+  }
+  st.cardPrefs = prefs;
   // keep the single-child fields mirrored to the first child for older exports / clients
   st.babyName = st.children[0].name; st.birth = st.children[0].birth;
   let cid = S.childId; if (cid == null) { try { cid = localStorage.getItem(CHILD_KEY); } catch (e) {} }
@@ -69,7 +77,9 @@ const STAGES = [
   { key: "newborn", name: "新生儿期", range: "0–3 个月", untilDays: 91, items: ["喂奶 / 尿布 / 睡眠", "妈妈产后恢复", "黄疸与体重"] },
   { key: "infant", name: "婴儿期", range: "3–12 个月", untilDays: 366, items: ["辅食与过敏反应", "作息与睡眠", "发育里程碑"] },
   { key: "toddler", name: "幼儿期", range: "1–3 岁", untilDays: 1096, items: ["三餐与喝奶", "如厕训练", "语言与情绪"] },
-  { key: "preschool", name: "学前期", range: "3–5 岁 PreK", untilDays: 1e9, items: ["阅读与户外", "幼儿园与社交", "情绪行为"] }
+  { key: "preschool", name: "学前期", range: "3–5 岁 PreK", untilDays: 2192, items: ["阅读与户外", "幼儿园与社交", "情绪行为"] },
+  { key: "school", name: "学龄期", range: "6–11 岁", untilDays: 4384, items: ["陪伴与谈心", "习惯与自律", "情绪与社交"] },
+  { key: "teen", name: "青少年期", range: "12 岁以上", untilDays: 1e9, items: ["情绪与心事", "自律与节制", "陪伴与关系"] }
 ];
 // The stage decides which quick buttons, stats, trend metrics and references the pages show.
 // Without a birth date the app behaves as it always did: newborn.
@@ -108,6 +118,6 @@ function matchCheckup(ts, cid = S.childId){
 }
 function nextCheckup(){ const done = checkupsDone(); return CHECKUPS.map(c => ({ ...c, at: checkupDate(c) })).find(c => c.at && !done[c.k] && c.at > Date.now() - 14 * D); }
 
-const APP_VERSION = "2026-10-17.11";
+const APP_VERSION = "2026-10-18.1";
 
 export { LS_KEY, S, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, matchCheckup, nextCheckup, APP_VERSION };

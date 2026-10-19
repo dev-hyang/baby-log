@@ -190,7 +190,7 @@ table.meal tfoot td.t{background:var(--honey-soft)}
 .pill.wait{background:var(--honey-soft);color:var(--ink)}
 
 /* stage track */
-.stages{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:6px}
+.stages{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:6px}
 .stage{padding:10px 8px 8px;border-top:4px solid var(--line);font-size:13px}
 .stage b{display:block;font-size:14px}
 .stage.now{border-top-color:var(--slate)}

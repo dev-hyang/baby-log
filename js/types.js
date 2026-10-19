@@ -87,6 +87,30 @@ const TYPES = {
     { k: "how", label: "怎么处理的", type: "text", ph: "抱着安抚、冷静角、转移注意…" },
     { k: "minutes", label: "持续（分钟）", type: "num" },
     { k: "note", label: "备注", type: "text" } ] },
+  /* ---- 学龄期起：陪伴、情绪、自律、社交 ---- */
+  companion: { label: "陪伴", icon: "🤗", color: "#C2677B", fields: [
+    { k: "kind", label: "做什么", type: "seg", opts: ["谈心", "游戏", "运动", "外出", "一起读书", "一起吃饭", "其他"], def: "谈心" },
+    { k: "who", label: "谁陪的", type: "seg", opts: ["爸爸", "妈妈", "爸爸妈妈", "其他家人"] },
+    { k: "minutes", label: "时长（分钟）", type: "num", half: 1 },
+    { k: "what", label: "内容", type: "text", half: 1, ph: "聊了什么、玩了什么…" },
+    { k: "note", label: "备注", type: "area", ph: "孩子的反应、想记住的话…" } ] },
+  mood: { label: "情绪", icon: "🌤", color: "#4F8FA8", fields: [
+    { k: "level", label: "心情（1 很低落 – 5 很好）", type: "range", min: 1, max: 5 },
+    { k: "kind", label: "状态", type: "seg", opts: ["平静", "开心", "低落", "烦躁生气", "焦虑压力", "委屈难过"], def: "平静" },
+    { k: "trigger", label: "起因", type: "text", ph: "考试、和朋友闹矛盾、被批评…" },
+    { k: "how", label: "怎么调整的", type: "text", ph: "聊聊、运动、听音乐、独处…" },
+    { k: "note", label: "心里话 / 备注", type: "area", ph: "孩子说的、你观察到的…", hint: () => t("提醒：目前这条记录家里所有加入的人都能看到。") } ] },
+  habit: { label: "自律", icon: "🎯", color: "#5F7F9B", fields: [
+    { k: "kind", label: "哪方面", type: "seg", opts: ["作息", "学习作业", "运动", "屏幕", "家务", "节制"], def: "作息" },
+    { k: "what", label: "内容", type: "text", ph: "11 点前睡、作业先做完、少喝饮料…" },
+    { k: "minutes", label: "时长（分钟，选填）", type: "num", half: 1 },
+    { k: "self", label: "不用提醒，自己做到的", type: "check" },
+    { k: "note", label: "备注", type: "text" } ] },
+  social: { label: "社交", icon: "👫", color: "#5B8E5A", fields: [
+    { k: "kind", label: "情况", type: "seg", opts: ["和朋友相处", "发生矛盾", "帮助别人", "认识新朋友", "团体活动", "网络社交"], def: "和朋友相处" },
+    { k: "who", label: "和谁", type: "text", half: 1, ph: "同学、队友、邻居…" },
+    { k: "how", label: "怎么处理的", type: "text", half: 1, ph: "道歉、聊开了、找老师…" },
+    { k: "note", label: "备注", type: "area", ph: "发生了什么、孩子的感受…" } ] },
   /* ---- 妈妈（家庭级，不随孩子切换） ---- */
   mmed:  { label: "妈妈用药", icon: "💊", color: "var(--rose)", fields: [
     { k: "cat", label: "类别", type: "seg", opts: ["止疼药", "维生素", "铁剂", "其他"], def: "止疼药" },
@@ -129,6 +153,10 @@ function summary(e){
     case "speech": p.push(v(e.kind), e.words ? `「${e.words}」` : "", e.lang && e.lang !== "中文" ? t(e.lang) : ""); break;
     case "activity": p.push(v(e.kind) || t("活动"), e.what || "", e.minutes ? t("{n}分钟", { n: e.minutes }) : ""); break;
     case "behavior": p.push(v(e.kind), e.trigger ? t("起因：{s}", { s: e.trigger }) : "", e.minutes ? t("{n}分钟", { n: e.minutes }) : "", e.how ? t("处理：{s}", { s: e.how }) : ""); break;
+    case "companion": p.push(v(e.kind) || t("陪伴"), v(e.who), e.what || "", e.minutes ? t("{n}分钟", { n: e.minutes }) : ""); break;
+    case "mood": if (e.level != null) p.push(`${t("心情")} ${e.level}/5`); p.push(v(e.kind), e.trigger ? t("起因：{s}", { s: e.trigger }) : "", e.how ? t("调整：{s}", { s: e.how }) : ""); break;
+    case "habit": p.push(v(e.kind) || t("自律"), e.what || "", e.minutes ? t("{n}分钟", { n: e.minutes }) : "", e.self ? t("自己做到") : ""); break;
+    case "social": p.push(v(e.kind), e.who || "", e.how ? t("处理：{s}", { s: e.how }) : ""); break;
   }
   return p.filter(Boolean).join(" · ");
 }
@@ -142,6 +170,7 @@ function flags(e){
   if (e.type === "food" && ["皮疹", "呕吐", "腹泻"].includes(e.reaction)) f.push(t("进食后{r}可能是食物过敏：记下吃了什么并咨询医生；如出现嘴唇或面部肿胀、呼吸困难、全身荨麻疹，请立即就医", { r: t(e.reaction) }));
   if (e.type === "vax" && ["发热", "其他"].includes(e.reaction)) f.push(t("接种后若出现高热、持续哭闹超过3小时、呼吸困难、面部肿胀或全身荨麻疹，请及时就医"));
   if (e.type === "mbody" && e.lochia === "1小时浸透1片") f.push(t("出血量大（约1小时浸透1片卫生巾）：属于紧急警示信号，请立即就医"));
+  if (e.type === "mood" && e.level != null && e.level <= 1) f.push(t("如果持续低落，或有伤害自己的想法，请尽快联系医生、学校辅导员或可信任的人（美国可拨打或发短信 988）"));
   if (e.type === "mbody" && e.mood != null && e.mood <= 1) f.push(t("如果持续低落或有伤害自己/宝宝的念头，请马上联系医生或身边可信任的人"));
   return f;
 }

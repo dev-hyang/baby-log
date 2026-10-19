@@ -1,6 +1,7 @@
 import { APPS, THIS_APP } from "./apps.js";
 import { LANGS, langPref, t } from "./i18n.js";
-import { APP_VERSION, S, ageText, childName } from "./state.js";
+import { allCards, hasCardPrefs } from "./stages.js";
+import { APP_VERSION, S, ageText, childName, stageOf } from "./state.js";
 import { familyHTML } from "./sync.js";
 import { isUS, unitPref } from "./units.js";
 import { $, esc } from "./util.js";
@@ -17,6 +18,7 @@ function viewMe(){
   <h2>${t("我的")} <span class="small muted" style="font-weight:400">${esc(childName())} · ${esc(ageText())}</span></h2>
   <div class="panel mlist">
     ${row('data-tab="settings"', t("设置"), t("孩子、妈妈用药间隔、家庭协作、备份、语言、单位、显示"), "⚙")}
+    ${row('data-tab="cards"', t("卡片"), t("今天页的快捷按钮和统计：按孩子打开或关闭，已有记录不受影响"), "◫")}
     ${row('data-tab="learn"', t("问答"), t("什么时候联系儿科医生、向 AI 提问、权威资料"), "?")}
     ${row('data-tab="about"', t("介绍"), t("这是什么、每页怎么用、小技巧、注意事项、数据与隐私"), "✎")}
   </div>
@@ -34,6 +36,22 @@ function viewMe(){
   <div class="panel mlist">${APPS.filter(a => a.key !== THIS_APP).map(link).join("")}</div>
   <p class="small muted">${t("同一个账号、同一个家庭，三个站点互通；标题旁的左右箭头也能切换。")}</p>
   <p class="small muted" style="margin-top:24px">${t("小月亮 · 母婴记录")} · ${t("版本 {v}", { v: APP_VERSION })}</p>`;
+}
+
+/* ---- card manager: which quick buttons and stats the active child's Today page shows ---- */
+function cardsHTML(){
+  const group = (kind, title, note) => {
+    const { common, other } = allCards(kind);
+    const chip = c => `<button class="chip" data-card="${kind}:${c.key}" aria-pressed="${c.on}">${c.icon} ${esc(t(c.label))}</button>`;
+    return `<h2>${title}</h2><div class="panel"><p class="small muted" style="margin-top:0">${note}</p>
+      <div class="lab">${t("{stage}常用", { stage: t(stageOf().name) })}</div><div class="chips" role="group" aria-label="${esc(title)}">${common.map(chip).join("")}</div>
+      <div class="lab">${t("其他阶段的卡片")}</div><div class="chips" role="group" aria-label="${esc(title)} · ${t("其他")}">${other.map(chip).join("")}</div></div>`;
+  };
+  return `<h2>${t("卡片")} <span class="small muted" style="font-weight:400">${esc(childName())} · ${esc(ageText())}</span></h2>
+  <p class="small muted">${t("点一下打开或关闭（深色表示正在显示）。关闭只是不再显示在今天页，已有的记录仍在记录页，随时可以重新打开。每个孩子分别设置；顶部切换孩子即可。")}</p>
+  ${group("quick", t("快捷按钮"), t("今天页上方的一键记录按钮。"))}
+  ${group("stats", t("最近 24 小时统计"), t("今天页的统计，和顶部的大计时。"))}
+  ${hasCardPrefs() ? `<div class="btns"><button class="btn" data-act="cards-reset">${t("恢复{stage}的默认卡片", { stage: t(stageOf().name) })}</button></div>` : ""}`;
 }
 
 /* ---- settings page ---- */
@@ -75,4 +93,4 @@ function readSettingsInputs(){
 // re-render the settings page after cloud state changed (login, members, invite code), unless a form is open on top
 function refreshSettingsIfOpen(){ if (S.tab === "settings" && !$("#sheet").open) render(); }
 
-export { viewMe, settingsHTML, readSettingsInputs, refreshSettingsIfOpen };
+export { viewMe, cardsHTML, settingsHTML, readSettingsInputs, refreshSettingsIfOpen };
