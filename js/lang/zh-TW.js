@@ -1,4 +1,5 @@
 export default {
+"第{n}个孩子": "第{n}個孩子",
 "归档{name}": "封存{name}",
 "归档": "封存",
 "恢复{name}": "還原{name}",

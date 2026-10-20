@@ -52,7 +52,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .kids button[aria-checked="true"]::after{content:"✓";color:var(--slate);font-weight:700;margin-left:4px}
 .kids .manage{border-top:1px solid var(--line);border-radius:0;margin-top:4px;padding-top:10px;color:var(--muted);font-size:14px;min-height:40px}
 .bname:focus-visible,.kids button:focus-visible{outline:3px solid var(--slate);outline-offset:2px;border-radius:6px}
-.kidrow{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:6px;align-items:center}
+.kidrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center}
 .kidrow input{min-width:0}
 .field.who{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .field.who b{font-size:16px}
@@ -266,14 +266,13 @@ body.sheet-open .wrap,body.sheet-open nav.tabs{display:none}
 :root[data-theme="dark"] .softform input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .softform input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}}
 .softform .panel{min-width:0}
-.softform .kidrow{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:10px;margin-bottom:10px;min-width:0}
+/* each child is its own small card: a header line (which child, age, archive) above the name and birth date */
+.softform .kidcard{border:1px solid var(--line);border-radius:18px;padding:12px 12px 14px;margin-bottom:10px;min-width:0}
+.softform .kidhead{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:36px;margin:0 0 8px 6px}
+.softform .kidhead .chip{flex:none;white-space:nowrap}
+.softform .kidrow{gap:10px;min-width:0}
 .softform .kidrow > *{min-width:0;max-width:100%}
-.softform .kidrow .chip{white-space:nowrap}
-@media (max-width:520px){
-  /* phone: name + remove on the first line, birth date full width below, so the date picker never overlaps the button */
-  .softform .kidrow{grid-template-columns:minmax(0,1fr) auto;margin-bottom:14px}
-  .softform .kidrow input[type=date]{grid-column:1 / -1;grid-row:2}
-}
+@media (max-width:520px){ .softform .kidrow{grid-template-columns:minmax(0,1fr)} } /* phone: name above the date */
 .softform .row2{gap:10px}
 .softform .field{margin:14px 0}
 .softform .field > label{margin-left:6px}
