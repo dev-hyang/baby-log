@@ -258,10 +258,16 @@ body.sheet-open .wrap,body.sheet-open nav.tabs{display:none}
 .softform input::placeholder,.softform textarea::placeholder{color:var(--muted);opacity:.6}
 .softform input:hover,.softform textarea:hover{background:var(--surface)}
 .softform input:focus,.softform textarea:focus{outline:none;background:var(--surface);border-color:var(--slate);box-shadow:0 0 0 4px var(--slate-soft)}
+/* iOS Safari sizes a date input to its own intrinsic width and ignores width:100% / min-width:0 unless the
+   native appearance is dropped; without the min-height on the inner value an empty date collapses to a sliver */
+.softform input[type=date]{-webkit-appearance:none;appearance:none;display:block;max-width:100%}
+.softform input[type=date]::-webkit-date-and-time-value{display:block;min-height:1.4em;text-align:left}
 .softform input[type=date]::-webkit-calendar-picker-indicator{opacity:.55;cursor:pointer}
 :root[data-theme="dark"] .softform input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .softform input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}}
-.softform .kidrow{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:10px;margin-bottom:10px}
+.softform .panel{min-width:0}
+.softform .kidrow{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:10px;margin-bottom:10px;min-width:0}
+.softform .kidrow > *{min-width:0;max-width:100%}
 .softform .kidrow .chip{white-space:nowrap}
 @media (max-width:520px){
   /* phone: name + remove on the first line, birth date full width below, so the date picker never overlaps the button */
