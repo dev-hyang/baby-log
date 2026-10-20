@@ -1,7 +1,7 @@
 import { APPS, THIS_APP } from "./apps.js";
 import { LANGS, langPref, t } from "./i18n.js";
 import { allCards, hasCardPrefs } from "./stages.js";
-import { APP_VERSION, S, ageText, childName, stageOf } from "./state.js";
+import { APP_VERSION, S, activeKids, kidCount, ageText, childName, stageOf } from "./state.js";
 import { familyHTML } from "./sync.js";
 import { isUS, unitPref } from "./units.js";
 import { $, esc } from "./util.js";
@@ -57,7 +57,7 @@ function cardsHTML(){
 /* ---- faith module (opt-in): family statement, on / off, which children ---- */
 const FAITH_TEMPLATE = "我们是一个基督徒家庭，愿意带孩子认识神、爱神、爱人，从小学做荣神益人的小门徒。";
 function faithHTML(){
-  const f = S.settings.faith, kids = S.settings.children;
+  const f = S.settings.faith, kids = activeKids();
   return `<p class="small muted" style="margin-top:0">${t("可选功能。关闭时，这个 App 里看不到任何信仰相关的内容；打开后会出现家庭敬拜、祷告、读经、服事等记录卡片。这里只记录家庭一起做了什么，不给孩子的信心打分，也不做连续打卡。")}</p>
     <div class="chips" role="group" aria-label="${t("信仰（可选）")}"><button class="chip" data-faith="toggle" aria-pressed="${f.on}">${f.on ? t("已打开信仰记录") : t("打开信仰记录")}</button></div>
     ${f.on ? `
@@ -71,6 +71,18 @@ function faithHTML(){
     <div class="btns"><button class="btn primary" data-act="savesettings">${t("保存设置")}</button></div>` : ""}`;
 }
 
+/* ---- archived children: restore, or delete for good (the only path that removes their records) ---- */
+function archivedKidsHTML(){
+  const gone = S.settings.children.filter(c => c.archived);
+  if (!gone.length) return "";
+  return `<div class="lab" style="margin-top:14px">${t("已归档的孩子")}</div>` + gone.map(c => {
+    const n = kidCount(c.id), nm = esc(c.name || t("这个孩子"));
+    return `<div class="medrow"><span><b>${nm}</b> <small class="muted">${t("{n} 条记录", { n })}</small></span>
+      <span class="chips"><button class="chip" data-act="restorekid" data-id="${esc(c.id)}" aria-label="${t("恢复{name}", { name: nm })}">${t("恢复")}</button>
+      <button class="chip danger" data-act="purgekid" data-id="${esc(c.id)}" aria-label="${t("彻底删除{name}", { name: nm })}">${t("彻底删除")}</button></span></div>`;
+  }).join("");
+}
+
 /* ---- settings page ---- */
 function settingsHTML(){
   const st = S.settings;
@@ -78,9 +90,11 @@ function settingsHTML(){
   return `<div class="softform">
   <h2>${t("设置")}</h2>
   <div class="panel"><div class="lab">${t("孩子（小名 · 出生日期）")}</div>
-    <div id="kidRows">${st.children.map((c, i) => `<div class="kidrow"><input type="text" aria-label="${t("第{n}个孩子的小名", { n: i + 1 })}" data-kr="${i}" data-kk="name" value="${esc(c.name)}" placeholder="${t("小名")}"><input type="date" aria-label="${t("第{n}个孩子的出生日期", { n: i + 1 })}" data-kr="${i}" data-kk="birth" value="${esc(c.birth)}">${st.children.length > 1 ? `<button class="chip" data-act="delkid" data-i="${i}" aria-label="${t("移除{name}", { name: esc(c.name || t("这个孩子")) })}">${t("移除")}</button>` : ""}</div>`).join("")}</div>
+    <div id="kidRows">${st.children.map((c, i) => c.archived ? "" : `<div class="kidrow"><input type="text" aria-label="${t("第{n}个孩子的小名", { n: i + 1 })}" data-kr="${i}" data-kk="name" value="${esc(c.name)}" placeholder="${t("小名")}"><input type="date" aria-label="${t("第{n}个孩子的出生日期", { n: i + 1 })}" data-kr="${i}" data-kk="birth" value="${esc(c.birth)}">${activeKids().length > 1 ? `<button class="chip" data-act="archivekid" data-i="${i}" aria-label="${t("归档{name}", { name: esc(c.name || t("这个孩子")) })}">${t("归档")}</button>` : ""}</div>`).join("")}</div>
     <button class="chip" data-act="addkid">${t("＋ 添加孩子")}</button>
+    ${archivedKidsHTML()}
     <p class="small muted" style="margin-top:6px">${t("每个孩子的记录分开保存，点页面顶部的名字可以切换。妈妈的记录属于整个家庭，不随孩子切换。")}</p>
+    <p class="small muted">${t("“归档”不会删除任何记录：这个孩子只是不再出现在切换和记录选择里，随时可以恢复。")}</p>
     <div class="lab" style="margin-top:14px">${t("妈妈用药的最短间隔（按医嘱或说明书填写）")}</div>
     <div id="medRules">${(st.medIntervals || []).map((r, i) => `<div class="row2" style="margin-bottom:6px"><input type="text" aria-label="${t("药名")}" data-mr="${i}" data-mk="name" value="${esc(r.name)}" placeholder="${t("药名")}"><input type="number" inputmode="decimal" aria-label="${t("间隔小时")}" data-mr="${i}" data-mk="hours" value="${esc(r.hours)}" placeholder="${t("间隔（小时）")}"></div>`).join("")}</div>
     <button class="chip" data-act="addrule">${t("＋ 添加一种药")}</button>
@@ -106,8 +120,10 @@ function settingsHTML(){
   </div>`;
 }
 function readSettingsInputs(){
-  const kids = []; document.querySelectorAll("[data-kr]").forEach(el => { const i = +el.dataset.kr; (kids[i] ||= { ...S.settings.children[i] })[el.dataset.kk] = el.value.trim(); });
-  if (kids.length) S.settings.children = kids.filter(c => c && c.id);
+  // start from the full list so archived children (no row on screen) are never dropped
+  const kids = S.settings.children.map(c => ({ ...c })); let seen = false;
+  document.querySelectorAll("[data-kr]").forEach(el => { const k = kids[+el.dataset.kr]; if (k) { k[el.dataset.kk] = el.value.trim(); seen = true; } });
+  if (seen) S.settings.children = kids;
   const rules = []; document.querySelectorAll("[data-mr]").forEach(el => { const i = +el.dataset.mr; (rules[i] ||= { name: "", hours: "" })[el.dataset.mk] = el.value.trim(); });
   S.settings.medIntervals = rules.filter(r => r && (r.name || r.hours));
   const fs = $("#faithStatement"); if (fs) S.settings.faith.statement = fs.value.trim();

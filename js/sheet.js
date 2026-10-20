@@ -1,5 +1,5 @@
 import { t } from "./i18n.js";
-import { LS_KEY, S, childName, childOf, isKidType } from "./state.js";
+import { LS_KEY, S, activeKids, childName, childOf, isKidType } from "./state.js";
 import { faithOn, milestoneNames, stageTypes } from "./stages.js";
 import { SB, canEdit, memberName, otherMembers, visSupported } from "./sync.js";
 import { TYPES, flags, summary, typeLabel } from "./types.js";
@@ -138,7 +138,7 @@ function drawReadOnly(e){
    one quiet line; "换一个孩子" expands the choice. A new activity can be shared by several children (reading
    to both), so it offers multi-select and saves one entry per child. */
 function whoHTML(isNew){
-  const kids = S.settings.children;
+  const kids = activeKids();
   if (!isKidType(draft.type) || kids.length < 2) return "";
   const cur = childOf(draft);
   if (["activity", "companion", "faith"].includes(draft.type) && isNew) {

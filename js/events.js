@@ -109,15 +109,28 @@ document.addEventListener("click", async ev => {
     case "print-meal": case "print-trend": case "print-timeline": case "print-medical": openPrint(t0.dataset.act.slice(6)); break;
     case "addrule": readSettingsInputs(); S.settings.medIntervals.push({ name: "", hours: "" }); render(); break;
     case "addkid": readSettingsInputs(); S.settings.children.push({ id: newId(), name: "", birth: "" }); render(); break;
-    case "delkid": {
+    case "archivekid": { // hide the child everywhere; id and records stay, so restoring brings everything back
       readSettingsInputs();
-      const c = S.settings.children[+t0.dataset.i]; if (!c || S.settings.children.length < 2) break;
-      const n = kidCount(c.id);
-      if (n && !confirm(t("{name} 有 {n} 条记录，移除后这些记录会一起删除，无法撤销。建议先导出备份。继续吗？", { name: c.name || t("这个孩子"), n }))) break;
-      if (n) await removeWhere(e => isKidType(e.type) && childOf(e) === c.id);
-      S.settings.children = S.settings.children.filter(x => x.id !== c.id);
+      const c = S.settings.children[+t0.dataset.i]; if (!c || S.settings.children.filter(x => !x.archived).length < 2) break;
+      c.archived = true;
       if (S.childId === c.id) S.childId = null;
-      await saveSettings(); toast(n ? t("已移除并删除 {n} 条记录", { n }) : t("已移除")); break; }
+      await saveSettings(); toast(t("已归档，记录都还在，可在下方恢复")); break; }
+    case "restorekid": {
+      readSettingsInputs();
+      const c = S.settings.children.find(x => x.id === t0.dataset.id); if (!c) break;
+      delete c.archived; await saveSettings(); toast(t("已恢复")); break; }
+    case "purgekid": { // the only path that deletes a child's records: archived children only, name typed to confirm
+      readSettingsInputs();
+      const c = S.settings.children.find(x => x.id === t0.dataset.id); if (!c || !c.archived) break;
+      const n = kidCount(c.id);
+      if (n) {
+        const word = c.name || t("删除");
+        const typed = prompt(t("{name} 有 {n} 条记录，彻底删除后无法撤销（所有家人的设备也会同步删除）。建议先导出备份。确认请输入「{word}」：", { name: c.name || t("这个孩子"), n, word }));
+        if (typed == null || typed.trim() !== word) { toast(t("没有输入一致，已取消")); break; }
+        await removeWhere(e => isKidType(e.type) && childOf(e) === c.id);
+      }
+      S.settings.children = S.settings.children.filter(x => x.id !== c.id);
+      await saveSettings(); toast(n ? t("已彻底删除 {n} 条记录", { n }) : t("已删除")); break; }
     case "savesettings": readSettingsInputs(); await saveSettings(); S.tab = "today"; render(); window.scrollTo(0, 0); toast(t("设置已保存")); break;
     case "export": offerFile(`${t("母婴记录备份")}-${dayKey(Date.now())}.json`, JSON.stringify({ app: "xiaoyueliang", version: 1, exported: Date.now(), settings: S.settings, entries: S.entries }, null, 1), "application/json"); break;
     case "csv": offerFile(`${t("母婴记录")}-${dayKey(Date.now())}.csv`, toCSV(), "text/csv"); break;

@@ -29,9 +29,12 @@ const MOM_TYPES = new Set(["mmed", "mbody"]);
 const isKidType = t => !MOM_TYPES.has(t);
 function normalizeSettings(){
   const st = S.settings;
-  st.children = (Array.isArray(st.children) ? st.children : []).filter(c => c && typeof c.id === "string").map(c => ({ id: c.id, name: c.name || "", birth: c.birth || "" }));
+  st.children = (Array.isArray(st.children) ? st.children : []).filter(c => c && typeof c.id === "string").map(c => ({ id: c.id, name: c.name || "", birth: c.birth || "", ...(c.archived ? { archived: true } : {}) }));
   if (!st.children.length) { const id = newId(); st.children.push({ id, name: st.babyName || "", birth: st.birth || "" }); st.legacyChild = id; }
   if (!st.legacyChild || !st.children.some(c => c.id === st.legacyChild)) st.legacyChild = st.children[0].id;
+  // archived children keep their id and records but leave every picker; at least one child must stay active
+  if (st.children.every(c => c.archived)) delete st.children[0].archived;
+  const live = st.children.filter(c => !c.archived);
   // checkups used to be a flat { m1: true } map; now keyed by child id
   const flat = {}, nested = {};
   for (const [k, v] of Object.entries(st.checkups || {})) (typeof v === "boolean" ? flat : nested)[k] = v;
@@ -52,15 +55,16 @@ function normalizeSettings(){
   const fa = st.faith && typeof st.faith === "object" ? st.faith : {};
   st.faith = { on: !!fa.on, statement: typeof fa.statement === "string" ? fa.statement.slice(0, 400) : "", off: strs(fa.off).filter(id => st.children.some(c => c.id === id)) };
   // keep the single-child fields mirrored to the first child for older exports / clients
-  st.babyName = st.children[0].name; st.birth = st.children[0].birth;
+  st.babyName = live[0].name; st.birth = live[0].birth;
   let cid = S.childId; if (cid == null) { try { cid = localStorage.getItem(CHILD_KEY); } catch (e) {} }
-  S.childId = st.children.some(c => c.id === cid) ? cid : st.children[0].id;
+  S.childId = live.some(c => c.id === cid) ? cid : live[0].id;
 }
+const activeKids = () => S.settings.children.filter(c => !c.archived);
 const child = (id = S.childId) => S.settings.children.find(c => c.id === id) || S.settings.children[0];
 const childName = (id = S.childId) => (child(id) && child(id).name) || t("宝宝");
 // unknown ids (e.g. a child removed on another device) fall back to the legacy child so no record disappears
 function childOf(e){ return e.child && S.settings.children.some(c => c.id === e.child) ? e.child : S.settings.legacyChild; }
-function setChild(id){ if (!S.settings.children.some(c => c.id === id)) return; S.childId = id; try { localStorage.setItem(CHILD_KEY, id); } catch (e) {} }
+function setChild(id){ if (!activeKids().some(c => c.id === id)) return; S.childId = id; try { localStorage.setItem(CHILD_KEY, id); } catch (e) {} }
 // entries shown on this device: the active child's records plus family-level mother records
 const vis = () => S.entries.filter(e => !isKidType(e.type) || childOf(e) === S.childId);
 function kidCount(id){ return S.entries.filter(e => isKidType(e.type) && childOf(e) === id).length; }
@@ -122,6 +126,6 @@ function matchCheckup(ts, cid = S.childId){
 }
 function nextCheckup(){ const done = checkupsDone(); return CHECKUPS.map(c => ({ ...c, at: checkupDate(c) })).find(c => c.at && !done[c.k] && c.at > Date.now() - 14 * D); }
 
-const APP_VERSION = "2026-10-19.1";
+const APP_VERSION = "2026-10-19.2";
 
-export { LS_KEY, S, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, matchCheckup, nextCheckup, APP_VERSION };
+export { LS_KEY, S, activeKids, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, matchCheckup, nextCheckup, APP_VERSION };
