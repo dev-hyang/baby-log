@@ -34,7 +34,7 @@ function viewMe(){
 
   <h2>${t("姐妹应用")}</h2>
   <div class="panel mlist">${APPS.filter(a => a.key !== THIS_APP).map(link).join("")}</div>
-  <p class="small muted">${t("同一个账号、同一个家庭，三个站点互通；标题旁的左右箭头也能切换。")}</p>
+  <p class="small muted">${t("同一个账号、同一个家庭，四个站点互通；标题旁的左右箭头也能切换。")}</p>
   <p class="small muted" style="margin-top:24px">${t("小月亮 · 母婴记录")} · ${t("版本 {v}", { v: APP_VERSION })}</p>`;
 }
 
