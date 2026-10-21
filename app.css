@@ -325,3 +325,4 @@ a{color:var(--slate)}
   #print .pfoot{margin-top:10pt;font-size:9pt;color:#555;border-top:1px solid #999;padding-top:4pt}
   #print .pwarn{color:#000;font-weight:600}
 }
+.hdr .apps{margin:-4px -6px -2px 0}   /* 44px touch target of the app switcher; keeps the header compact */

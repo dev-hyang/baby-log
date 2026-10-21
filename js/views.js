@@ -2,7 +2,7 @@ import { aboutHTML } from "./about.js";
 import { APPS, THIS_APP } from "./apps.js";
 import { ask } from "./ask.js";
 import { byTime, last, medStatus, suggestSide, within } from "./derived.js";
-import { t } from "./i18n.js";
+import { lang, t } from "./i18n.js";
 import { cardsHTML, settingsHTML, viewMe } from "./me.js";
 import { dayNavHTML, viewMeal } from "./meal.js";
 import { activeCards, doctorListHTML, milestoneRef, milestoneRefHTML, quickHTML, stageCfg, stageTypes, statsHTML } from "./stages.js";
@@ -23,11 +23,22 @@ function renderStatus(){
   $("#bage").textContent = ageText();
   $("#kids").innerHTML = activeKids().map(c => `<button role="menuitemradio" aria-checked="${c.id === S.childId}" data-kidsel="${esc(c.id)}"><b>${esc(c.name || t("宝宝"))}</b><small>${esc(ageText(c.id))}</small></button>`).join("")
     + `<button class="manage" role="menuitem" data-act="settings">${t("管理孩子…")}</button>`;
-  // sister apps in the top-right corner: ‹ previous site, next site › (wrapping); same account on all three
+  renderAppSwitch();
+}
+// App switcher (shared by the four sister apps): a grid button in the top-right, popover on wide screens, bottom sheet on phones.
+// The title stays the child switcher. The component lives in home-pantry/shared; if it can't load (offline first visit), the old
+// ‹ previous / next › badges are shown instead so switching still works.
+const SWITCHER_URL = "https://dev-hyang.github.io/home-pantry/shared/app-switcher.js";
+let switcherMod = null, switcherTried = false;
+function renderAppSwitch(){
+  const host = $("#apps"), cur = lang();
+  if (switcherMod) { switcherMod.mountAppSwitcher({ host, current: "baby-log", lang: cur }); return; }
   const i = APPS.findIndex(a => a.key === THIS_APP), n = APPS.length, prev = APPS[(i - 1 + n) % n], next = APPS[(i + 1) % n];
   const badge = (a, label) => `<a class="badge" href="${a.url}" title="${esc(t("切到{name}", { name: t(a.name) }))}" aria-label="${esc(t("切到{name}", { name: t(a.name) }))}">${label}</a>`;
-  $("#apps").innerHTML = badge(prev, `‹ ${esc(t(prev.short))}`) + badge(next, `${esc(t(next.short))} ›`);
+  host.innerHTML = badge(prev, `‹ ${esc(t(prev.short))}`) + badge(next, `${esc(t(next.short))} ›`);
+  if (!switcherTried) { switcherTried = true; import(SWITCHER_URL).then(m => { switcherMod = m; renderAppSwitch(); }).catch(() => {}); }
 }
+
 function toggleKids(open = $("#kids").hidden){
   $("#kids").hidden = !open;
   $("#bname").setAttribute("aria-expanded", String(open));
