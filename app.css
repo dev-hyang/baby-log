@@ -325,4 +325,6 @@ a{color:var(--slate)}
   #print .pfoot{margin-top:10pt;font-size:9pt;color:#555;border-top:1px solid #999;padding-top:4pt}
   #print .pwarn{color:#000;font-weight:600}
 }
-.hdr .apps{margin:-4px -6px -2px 0}   /* 44px touch target of the app switcher; keeps the header compact */
+.hdr-tools{display:inline-flex;align-items:center;gap:2px;margin:-4px -6px -2px 0}   /* language + app switcher: two 44px touch targets side by side, header stays compact */
+/* sub-page "‹ hub" chip stays pinned under the notch while the page scrolls, so the way back is always there */
+.backbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;margin:0 -16px 8px;padding:8px 16px;background:var(--bg);border-bottom:1px solid var(--line)}

@@ -167,3 +167,6 @@ document.addEventListener("input", ev => {
   if (ev.target.id === "q") { S.q = ev.target.value; S.logFocus = true; render(); return; }
   if (ev.target.type === "range") { const o = ev.target.parentElement.querySelector("output"); if (o) o.textContent = ev.target.value; }
 });
+
+// language chosen from the header switcher (shared component)
+document.addEventListener("eco-set-lang", e => { readSettingsInputs(); setLang(e.detail); render(); });

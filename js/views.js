@@ -2,7 +2,7 @@ import { aboutHTML } from "./about.js";
 import { APPS, THIS_APP } from "./apps.js";
 import { ask } from "./ask.js";
 import { byTime, last, medStatus, suggestSide, within } from "./derived.js";
-import { lang, t } from "./i18n.js";
+import { LANGS, lang, langPref, t } from "./i18n.js";
 import { cardsHTML, settingsHTML, viewMe } from "./me.js";
 import { dayNavHTML, viewMeal } from "./meal.js";
 import { activeCards, doctorListHTML, milestoneRef, milestoneRefHTML, quickHTML, stageCfg, stageTypes, statsHTML } from "./stages.js";
@@ -24,12 +24,27 @@ function renderStatus(){
   $("#kids").innerHTML = activeKids().map(c => `<button role="menuitemradio" aria-checked="${c.id === S.childId}" data-kidsel="${esc(c.id)}"><b>${esc(c.name || t("宝宝"))}</b><small>${esc(ageText(c.id))}</small></button>`).join("")
     + `<button class="manage" role="menuitem" data-act="settings">${t("管理孩子…")}</button>`;
   renderAppSwitch();
+  renderLangSwitch();
 }
 // App switcher (shared by the four sister apps): a grid button in the top-right, popover on wide screens, bottom sheet on phones.
 // The title stays the child switcher. The component lives in home-pantry/shared; if it can't load (offline first visit), the old
 // ‹ previous / next › badges are shown instead so switching still works.
 const SWITCHER_URL = "https://dev-hyang.github.io/home-pantry/shared/app-switcher.js";
 let switcherMod = null, switcherTried = false;
+// Language switcher (shared by the four sister apps): globe button + list instead of side-by-side buttons, so more languages fit later.
+const LANG_URL = "https://dev-hyang.github.io/home-pantry/shared/lang-switcher.js";
+let langMod = null, langTried = false;
+function renderLangSwitch(){
+  const host = $("#langsw"); if (!host) return;
+  if (langMod) {
+    const cur = lang(), short = { "zh-CN": "简", "zh-TW": "繁", en: "EN" }[cur], pref = langPref();
+    langMod.mountLangSwitcher({ host, current: pref, ui: cur === "en" ? "en" : cur === "zh-TW" ? "tw" : "zh",
+      languages: LANGS.map(([code, name]) => code === "auto" ? { code, name: t("自动"), short, sub: { "zh-CN": "简体中文", "zh-TW": "繁體中文", en: "English" }[cur] } : { code, name }),
+      onSelect: code => document.dispatchEvent(new CustomEvent("eco-set-lang", { detail: code })) });
+    return;
+  }
+  if (!langTried) { langTried = true; import(LANG_URL).then(m => { langMod = m; renderLangSwitch(); }).catch(() => {}); }
+}
 function renderAppSwitch(){
   const host = $("#apps"), cur = lang();
   if (switcherMod) { switcherMod.mountAppSwitcher({ host, current: "baby-log", lang: cur }); return; }
@@ -63,7 +78,7 @@ function render(){
   if (cur === "mom" && !showMom) S.tab = "today";
   document.querySelectorAll("nav.tabs button").forEach(b => { if (b.dataset.tab === cur) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
   const v = sub ? sub[1] : ({ today: viewToday, log: viewLog, mom: viewMom, grow: viewGrow, me: viewMe }[S.tab] || viewToday);
-  const back = sub ? `<div style="margin-top:12px"><button class="chip" data-tab="${sub[0]}">‹ ${t(TAB_LABEL[sub[0]])}</button></div>` : "";
+  const back = sub ? `<div class="backbar"><button class="chip" data-tab="${sub[0]}">‹ ${t(TAB_LABEL[sub[0]])}</button></div>` : "";
   $("#main").innerHTML = back + v();
   if (S.tab === "log") { const s = $("#q"); if (s && document.activeElement !== s && S.logFocus) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); S.logFocus = false; } }
 }
