@@ -1,7 +1,8 @@
 import { APPS, THIS_APP } from "./apps.js";
 import { LANGS, langPref, t } from "./i18n.js";
-import { HERO_CHOICES, allCards, hasCardPrefs, heroKeys, pottyMin } from "./stages.js";
-import { APP_VERSION, S, activeKids, kidCount, ageText, childName, ROUTINE_TPL, routineGroups, routineToText, stageOf } from "./state.js";
+import { HERO_BUILTIN, allCards, clockLabel, faithOn, hasCardPrefs, heroCustom, heroKeys, pottyMin } from "./stages.js";
+import { TYPES, typeLabel } from "./types.js";
+import { APP_VERSION, S, activeKids, kidCount, ageText, childName, ROUTINE_TPL, isKidType, routineGroups, routineSteps, routineToText, stageOf } from "./state.js";
 import { familyHTML } from "./sync.js";
 import { isUS, unitPref } from "./units.js";
 import { $, esc } from "./util.js";
@@ -47,24 +48,48 @@ function cardsHTML(){
       <div class="lab">${t("{stage}常用", { stage: t(stageOf().name) })}</div><div class="chips" role="group" aria-label="${esc(title)}">${common.map(chip).join("")}</div>
       <div class="lab">${t("其他阶段的卡片")}</div><div class="chips" role="group" aria-label="${esc(title)} · ${t("其他")}">${other.map(chip).join("")}</div></div>`;
   };
-  // the top card: which "since last" clocks it shows, the potty nudge interval, and the daily routine list
-  const keys = heroKeys();
-  const pick = (attr, list, cur) => `<div class="chips">${list.map(([v, l]) => `<button class="chip" ${attr}="${v}" aria-pressed="${cur.includes(v)}">${esc(t(l))}</button>`).join("")}</div>`;
-  const little_html = `<h2>${t("顶部大计时")}</h2><div class="panel"><p class="small muted" style="margin-top:0">${t("今天页最上面那张卡。可以选一个或几个：第一个是大数字，其余在下面用小字显示（取消再点选可以换顺序）。")}</p>
-      ${pick("data-hero", HERO_CHOICES, keys)}
-      ${(S.settings.heroPref || {})[S.childId] ? `<div class="btns"><button class="btn" data-hero="default">${t("恢复默认")}</button></div>` : ""}
-      ${keys.includes("potty") ? `<div class="lab">${t("如厕提醒间隔（分钟）")}</div>${pick("data-pottymin", [60, 90, 120, 180].map(m => [String(m), String(m)]), [String(pottyMin())])}` : ""}</div>`;
-  const routine_html = ["toddler", "preschool", "school"].includes(stageOf().key) || (S.settings.routine || {})[S.childId] ? `<h2>${t("习惯清单")}</h2><div class="panel">
-      <p class="small muted" style="margin-top:0">${t("今天页的“今天的习惯”：分成晨间、午间、睡前等几组，一行一步，按先后顺序写；同名的步骤会自动加编号。改名或删除不影响已有记录。全部清空后保存，就不再显示。")}</p>
-      <div class="lab">${t("加入模板")}</div><div class="chips">${ROUTINE_TPL.map((g, i) => `<button class="chip" data-tpl="${i}">+ ${esc(t(g.name))}</button>`).join("")}</div>
-      <label class="lab" for="routineSteps">${t("每行一步；以 # 开头的一行是分组名")}</label><textarea id="routineSteps" rows="12">${esc(routineToText(routineGroups()))}</textarea>
-      <div class="btns"><button class="btn primary" data-act="routine-save">${t("保存清单")}</button><button class="btn" data-act="routine-reset">${t("恢复默认清单")}</button></div></div>` : "";
   return `<h2>${t("卡片")} <span class="small muted" style="font-weight:400">${esc(childName())} · ${esc(ageText())}</span></h2>
   <p class="small muted">${t("点一下打开或关闭（深色表示正在显示）。关闭只是不再显示在今天页，已有的记录仍在记录页，随时可以重新打开。每个孩子分别设置；顶部切换孩子即可。")}</p>
-  ${little_html}${routine_html}
+  <div class="panel mlist">
+    ${mrow('data-tab="herocfg"', t("顶部大计时"), t("今天页最上面可左右滑动的卡片：数什么、顺序、自定义"), "⏱")}
+    ${mrow('data-tab="routinecfg"', t("习惯清单"), t("今天页“今天的习惯”里的步骤和分组"), "🌅")}
+  </div>
   ${group("quick", t("快捷按钮"), t("今天页上方的一键记录按钮。"))}
   ${group("stats", t("最近 24 小时统计"), t("今天页的统计，和顶部的大计时。"))}
   ${hasCardPrefs() ? `<div class="btns"><button class="btn" data-act="cards-reset">${t("恢复{stage}的默认卡片", { stage: t(stageOf().name) })}</button></div>` : ""}`;
+}
+
+/* ---- the top cards of Today: which "since last" cards, in what order, the child's own cards, the potty nudge ---- */
+function heroCfgHTML(){
+  const keys = heroKeys(), cust = heroCustom(), slot = Math.min(S.heroEdit || 0, keys.length - 1), d = S.hcDraft, hasRoutine = routineSteps().length > 0;
+  const lab = k => esc(t(clockLabel(k)));
+  const avail = [...HERO_BUILTIN, ...cust.map(x => x.id)].filter(k => k !== "routine" || hasRoutine);
+  const chip = (op, k, on) => `<button class="chip" data-hc="${op}:${esc(k)}" aria-pressed="${on}">${lab(k)}</button>`;
+  const rows = keys.map((k, i) => `<div class="medrow"><span><b class="num">${i + 1}</b> ${lab(k)}</span><span class="chips" style="margin:0">
+      <button class="chip" data-hc="up:${i}" ${i ? "" : "disabled"} aria-label="${t("上移")}">↑</button><button class="chip" data-hc="down:${i}" ${i < keys.length - 1 ? "" : "disabled"} aria-label="${t("下移")}">↓</button>
+      ${cust.some(x => x.id === k) ? `<button class="chip" data-hc="edit:${esc(k)}">${t("编辑")}</button>` : ""}
+      <button class="chip danger" data-hc="del:${i}" ${keys.length > 1 ? "" : "disabled"}>${t("移除")}</button></span></div>`).join("");
+  const types = Object.keys(TYPES).filter(k => isKidType(k) && (k !== "faith" || faithOn()));
+  const kinds = d && TYPES[d.type] ? ((TYPES[d.type].fields.find(f => f.k === "kind" && Array.isArray(f.opts)) || {}).opts || []) : [];
+  const form = d ? `<div class="panel" style="margin-top:10px"><div class="field"><label for="hcName">${t("卡片名称（留空自动命名）")}</label><input id="hcName" type="text" maxlength="30" value="${esc(d.name)}" placeholder="${esc(t("例如：距上次洗澡"))}"></div>
+      <div class="lab">${t("数哪类记录")}</div><div class="chips">${types.map(k => `<button class="chip" data-hc="type:${k}" aria-pressed="${d.type === k}">${TYPES[k].icon} ${esc(typeLabel(k))}</button>`).join("")}</div>
+      ${kinds.length ? `<div class="lab">${t("只数其中一种（可不选）")}</div><div class="chips">${kinds.map(o => `<button class="chip" data-hc="kind:${esc(o)}" aria-pressed="${d.kind === o}">${esc(t(o))}</button>`).join("")}</div>` : ""}
+      <div class="btns"><button class="btn primary" data-act="hc-save">${t("保存")}</button><button class="btn" data-hc="cancel">${t("取消")}</button>${d.id ? `<button class="btn danger" data-hc="rm:${esc(d.id)}">${t("删除")}</button>` : ""}</div></div>` : "";
+  return `<h2>${t("顶部大计时")} <span class="small muted" style="font-weight:400">${esc(childName())}</span></h2>
+  <p class="small muted">${t("今天页最上面的卡片可以左右滑动，每张数一件事。下面可以改每张数什么、调顺序、增删，也能自己做一张。")}</p>
+  <h2>${t("第 {n} 张卡数什么", { n: slot + 1 })}</h2><div class="panel"><div class="chips" role="group" aria-label="${t("第 {n} 张卡数什么", { n: slot + 1 })}">${avail.map(k => chip("set", k, keys[slot] === k)).join("")}</div></div>
+  <h2>${t("全部卡片")}</h2><div class="panel">${rows}</div>
+  <h2>${t("添加")}</h2><div class="panel"><div class="chips">${avail.filter(k => !keys.includes(k)).map(k => chip("add", k, false)).join("")}<button class="chip" data-hc="new:">+ ${t("自定义卡片")}</button></div>${form}</div>
+  ${keys.includes("potty") ? `<h2>${t("如厕提醒间隔（分钟）")}</h2><div class="panel"><div class="chips">${[60, 90, 120, 180].map(m => `<button class="chip" data-pottymin="${m}" aria-pressed="${pottyMin() === m}">${m}</button>`).join("")}</div></div>` : ""}
+  ${(S.settings.heroPref || {})[S.childId] ? `<div class="btns"><button class="btn" data-hc="reset:">${t("恢复默认")}</button></div>` : ""}`;
+}
+/* ---- the daily routine list: groups and steps ---- */
+function routineCfgHTML(){
+  return `<h2>${t("习惯清单")} <span class="small muted" style="font-weight:400">${esc(childName())}</span></h2><div class="panel">
+    <p class="small muted" style="margin-top:0">${t("今天页的“今天的习惯”：分成晨间、午间、睡前等几组，一行一步，按先后顺序写；同名的步骤会自动加编号。改名或删除不影响已有记录。全部清空后保存，就不再显示。")}</p>
+    <div class="lab">${t("加入模板")}</div><div class="chips">${ROUTINE_TPL.map((g, i) => `<button class="chip" data-tpl="${i}">+ ${esc(t(g.name))}</button>`).join("")}</div>
+    <label class="lab" for="routineSteps">${t("每行一步；以 # 开头的一行是分组名")}</label><textarea id="routineSteps" rows="12">${esc(routineToText(routineGroups()))}</textarea>
+    <div class="btns"><button class="btn primary" data-act="routine-save">${t("保存清单")}</button><button class="btn" data-act="routine-reset">${t("恢复默认清单")}</button></div></div>`;
 }
 
 /* ---- faith module (opt-in): family statement, on / off, which children ---- */
@@ -146,4 +171,4 @@ function readSettingsInputs(){
 // re-render the settings page after cloud state changed (login, members, invite code), unless a form is open on top
 function refreshSettingsIfOpen(){ if (S.tab === "settings" && !$("#sheet").open) render(); }
 
-export { viewMe, cardsHTML, faithHTML, FAITH_TEMPLATE, settingsHTML, readSettingsInputs, refreshSettingsIfOpen };
+export { viewMe, cardsHTML, heroCfgHTML, routineCfgHTML, faithHTML, FAITH_TEMPLATE, settingsHTML, readSettingsInputs, refreshSettingsIfOpen };

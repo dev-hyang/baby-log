@@ -3,7 +3,7 @@ import { t } from "./i18n.js";
 import { S, ageMonths, babyAgeDays, birthTs, faithOn, routineGroups, routineSteps, stageOf, vis } from "./state.js";
 import { TYPES } from "./types.js";
 import { isUS, toDisp, trim, unitOf } from "./units.js";
-import { D, H, esc, hm, startOfDay } from "./util.js";
+import { D, H, dur, esc, hm, startOfDay } from "./util.js";
 
 /* ============ stage configuration ============
    One place that says what each growth stage shows: quick buttons and 24h stats on Today, which record
@@ -43,35 +43,35 @@ const Q = {
   habit:   { add: "habit", icon: "🎯", label: "自律" },
   social:  { add: "social", icon: "👫", label: "社交" }
 };
-// hero: what the big clock on Today counts since — the last feed, last potty visit, today's routine progress,
-// the last meal, or the last time together (each child can pick one or several, see heroKeys)
+// heroes: the cards on top of Today, swipeable — each counts since the last record of something (see CLOCKS), or shows
+// the routine's progress; each child can change the list (see heroKeys)
 const STAGE = {
-  newborn:   { hero: "feed",
+  newborn:   { heroes: ["feed", "diaper", "wake"],
                quick: ["nurse", "bottle", "formula", "diaper", "sleep", "mmed", "mbody", "health"],
                stats: ["hero", "feeds", "bottle", "nursing", "wetpoop", "sleep"],
                types: ["feed", "diaper", "sleep", "baby", "bmed", "vax"],
                metrics: ["sleep", "longest", "ml", "nurse", "feeds", "wet", "poop", "pump"] },
-  infant:    { hero: "feed",
+  infant:    { heroes: ["feed", "diaper", "meal", "wake"],
                quick: ["nurse", "bottle", "formula", "solids", "diaper", "sleep", "milestone", "health"],
                stats: ["hero", "feeds", "bottle", "solids", "wetpoop", "sleep"],
                types: ["feed", "food", "diaper", "sleep", "milestone", "baby", "bmed", "vax"],
                metrics: ["sleep", "longest", "ml", "nurse", "feeds", "food", "wet", "poop"] },
-  toddler:   { hero: "potty",
+  toddler:   { heroes: ["potty", "meal", "routine", "wake"],
                quick: ["meal", "milk", "potty", "diaper", "sleep", "speech", "activity", "health", "prayer", "scripture"],
                stats: ["hero", "meals", "mealq", "milk", "potty", "diapers", "outdoorRead", "sleep"],
                types: ["food", "feed", "potty", "routine", "diaper", "sleep", "speech", "activity", "milestone", "behavior", "baby", "bmed", "vax", "faith"],
                metrics: ["sleep", "longest", "food", "mealMin", "routine", "ml", "potty", "outdoor", "read", "words", "tantrum"] },
-  preschool: { hero: "routine",
+  preschool: { heroes: ["routine", "meal", "potty", "outdoor"],
                quick: ["meal", "read", "outdoor", "school", "behavior", "potty", "sleep", "health", "prayer", "scripture"],
                stats: ["hero", "meals", "mealq", "read", "outdoor", "screen", "upset", "sleep", "faith"],
                types: ["food", "routine", "activity", "behavior", "potty", "sleep", "speech", "milestone", "baby", "bmed", "vax", "feed", "diaper", "faith"],
                metrics: ["sleep", "routine", "read", "outdoor", "screen", "food", "mealMin", "tantrum", "words", "potty", "faith"] },
-  school:    { hero: "companion",
+  school:    { heroes: ["companion", "routine", "outdoor"],
                quick: ["companion", "mood", "habit", "social", "read", "outdoor", "screen", "health", "worship", "prayer", "scripture", "serve"],
                stats: ["hero", "companion", "mood", "habit", "social", "screen", "sleep", "faith"],
                types: ["companion", "mood", "habit", "routine", "social", "activity", "food", "sleep", "milestone", "baby", "bmed", "vax", "behavior", "speech", "faith"],
                metrics: ["companion", "mood", "habit", "routine", "social", "read", "outdoor", "screen", "sleep", "faith"] },
-  teen:      { hero: "companion",
+  teen:      { heroes: ["companion", "outdoor", "routine"],
                quick: ["companion", "mood", "habit", "social", "screen", "read", "outdoor", "health", "prayer", "scripture", "serve"],
                stats: ["hero", "companion", "mood", "habit", "social", "screen", "outdoor", "faith"],
                types: ["companion", "mood", "habit", "social", "activity", "sleep", "baby", "bmed", "vax", "milestone", "food", "faith"],
@@ -88,20 +88,34 @@ const stageMetrics = () => withoutFaith("metrics", stageCfg().metrics);
 
 /* ---- toddler / preschool Today: what the clock counts, potty reminders, the daily routine ---- */
 const POTTY_DEFAULT_MIN = 90;
-// the "since last" clocks the top card can show (plus the routine's progress, which is not a clock); label = what the card says
+// the "since last" cards the top of Today can show (plus the routine's progress, which is not a clock).
+// add / preset: the record button next to the status; act: a one-tap action instead; sum: the line after the time
 const CLOCKS = {
-  feed:      { label: "距上次喂奶", empty: "点下面的按钮记录第一次喂奶", find: () => last(e => e.type === "feed" && e.method !== "吸奶") },
-  diaper:    { label: "距上次换尿布", empty: "点下面的按钮记录第一次换尿布", find: () => last(e => e.type === "diaper") },
-  potty:     { label: "距上次如厕", empty: "点下面的按钮记录第一次如厕", find: () => last(e => e.type === "potty") },
-  meal:      { label: "距上次吃饭", empty: "点下面的按钮记录今天第一顿", find: () => last(e => e.type === "food") },
-  companion: { label: "距上次陪伴", empty: "点下面的按钮记录一次陪伴", find: () => last(e => e.type === "companion") },
-  outdoor:   { label: "距上次户外", empty: "点下面的按钮记录一次户外", find: () => last(e => e.type === "activity" && e.kind === "户外") }
+  feed:      { label: "距上次喂奶", noun: "喂奶", empty: "点下面的按钮记录第一次喂奶", add: "feed", find: () => last(e => e.type === "feed" && e.method !== "吸奶") },
+  diaper:    { label: "距上次换尿布", noun: "换尿布", empty: "点下面的按钮记录第一次换尿布", add: "diaper", find: () => last(e => e.type === "diaper") },
+  potty:     { label: "距上次如厕", noun: "如厕", empty: "点下面的按钮记录第一次如厕", add: "potty", find: () => last(e => e.type === "potty") },
+  meal:      { label: "距上次吃饭", noun: "吃饭", empty: "点下面的按钮记录今天第一顿", add: "food", find: () => last(e => e.type === "food") },
+  companion: { label: "距上次陪伴", noun: "陪伴", empty: "点下面的按钮记录一次陪伴", add: "companion", find: () => last(e => e.type === "companion") },
+  outdoor:   { label: "距上次户外", noun: "户外", empty: "点下面的按钮记录一次户外", add: "activity", preset: { kind: "户外" }, find: () => last(e => e.type === "activity" && e.kind === "户外") },
+  wake:      { label: "距上次睡醒", noun: "开始睡", empty: "还没有睡眠记录", act: "sleepnow",
+               find: () => { const e = last(x => x.type === "sleep" && x.end); return e && { ...e, ts: e.end, slept: e.end - e.ts }; },
+               sum: e => t("睡了 {d}", { d: dur(e.slept) }) }
 };
-const HERO_CHOICES = [...Object.entries(CLOCKS).map(([k, c]) => [k, c.label]), ["routine", "今天的习惯"]];
-// what the top card shows, in order: the first is the big number, the rest are small lines. The child's own choice
-// (settings.heroPref) wins, otherwise the stage's default; the routine only counts while it has steps.
+const HERO_BUILTIN = [...Object.keys(CLOCKS), "routine"];
+const heroCustom = (cid = S.childId) => (S.settings.heroCustom || {})[cid] || [];
+// a built-in card, or the child's own (a record type, optionally one kind of it, e.g. activity → 户外)
+function clockOf(k, cid = S.childId){
+  if (CLOCKS[k]) return CLOCKS[k];
+  const u = heroCustom(cid).find(x => x.id === k); if (!u || !TYPES[u.type]) return null;
+  const what = u.kind ? t(u.kind) : t(TYPES[u.type].label);
+  return { label: u.name || t("距上次{x}", { x: what }), noun: what, empty: "还没有记录", add: u.type, ...(u.kind ? { preset: { kind: u.kind } } : {}),
+           find: () => last(e => e.type === u.type && (!u.kind || e.kind === u.kind)) };
+}
+const clockLabel = (k, cid) => k === "routine" ? "今天的习惯" : (clockOf(k, cid) || { label: "" }).label;
+// what the top of Today shows, in order. The child's own list (settings.heroPref) wins, otherwise the stage's default;
+// the routine only counts while it has steps.
 function heroKeys(cid = S.childId){
-  const pick = (S.settings.heroPref || {})[cid], keys = (pick && pick.length ? pick : [STAGE[stageOf(cid).key].hero]).filter(k => k === "routine" ? routineSteps(cid).length : CLOCKS[k]);
+  const pick = (S.settings.heroPref || {})[cid], keys = (pick && pick.length ? pick : STAGE[stageOf(cid).key].heroes).filter(k => k === "routine" ? routineSteps(cid).length : !!clockOf(k, cid));
   return keys.length ? keys : ["meal"];
 }
 const pottyMin = (cid = S.childId) => (S.settings.pottyMin || {})[cid] || POTTY_DEFAULT_MIN;
@@ -117,8 +131,9 @@ function routineHTML(){
   const chip = s => { const e = done.get(s); return e
     ? `<button class="chip done" data-edit="${esc(e.id)}" aria-label="${esc(t("{step} 已完成，点一下修改", { step: t(s) }))}">✓ ${esc(t(s))} <small>${hm(e.ts)}${e.self ? "" : " · " + t("提醒后")}</small></button>`
     : `<button class="chip" data-step="${esc(s)}">${esc(t(s))}</button>`; };
-  return `<h2>${t("今天的习惯")} <span class="small muted num" style="font-weight:400">${n}/${steps.length}</span></h2>
-  <div class="panel">${routineGroups().map(g => `${g.name ? `<div class="lab">${esc(t(g.name))} <span class="num">${g.steps.filter(s => done.has(s)).length}/${g.steps.length}</span></div>` : ""}<div class="ms">${g.steps.map(chip).join("")}</div>`).join("")}
+  return `<div class="panel routine"><div class="phead"><h2>${t("今天的习惯")} <span class="small muted num" style="font-weight:400">${n}/${steps.length}</span></h2>
+    <button class="gear" data-tab="routinecfg" aria-label="${t("编辑习惯清单")}">⚙</button></div>
+  ${routineGroups().map(g => `${g.name ? `<div class="lab">${esc(t(g.name))} <span class="num">${g.steps.filter(s => done.has(s)).length}/${g.steps.length}</span></div>` : ""}<div class="ms">${g.steps.map(chip).join("")}</div>`).join("")}
   <p class="small muted" style="margin:8px 0 0">${t("做到一步点一下，默认记为自己做到的；要提醒了才做的，点已完成的那一步改。")}</p></div>`;
 }
 
@@ -291,4 +306,4 @@ function doctorListHTML(){
   return `<ul class="plain">${list.map(s => `<li>${t(s)}</li>`).join("")}</ul>`;
 }
 
-export { STAGE, faithOn, CLOCKS, HERO_CHOICES, heroKeys, pottyMin, POTTY_DEFAULT_MIN, routineHTML, routineToday, stageCfg, stageTypes, stageMetrics, activeCards, setCard, resetCards, hasCardPrefs, allCards, quickHTML, statsHTML, MILESTONE_REF, milestoneRef, milestoneNames, milestoneRefHTML, doctorListHTML };
+export { STAGE, faithOn, CLOCKS, HERO_BUILTIN, clockOf, clockLabel, heroCustom, heroKeys, pottyMin, POTTY_DEFAULT_MIN, routineHTML, routineToday, stageCfg, stageTypes, stageMetrics, activeCards, setCard, resetCards, hasCardPrefs, allCards, quickHTML, statsHTML, MILESTONE_REF, milestoneRef, milestoneNames, milestoneRefHTML, doctorListHTML };

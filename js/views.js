@@ -3,9 +3,9 @@ import { APPS, THIS_APP } from "./apps.js";
 import { ask } from "./ask.js";
 import { byTime, last, medStatus, suggestSide, within } from "./derived.js";
 import { LANGS, lang, langPref, t } from "./i18n.js";
-import { cardsHTML, settingsHTML, viewMe } from "./me.js";
+import { cardsHTML, heroCfgHTML, routineCfgHTML, settingsHTML, viewMe } from "./me.js";
 import { dayNavHTML, viewMeal } from "./meal.js";
-import { CLOCKS, activeCards, doctorListHTML, heroKeys, milestoneRef, milestoneRefHTML, pottyMin, quickHTML, routineHTML, routineToday, stageCfg, stageTypes, statsHTML } from "./stages.js";
+import { activeCards, clockOf, doctorListHTML, heroKeys, milestoneRef, milestoneRefHTML, pottyMin, quickHTML, routineHTML, routineToday, stageCfg, stageTypes, statsHTML } from "./stages.js";
 import { CHECKUPS, S, activeKids, STAGES, routineSteps, isKidType, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
 import { SB, loadTombs, memberName, memberNames } from "./sync.js";
 import { viewTrend } from "./trend.js";
@@ -63,12 +63,12 @@ function toggleKids(open = $("#kids").hidden){
 const mrow = (attr, title, desc, icon) => `<button class="mrow" ${attr}><span class="mi" aria-hidden="true">${icon}</span><span class="mt"><b>${title}</b>${desc ? `<small>${desc}</small>` : ""}</span><span class="mch" aria-hidden="true">›</span></button>`;
 // sub-pages reached from a hub: the hub's bottom tab stays highlighted and a "‹ hub" chip sits on top
 const SUB = {
-  settings: ["me", () => settingsHTML()], cards: ["me", () => cardsHTML()], learn: ["me", () => viewLearn()], about: ["me", () => aboutHTML()],
+  settings: ["me", () => settingsHTML()], cards: ["me", () => cardsHTML()], herocfg: ["today", () => heroCfgHTML()], routinecfg: ["today", () => routineCfgHTML()], learn: ["me", () => viewLearn()], about: ["me", () => aboutHTML()],
   "grow-milestones": ["grow", () => growMilestones()], "grow-foods": ["grow", () => growFoods()], "grow-sleep": ["grow", () => growSleep()],
   "grow-body": ["grow", () => growBody()], "grow-checkups": ["grow", () => growCheckups()], "grow-vax": ["grow", () => growVax()],
   "mom-charts": ["mom", () => momCharts()], "mom-signs": ["mom", () => momSigns()]
 };
-const TAB_LABEL = { me: "我的", grow: "成长", mom: "妈妈" };
+const TAB_LABEL = { today: "今天", me: "我的", grow: "成长", mom: "妈妈" };
 function render(){
   renderStatus();
   // the postpartum tab matters in the newborn stage, or while mother records are still being written
@@ -80,21 +80,31 @@ function render(){
   const v = sub ? sub[1] : ({ today: viewToday, log: viewLog, mom: viewMom, grow: viewGrow, me: viewMe }[S.tab] || viewToday);
   const back = sub ? `<div class="backbar"><button class="chip" data-tab="${sub[0]}">‹ ${t(TAB_LABEL[sub[0]])}</button></div>` : "";
   $("#main").innerHTML = back + v();
+  heroRestore();
   if (S.tab === "log") { const s = $("#q"); if (s && document.activeElement !== s && S.logFocus) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); S.logFocus = false; } }
 }
 
 function heroHTML(){
   const sl = last(e => e.type === "sleep" && !e.end);
-  if (sl) return `<section class="hero sleeping" aria-live="polite"><div class="moon"></div>
+  if (sl) return `<div class="herobox"><section class="hero sleeping" aria-live="polite"><div class="moon"></div>
     <div class="lbl">${t("宝宝已经睡了")}</div>
     <div class="big num">${bigDur(Date.now() - sl.ts)}</div>
     <div class="meta"><span>${t("{time} 入睡", { time: hm(sl.ts) })}</span>${sl.where ? `<span>${esc(t(sl.where))}</span>` : ""}</div>
-    <div class="act"><button data-act="wake" data-id="${sl.id}">${t("醒了，记录结束")}</button></div></section>`;
+    <div class="act"><button data-act="wake" data-id="${sl.id}">${t("醒了，记录结束")}</button></div></section></div>`;
   if (!activeCards("stats").includes("hero")) return ""; // the child's card settings turned the clock off
-  const [first, ...rest] = heroKeys();
-  return `<section class="hero"><div class="moon"></div>${bigClock(first)}${rest.length ? `<div class="more">${rest.map(smallClock).join("")}</div>` : ""}</section>`;
+  const keys = heroKeys(), n = keys.length, cur = Math.min(S.heroIdx || 0, n - 1);
+  const slide = (k, i) => `<section class="hero" aria-label="${i + 1}/${n}"><div class="moon"></div>
+    <button class="gear" data-tab="herocfg" data-slot="${i}" aria-label="${t("编辑顶部卡片")}">⚙</button>${bigClock(k)}</section>`;
+  return `<div class="herobox"><div class="herotrack" tabindex="0" role="region" aria-roledescription="carousel" aria-label="${t("顶部大计时")}">${keys.map(slide).join("")}</div>
+    ${n > 1 ? `<div class="herodots">${keys.map((k, i) => `<button data-heropage="${i}" aria-label="${i + 1}/${n}" aria-current="${i === cur}"></button>`).join("")}</div>` : ""}</div>`;
 }
-// the big number: how long since the last record, or today's routine progress
+// the cards sit side by side and snap; Today re-renders after every save, so put the track back on the card being looked at
+const HERO_GAP = 10;
+function heroRestore(){
+  const tr = document.querySelector(".herotrack");
+  if (tr && S.heroIdx) tr.scrollLeft = Math.min(S.heroIdx, tr.children.length - 1) * (tr.clientWidth + HERO_GAP);
+}
+// one card: how long since the last record (with its status and the record button on the same line), or the routine's progress
 function bigClock(k){
   if (k === "routine") {
     const steps = routineSteps(), done = routineToday(), n = steps.filter(s => done.has(s)).length, next = steps.find(s => !done.has(s));
@@ -103,20 +113,14 @@ function bigClock(k){
       <div class="big num">${n}<small>/${steps.length}</small></div>
       <div class="meta">${wake ? `<span>${t("{time} 起床", { time: hm(wake.ts) })}</span>` : ""}${next ? `<span>${t("下一步：{step}", { step: `<span class="side">${esc(t(next))}</span>` })}</span>` : `<span>${t("今天的习惯都做到了")}</span>`}${own ? `<span>${t("{n} 步自己做到", { n: own })}</span>` : ""}</div>`;
   }
-  const c = CLOCKS[k], e = c.find(), act = k === "potty" ? `<div class="act"><button data-add="potty">🚽 ${t("记录如厕")}</button></div>` : "";
-  if (!e) return `<div class="lbl">${t(c.label)}</div><div class="big num">--<small>:</small>--</div><div class="meta">${t(c.empty)}</div>${act}`;
+  const c = clockOf(k), e = c.find();
+  const rec = c.act ? `<button class="rec" data-act="${c.act}">${esc(t(c.noun))}</button>`
+    : `<button class="rec" data-add="${c.add}"${c.preset ? ` data-preset="${esc(JSON.stringify(c.preset))}"` : ""}>${t("记录{x}", { x: esc(t(c.noun)) })}</button>`;
+  if (!e) return `<div class="lbl">${esc(t(c.label))}</div><div class="big num">--<small>:</small>--</div><div class="meta"><span>${esc(t(c.empty))}</span>${rec}</div>`;
   const gap = Date.now() - e.ts, side = k === "feed" ? suggestSide(e) : null, every = pottyMin();
-  return `<div class="lbl">${t(c.label)}</div><div class="big num">${bigDur(gap)}</div>
-    <div class="meta"><span>${hm(e.ts)} · ${esc(summary(e))}</span>${side ? `<span>${t("这次建议先喂 {side}", { side: `<span class="side">${t(side)}</span>` })}</span>` : ""}${k === "potty" ? (gap >= every * 60e3 ? `<span class="side">${t("该去试试了")}</span>` : `<span>${t("{n} 分钟后提醒去试试", { n: Math.ceil(every - gap / 60e3) })}</span>`) : ""}</div>${act}`;
-}
-// the other chosen clocks: one small line each under the big one
-function smallClock(k){
-  if (k === "routine") {
-    const steps = routineSteps(), done = routineToday(), next = steps.find(s => !done.has(s));
-    return `<div class="row"><span>${t("今天的习惯")}</span><b class="num">${steps.filter(s => done.has(s)).length}/${steps.length}</b>${next ? `<span>${t("下一步：{step}", { step: esc(t(next)) })}</span>` : ""}</div>`;
-  }
-  const c = CLOCKS[k], e = c.find(), late = k === "potty" && e && Date.now() - e.ts >= pottyMin() * 60e3;
-  return `<div class="row"><span>${t(c.label)}</span><b class="num">${e ? dur(Date.now() - e.ts) : "--"}</b>${e ? `<span>${hm(e.ts)}</span>` : ""}${late ? `<span class="side">${t("该去试试了")}</span>` : ""}</div>`;
+  const pill = k !== "potty" ? "" : gap >= every * 60e3 ? `<span class="side">${t("该去试试了")}</span>` : `<span>${t("{n} 分钟后提醒去试试", { n: Math.ceil(every - gap / 60e3) })}</span>`;
+  return `<div class="lbl">${esc(t(c.label))}</div><div class="big num">${bigDur(gap)}</div>
+    <div class="meta"><span>${hm(e.ts)} · ${esc(c.sum ? c.sum(e) : summary(e))}</span>${side ? `<span>${t("这次建议先喂 {side}", { side: `<span class="side">${t(side)}</span>` })}</span>` : ""}${pill}${rec}</div>`;
 }
 function bigDur(ms){ const m = Math.max(0, Math.floor(ms / 60000)); const h = Math.floor(m / 60); return h ? `${h}<small>${t("小时")}</small>${m % 60}<small>${t("分")}</small>` : `${m}<small>${t("分钟")}</small>`; }
 
@@ -441,4 +445,4 @@ function viewLearn(){
     ${["丁香妈妈", "崔玉涛育学园", "年糕妈妈"].map(n => `<div class="medrow"><span>${n}</span><button class="chip" data-copy="${n}">${t("复制名称")}</button></div>`).join("")}</div>`;
 }
 
-export { renderStatus, render, toggleKids, mrow, SUB, heroHTML, bigDur, viewToday, medRow, entryRow, viewLog, viewList, lineChart, sleepBarcode, viewMom, viewGrow, milestonesHTML, foodsHTML, vaxHTML, viewLearn };
+export { renderStatus, render, toggleKids, mrow, SUB, heroHTML, heroRestore, bigDur, viewToday, medRow, entryRow, viewLog, viewList, lineChart, sleepBarcode, viewMom, viewGrow, milestonesHTML, foodsHTML, vaxHTML, viewLearn };

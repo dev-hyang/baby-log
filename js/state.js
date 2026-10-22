@@ -27,7 +27,7 @@ function loadLocal(){
 const CHILD_KEY = LS_KEY + ".child";
 const MOM_TYPES = new Set(["mmed", "mbody"]);
 const isKidType = t => !MOM_TYPES.has(t);
-const HERO_KEYS = ["feed", "diaper", "potty", "meal", "companion", "outdoor", "routine"]; // see CLOCKS in stages.js
+const HERO_KEYS = ["feed", "diaper", "potty", "meal", "companion", "outdoor", "wake", "routine"]; // see CLOCKS in stages.js
 function normalizeSettings(){
   const st = S.settings;
   st.children = (Array.isArray(st.children) ? st.children : []).filter(c => c && typeof c.id === "string").map(c => ({ id: c.id, name: c.name || "", birth: c.birth || "", ...(c.archived ? { archived: true } : {}) }));
@@ -57,13 +57,17 @@ function normalizeSettings(){
   st.faith = { on: !!fa.on, statement: typeof fa.statement === "string" ? fa.statement.slice(0, 400) : "", off: strs(fa.off).filter(id => st.children.some(c => c.id === id)) };
   // per-child Today choices for toddlers / preschoolers: routine = the child's own step list ([] hides it),
   // heroPref = what the big clock counts, pottyMin = minutes between potty reminders
-  const own = {}, hp = {}, pm = {};
+  const own = {}, hp = {}, pm = {}, cu = {};
   for (const c of st.children) {
     const r = cleanRoutine((st.routine || {})[c.id]); if (r) own[c.id] = r;
-    const h = [].concat((st.heroPref || {})[c.id] || []).filter((k, i, a) => HERO_KEYS.includes(k) && a.indexOf(k) === i); if (h.length) hp[c.id] = h;
+    // heroCustom[child] = [{ id: "u_…", name, type, kind }]: the child's own "since last" cards; heroPref[child] = the cards in order
+    const cl = (Array.isArray((st.heroCustom || {})[c.id]) ? st.heroCustom[c.id] : []).filter(x => x && /^u_\w+$/.test(x.id) && typeof x.type === "string").slice(0, 8)
+      .map(x => ({ id: x.id, name: String(x.name || "").trim().slice(0, 30), type: x.type, kind: String(x.kind || "").slice(0, 16) }));
+    if (cl.length) cu[c.id] = cl;
+    const h = [].concat((st.heroPref || {})[c.id] || []).filter((k, i, a) => (HERO_KEYS.includes(k) || cl.some(x => x.id === k)) && a.indexOf(k) === i); if (h.length) hp[c.id] = h;
     const m = Math.round(+(st.pottyMin || {})[c.id]); if (m >= 15 && m <= 480) pm[c.id] = m;
   }
-  st.routine = own; st.heroPref = hp; st.pottyMin = pm;
+  st.routine = own; st.heroPref = hp; st.heroCustom = cu; st.pottyMin = pm;
   // keep the single-child fields mirrored to the first child for older exports / clients
   st.babyName = live[0].name; st.birth = live[0].birth;
   let cid = S.childId; if (cid == null) { try { cid = localStorage.getItem(CHILD_KEY); } catch (e) {} }
@@ -176,6 +180,6 @@ function textToRoutine(txt){
   return gs;
 }
 
-const APP_VERSION = "2026-10-23.4";
+const APP_VERSION = "2026-10-24.1";
 
 export { faithOn, FAITH_STEPS, ROUTINE_TPL, routineGroups, routineSteps, routineToText, textToRoutine, LS_KEY, S, activeKids, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, matchCheckup, nextCheckup, APP_VERSION };

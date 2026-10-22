@@ -7,10 +7,16 @@ import { S, loadLocal } from "./state.js";
 import { initCloud } from "./store.js";
 import { initSupabase, syncNow } from "./sync.js";
 import { $ } from "./util.js";
-import { heroHTML, render } from "./views.js";
+import { heroHTML, heroRestore, render } from "./views.js";
 
 applyLang(); loadLocal(); render();
-setInterval(() => { if (S.tab === "today" && !$("#sheet").open) { const h = document.querySelector(".hero"); if (h) h.outerHTML = heroHTML(); } }, 30e3);
+setInterval(() => { if (S.tab === "today" && !$("#sheet").open) { const h = document.querySelector(".herobox"); if (h) { h.outerHTML = heroHTML(); heroRestore(); } } }, 30e3);
+// remember which top card is showing (and move the dots) while swiping
+document.addEventListener("scroll", e => {
+  const tr = e.target; if (!tr.classList || !tr.classList.contains("herotrack")) return;
+  const i = Math.round(tr.scrollLeft / (tr.clientWidth + 10)); if (i === S.heroIdx) return;
+  S.heroIdx = i; tr.parentElement.querySelectorAll(".herodots button").forEach((b, k) => b.setAttribute("aria-current", String(k === i)));
+}, true);
 if (!initSupabase()) initCloud();
 setInterval(() => syncNow(), 60e3);
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") syncNow(); });

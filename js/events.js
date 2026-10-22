@@ -4,7 +4,7 @@ import { setLang, t } from "./i18n.js";
 import { FAITH_TEMPLATE, readSettingsInputs } from "./me.js";
 import { mealCheck } from "./meal.js";
 import { closeSheet, draft, drawForm, openForm, pickType, readDraftInputs, rememberVis } from "./sheet.js";
-import { heroKeys, resetCards, setCard } from "./stages.js";
+import { heroCustom, heroKeys, resetCards, setCard } from "./stages.js";
 import { FAITH_STEPS, LS_KEY, ROUTINE_TPL, S, child, childOf, faithOn, isKidType, kidCount, matchCheckup, routineToText, setChild, textToRoutine } from "./state.js";
 import { importJSON, loadDemo, offerFile, putEntry, removeEntry, removeWhere, saveSettings, toCSV } from "./store.js";
 import { sbAuth, sbCreate, sbJoin, sbLogout, sbMember, sbResetCode, syncNow, visSupported } from "./sync.js";
@@ -22,7 +22,7 @@ document.addEventListener("click", async ev => {
   if (!$("#kids").hidden && !ev.target.closest("#bname")) toggleKids(false);
   const t0 = ev.target.closest("button,[data-checkup]"); if (!t0) return;
   if (t0.id === "bname") { toggleKids(); return; }
-  if (t0.dataset.tab) { goTab(t0.dataset.tab); return; }
+  if (t0.dataset.tab) { if (t0.dataset.slot !== undefined) S.heroEdit = +t0.dataset.slot; goTab(t0.dataset.tab); return; } // the card's gear opens the editor on that card
   if (t0.dataset.add) { openForm(t0.dataset.add, null, t0.dataset.preset ? JSON.parse(t0.dataset.preset) : {}); return; }
   if (t0.dataset.edit) { const e = S.entries.find(x => x.id === t0.dataset.edit); e && openForm(e.type, e); return; }
   if (t0.dataset.filter) { S.filter = t0.dataset.filter; render(); return; }
@@ -59,22 +59,35 @@ document.addEventListener("click", async ev => {
   if (t0.dataset.step) { // Today → 今天的习惯: one tap ticks the step, by default as done without a reminder
     await putEntry({ id: newId(), type: "routine", ts: Date.now(), child: S.childId, step: t0.dataset.step, self: true }); toast(t("已记录")); return;
   }
-  if (t0.dataset.hero || t0.dataset.pottymin) { // card manager: what the big clock counts, how often to nudge about the potty
-    if (t0.dataset.hero) { // toggle one clock in the child's list; "default" goes back to the stage's choice
-      const k = t0.dataset.hero, hp = S.settings.heroPref ||= {}, cur = heroKeys();
-      if (k === "default") delete hp[S.childId]; else hp[S.childId] = cur.includes(k) ? cur.filter(x => x !== k) : [...cur, k];
-      if (hp[S.childId] && !hp[S.childId].length) delete hp[S.childId]; // never empty
-    } else (S.settings.pottyMin ||= {})[S.childId] = +t0.dataset.pottymin;
-    const sel = t0.dataset.hero ? `[data-hero="${t0.dataset.hero}"]` : `[data-pottymin="${t0.dataset.pottymin}"]`;
-    await saveSettings(); const again = document.querySelector(sel); again && again.focus(); return;
+  if (t0.dataset.pottymin) { // top-card editor: how often to nudge about the potty
+    (S.settings.pottyMin ||= {})[S.childId] = +t0.dataset.pottymin;
+    await saveSettings(); const again = document.querySelector(`[data-pottymin="${t0.dataset.pottymin}"]`); again && again.focus(); return;
   }
-  if (t0.dataset.tpl) { // card manager: append a template group to the editor text (saved with 保存清单)
-    const g = ROUTINE_TPL[+t0.dataset.tpl], box = $("#routineSteps"), steps = g.steps.filter(x => !FAITH_STEPS.includes(x) || faithOn());
-    box.value = (box.value.trim() ? box.value.trimEnd() + "\n\n" : "") + routineToText([{ name: g.name, steps }]); box.focus(); return;
+  if (t0.dataset.heropage !== undefined) { // dots under the top cards
+    const tr = document.querySelector(".herotrack"); tr && tr.scrollTo({ left: +t0.dataset.heropage * (tr.clientWidth + 10), behavior: "smooth" }); return;
+  }
+  if (t0.dataset.hc) { // top-card editor: "op:arg"
+    const v = t0.dataset.hc, c = v.indexOf(":"), op = c < 0 ? v : v.slice(0, c), arg = c < 0 ? "" : v.slice(c + 1);
+    const keys = heroKeys(), slot = Math.min(S.heroEdit || 0, keys.length - 1), hp = S.settings.heroPref ||= {};
+    const readName = () => { const el = $("#hcName"); if (el && S.hcDraft) S.hcDraft.name = el.value.trim().slice(0, 30); };
+    let ks = null;
+    if (op === "set") { ks = keys.slice(); const j = ks.indexOf(arg); if (j >= 0 && j !== slot) ks[j] = ks[slot]; ks[slot] = arg; }
+    else if (op === "add") { ks = [...keys, arg]; S.heroEdit = ks.length - 1; }
+    else if (op === "up" || op === "down") { ks = keys.slice(); const i = +arg, j = i + (op === "up" ? -1 : 1); if (j >= 0 && j < ks.length) { [ks[i], ks[j]] = [ks[j], ks[i]]; if (S.heroEdit === i) S.heroEdit = j; } }
+    else if (op === "del") { if (keys.length > 1) { ks = keys.filter((_, i) => i !== +arg); S.heroEdit = 0; } }
+    else if (op === "reset") { delete hp[S.childId]; S.heroEdit = 0; }
+    else if (op === "rm") { const cu = S.settings.heroCustom ||= {}; cu[S.childId] = (cu[S.childId] || []).filter(x => x.id !== arg); ks = keys.filter(k => k !== arg); S.hcDraft = null; }
+    else if (op === "edit") { S.hcDraft = { ...heroCustom().find(x => x.id === arg) }; render(); return; }
+    else if (op === "new") { S.hcDraft = { id: "", name: "", type: "food", kind: "" }; render(); return; }
+    else if (op === "type") { readName(); S.hcDraft.type = arg; S.hcDraft.kind = ""; render(); return; }
+    else if (op === "kind") { readName(); S.hcDraft.kind = S.hcDraft.kind === arg ? "" : arg; render(); return; }
+    else if (op === "cancel") { S.hcDraft = null; render(); return; }
+    if (ks) hp[S.childId] = ks;
+    await saveSettings(); return;
   }
   if (t0.dataset.mealcheck) { await mealCheck(t0.dataset.feed, t0.dataset.mealcheck); return; }
   if (t0.dataset.copy) { try { await navigator.clipboard.writeText(t0.dataset.copy); toast(t("已复制：{s}", { s: t0.dataset.copy })); } catch (e) { toast(t("请手动搜索：{s}", { s: t0.dataset.copy })); } return; }
-  if (t0.dataset.kidsel) { setChild(t0.dataset.kidsel); S.mealDay = null; render(); $("#bname").focus(); return; }
+  if (t0.dataset.kidsel) { setChild(t0.dataset.kidsel); S.mealDay = null; S.heroIdx = 0; S.heroEdit = 0; render(); $("#bname").focus(); return; }
   if (t0.dataset.member) { await sbMember(t0.dataset.member, t0.dataset.uid); return; }
   if (t0.dataset.seg) { readDraftInputs(); const k = t0.dataset.seg; draft[k] = (draft[k] === t0.dataset.v && k !== "child" && k !== "vis") ? null : t0.dataset.v; drawForm(k); return; }
   if (t0.dataset.with) { // family members a record is shared with
@@ -124,6 +137,13 @@ document.addEventListener("click", async ev => {
     case "routine-save": { // card manager: "# group" lines and one step per line; an empty list hides the routine
       const list = textToRoutine($("#routineSteps").value);
       (S.settings.routine ||= {})[S.childId] = list; await saveSettings(); toast(t("习惯清单已保存")); break; }
+    case "hc-save": { // top-card editor: save the child's own card (new ones are added to the end of the list)
+      const d = S.hcDraft; if (!d) break;
+      d.name = ($("#hcName").value || "").trim().slice(0, 30);
+      const list = (S.settings.heroCustom ||= {})[S.childId] ||= [];
+      if (d.id) { const j = list.findIndex(x => x.id === d.id); if (j >= 0) list[j] = { ...d }; }
+      else { d.id = "u_" + Math.random().toString(36).slice(2, 8); list.push({ ...d }); const ks = [...heroKeys(), d.id]; (S.settings.heroPref ||= {})[S.childId] = ks; S.heroEdit = ks.length - 1; }
+      S.hcDraft = null; await saveSettings(); toast(t("已保存")); break; }
     case "routine-reset": if (S.settings.routine) delete S.settings.routine[S.childId]; await saveSettings(); toast(t("已恢复默认清单")); break;
     case "cards-reset": resetCards(); await saveSettings(); toast(t("已恢复默认卡片")); break;
     case "print-meal": case "print-trend": case "print-timeline": case "print-medical": openPrint(t0.dataset.act.slice(6)); break;
