@@ -1,6 +1,6 @@
 import { APPS, THIS_APP } from "./apps.js";
 import { LANGS, langPref, t } from "./i18n.js";
-import { allCards, hasCardPrefs, heroOf, pottyMin } from "./stages.js";
+import { HERO_CHOICES, allCards, hasCardPrefs, heroKeys, pottyMin } from "./stages.js";
 import { APP_VERSION, S, activeKids, kidCount, ageText, childName, ROUTINE_TPL, routineGroups, routineToText, stageOf } from "./state.js";
 import { familyHTML } from "./sync.js";
 import { isUS, unitPref } from "./units.js";
@@ -47,12 +47,13 @@ function cardsHTML(){
       <div class="lab">${t("{stage}常用", { stage: t(stageOf().name) })}</div><div class="chips" role="group" aria-label="${esc(title)}">${common.map(chip).join("")}</div>
       <div class="lab">${t("其他阶段的卡片")}</div><div class="chips" role="group" aria-label="${esc(title)} · ${t("其他")}">${other.map(chip).join("")}</div></div>`;
   };
-  // toddlers and preschoolers: what the big clock counts, the potty nudge interval, and the daily routine list
-  const little = ["toddler", "preschool"].includes(stageOf().key), hero = heroOf();
-  const pick = (attr, list, cur) => `<div class="chips">${list.map(([v, l]) => `<button class="chip" ${attr}="${v}" aria-pressed="${cur === v}">${esc(t(l))}</button>`).join("")}</div>`;
-  const little_html = little ? `<h2>${t("顶部大计时")}</h2><div class="panel"><p class="small muted" style="margin-top:0">${t("今天页最上面的大数字数什么。如厕训练期选“距上次如厕”，想看习惯养成选“今天的习惯”。")}</p>
-      ${pick("data-hero", [["meal", "距上次吃饭"], ["potty", "距上次如厕"], ["routine", "今天的习惯"]], hero)}
-      ${hero === "potty" ? `<div class="lab">${t("如厕提醒间隔（分钟）")}</div>${pick("data-pottymin", [60, 90, 120, 180].map(m => [String(m), String(m)]), String(pottyMin()))}` : ""}</div>` : "";
+  // the top card: which "since last" clocks it shows, the potty nudge interval, and the daily routine list
+  const keys = heroKeys();
+  const pick = (attr, list, cur) => `<div class="chips">${list.map(([v, l]) => `<button class="chip" ${attr}="${v}" aria-pressed="${cur.includes(v)}">${esc(t(l))}</button>`).join("")}</div>`;
+  const little_html = `<h2>${t("顶部大计时")}</h2><div class="panel"><p class="small muted" style="margin-top:0">${t("今天页最上面那张卡。可以选一个或几个：第一个是大数字，其余在下面用小字显示（取消再点选可以换顺序）。")}</p>
+      ${pick("data-hero", HERO_CHOICES, keys)}
+      ${(S.settings.heroPref || {})[S.childId] ? `<div class="btns"><button class="btn" data-hero="default">${t("恢复默认")}</button></div>` : ""}
+      ${keys.includes("potty") ? `<div class="lab">${t("如厕提醒间隔（分钟）")}</div>${pick("data-pottymin", [60, 90, 120, 180].map(m => [String(m), String(m)]), [String(pottyMin())])}` : ""}</div>`;
   const routine_html = ["toddler", "preschool", "school"].includes(stageOf().key) || (S.settings.routine || {})[S.childId] ? `<h2>${t("习惯清单")}</h2><div class="panel">
       <p class="small muted" style="margin-top:0">${t("今天页的“今天的习惯”：分成晨间、午间、睡前等几组，一行一步，按先后顺序写；同名的步骤会自动加编号。改名或删除不影响已有记录。全部清空后保存，就不再显示。")}</p>
       <div class="lab">${t("加入模板")}</div><div class="chips">${ROUTINE_TPL.map((g, i) => `<button class="chip" data-tpl="${i}">+ ${esc(t(g.name))}</button>`).join("")}</div>

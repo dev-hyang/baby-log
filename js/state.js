@@ -27,6 +27,7 @@ function loadLocal(){
 const CHILD_KEY = LS_KEY + ".child";
 const MOM_TYPES = new Set(["mmed", "mbody"]);
 const isKidType = t => !MOM_TYPES.has(t);
+const HERO_KEYS = ["feed", "diaper", "potty", "meal", "companion", "outdoor", "routine"]; // see CLOCKS in stages.js
 function normalizeSettings(){
   const st = S.settings;
   st.children = (Array.isArray(st.children) ? st.children : []).filter(c => c && typeof c.id === "string").map(c => ({ id: c.id, name: c.name || "", birth: c.birth || "", ...(c.archived ? { archived: true } : {}) }));
@@ -59,7 +60,7 @@ function normalizeSettings(){
   const own = {}, hp = {}, pm = {};
   for (const c of st.children) {
     const r = cleanRoutine((st.routine || {})[c.id]); if (r) own[c.id] = r;
-    const h = (st.heroPref || {})[c.id]; if (["meal", "potty", "routine"].includes(h)) hp[c.id] = h;
+    const h = [].concat((st.heroPref || {})[c.id] || []).filter((k, i, a) => HERO_KEYS.includes(k) && a.indexOf(k) === i); if (h.length) hp[c.id] = h;
     const m = Math.round(+(st.pottyMin || {})[c.id]); if (m >= 15 && m <= 480) pm[c.id] = m;
   }
   st.routine = own; st.heroPref = hp; st.pottyMin = pm;
@@ -175,6 +176,6 @@ function textToRoutine(txt){
   return gs;
 }
 
-const APP_VERSION = "2026-10-23.3";
+const APP_VERSION = "2026-10-23.4";
 
 export { faithOn, FAITH_STEPS, ROUTINE_TPL, routineGroups, routineSteps, routineToText, textToRoutine, LS_KEY, S, activeKids, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, matchCheckup, nextCheckup, APP_VERSION };

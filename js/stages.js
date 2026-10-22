@@ -1,4 +1,4 @@
-import { expectedDiapers, sleepMsIn } from "./derived.js";
+import { expectedDiapers, last, sleepMsIn } from "./derived.js";
 import { t } from "./i18n.js";
 import { S, ageMonths, babyAgeDays, birthTs, faithOn, routineGroups, routineSteps, stageOf, vis } from "./state.js";
 import { TYPES } from "./types.js";
@@ -44,7 +44,7 @@ const Q = {
   social:  { add: "social", icon: "👫", label: "社交" }
 };
 // hero: what the big clock on Today counts since — the last feed, last potty visit, today's routine progress,
-// the last meal, or the last time together (toddlers and preschoolers can pick, see heroOf)
+// the last meal, or the last time together (each child can pick one or several, see heroKeys)
 const STAGE = {
   newborn:   { hero: "feed",
                quick: ["nurse", "bottle", "formula", "diaper", "sleep", "mmed", "mbody", "health"],
@@ -87,11 +87,22 @@ const stageTypes = () => withoutFaith("types", stageCfg().types);
 const stageMetrics = () => withoutFaith("metrics", stageCfg().metrics);
 
 /* ---- toddler / preschool Today: what the clock counts, potty reminders, the daily routine ---- */
-const HERO_PICK = ["toddler", "preschool"], POTTY_DEFAULT_MIN = 90;
-function heroOf(cid = S.childId){
-  const key = stageOf(cid).key, pick = (S.settings.heroPref || {})[cid];
-  const h = HERO_PICK.includes(key) && pick ? pick : STAGE[key].hero;
-  return h === "routine" && !routineSteps(cid).length ? "meal" : h; // no steps to show progress on
+const POTTY_DEFAULT_MIN = 90;
+// the "since last" clocks the top card can show (plus the routine's progress, which is not a clock); label = what the card says
+const CLOCKS = {
+  feed:      { label: "距上次喂奶", empty: "点下面的按钮记录第一次喂奶", find: () => last(e => e.type === "feed" && e.method !== "吸奶") },
+  diaper:    { label: "距上次换尿布", empty: "点下面的按钮记录第一次换尿布", find: () => last(e => e.type === "diaper") },
+  potty:     { label: "距上次如厕", empty: "点下面的按钮记录第一次如厕", find: () => last(e => e.type === "potty") },
+  meal:      { label: "距上次吃饭", empty: "点下面的按钮记录今天第一顿", find: () => last(e => e.type === "food") },
+  companion: { label: "距上次陪伴", empty: "点下面的按钮记录一次陪伴", find: () => last(e => e.type === "companion") },
+  outdoor:   { label: "距上次户外", empty: "点下面的按钮记录一次户外", find: () => last(e => e.type === "activity" && e.kind === "户外") }
+};
+const HERO_CHOICES = [...Object.entries(CLOCKS).map(([k, c]) => [k, c.label]), ["routine", "今天的习惯"]];
+// what the top card shows, in order: the first is the big number, the rest are small lines. The child's own choice
+// (settings.heroPref) wins, otherwise the stage's default; the routine only counts while it has steps.
+function heroKeys(cid = S.childId){
+  const pick = (S.settings.heroPref || {})[cid], keys = (pick && pick.length ? pick : [STAGE[stageOf(cid).key].hero]).filter(k => k === "routine" ? routineSteps(cid).length : CLOCKS[k]);
+  return keys.length ? keys : ["meal"];
 }
 const pottyMin = (cid = S.childId) => (S.settings.pottyMin || {})[cid] || POTTY_DEFAULT_MIN;
 // step name → today's latest record of it, for the active child
@@ -280,4 +291,4 @@ function doctorListHTML(){
   return `<ul class="plain">${list.map(s => `<li>${t(s)}</li>`).join("")}</ul>`;
 }
 
-export { STAGE, faithOn, heroOf, pottyMin, POTTY_DEFAULT_MIN, routineHTML, routineToday, stageCfg, stageTypes, stageMetrics, activeCards, setCard, resetCards, hasCardPrefs, allCards, quickHTML, statsHTML, MILESTONE_REF, milestoneRef, milestoneNames, milestoneRefHTML, doctorListHTML };
+export { STAGE, faithOn, CLOCKS, HERO_CHOICES, heroKeys, pottyMin, POTTY_DEFAULT_MIN, routineHTML, routineToday, stageCfg, stageTypes, stageMetrics, activeCards, setCard, resetCards, hasCardPrefs, allCards, quickHTML, statsHTML, MILESTONE_REF, milestoneRef, milestoneNames, milestoneRefHTML, doctorListHTML };

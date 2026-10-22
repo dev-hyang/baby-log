@@ -1094,4 +1094,10 @@ export default {
 "加入模板": "Add a template",
 "每行一步；以 # 开头的一行是分组名": "One step per line; a line starting with # is a group name",
 "分成晨间、午间、睡前等几组，一行一步，按先后顺序写；同名的步骤会自动加编号。改名或删除不影响已有记录。全部清空后保存，就不再显示。": "Split into groups such as morning, midday and bedtime, one step per line in order; repeated names get a number. Renaming or deleting a step doesn't affect past records. Clear everything and save to hide it.",
+"距上次换尿布": "Since last diaper change",
+"点下面的按钮记录第一次换尿布": "Tap below to log the first diaper change",
+"距上次户外": "Since last outdoor time",
+"点下面的按钮记录一次户外": "Tap below to log outdoor time",
+"恢复默认": "Restore default",
+"今天页最上面那张卡。可以选一个或几个：第一个是大数字，其余在下面用小字显示（取消再点选可以换顺序）。": "The card at the top of Today. Pick one or several: the first is the big number and the rest show below in small text (deselect and select again to change the order).",
 };

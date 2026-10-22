@@ -4,7 +4,7 @@ import { setLang, t } from "./i18n.js";
 import { FAITH_TEMPLATE, readSettingsInputs } from "./me.js";
 import { mealCheck } from "./meal.js";
 import { closeSheet, draft, drawForm, openForm, pickType, readDraftInputs, rememberVis } from "./sheet.js";
-import { resetCards, setCard } from "./stages.js";
+import { heroKeys, resetCards, setCard } from "./stages.js";
 import { FAITH_STEPS, LS_KEY, ROUTINE_TPL, S, child, childOf, faithOn, isKidType, kidCount, matchCheckup, routineToText, setChild, textToRoutine } from "./state.js";
 import { importJSON, loadDemo, offerFile, putEntry, removeEntry, removeWhere, saveSettings, toCSV } from "./store.js";
 import { sbAuth, sbCreate, sbJoin, sbLogout, sbMember, sbResetCode, syncNow, visSupported } from "./sync.js";
@@ -60,7 +60,11 @@ document.addEventListener("click", async ev => {
     await putEntry({ id: newId(), type: "routine", ts: Date.now(), child: S.childId, step: t0.dataset.step, self: true }); toast(t("已记录")); return;
   }
   if (t0.dataset.hero || t0.dataset.pottymin) { // card manager: what the big clock counts, how often to nudge about the potty
-    if (t0.dataset.hero) (S.settings.heroPref ||= {})[S.childId] = t0.dataset.hero; else (S.settings.pottyMin ||= {})[S.childId] = +t0.dataset.pottymin;
+    if (t0.dataset.hero) { // toggle one clock in the child's list; "default" goes back to the stage's choice
+      const k = t0.dataset.hero, hp = S.settings.heroPref ||= {}, cur = heroKeys();
+      if (k === "default") delete hp[S.childId]; else hp[S.childId] = cur.includes(k) ? cur.filter(x => x !== k) : [...cur, k];
+      if (hp[S.childId] && !hp[S.childId].length) delete hp[S.childId]; // never empty
+    } else (S.settings.pottyMin ||= {})[S.childId] = +t0.dataset.pottymin;
     const sel = t0.dataset.hero ? `[data-hero="${t0.dataset.hero}"]` : `[data-pottymin="${t0.dataset.pottymin}"]`;
     await saveSettings(); const again = document.querySelector(sel); again && again.focus(); return;
   }

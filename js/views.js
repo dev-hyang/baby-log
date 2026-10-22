@@ -5,7 +5,7 @@ import { byTime, last, medStatus, suggestSide, within } from "./derived.js";
 import { LANGS, lang, langPref, t } from "./i18n.js";
 import { cardsHTML, settingsHTML, viewMe } from "./me.js";
 import { dayNavHTML, viewMeal } from "./meal.js";
-import { activeCards, doctorListHTML, heroOf, milestoneRef, milestoneRefHTML, pottyMin, quickHTML, routineHTML, routineToday, stageCfg, stageTypes, statsHTML } from "./stages.js";
+import { CLOCKS, activeCards, doctorListHTML, heroKeys, milestoneRef, milestoneRefHTML, pottyMin, quickHTML, routineHTML, routineToday, stageCfg, stageTypes, statsHTML } from "./stages.js";
 import { CHECKUPS, S, activeKids, STAGES, routineSteps, isKidType, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
 import { SB, loadTombs, memberName, memberNames } from "./sync.js";
 import { viewTrend } from "./trend.js";
@@ -91,47 +91,32 @@ function heroHTML(){
     <div class="meta"><span>${t("{time} 入睡", { time: hm(sl.ts) })}</span>${sl.where ? `<span>${esc(t(sl.where))}</span>` : ""}</div>
     <div class="act"><button data-act="wake" data-id="${sl.id}">${t("醒了，记录结束")}</button></div></section>`;
   if (!activeCards("stats").includes("hero")) return ""; // the child's card settings turned the clock off
-  const hero = heroOf();
-  if (hero === "potty") {
-    const p = last(e => e.type === "potty"), every = pottyMin(), act = `<div class="act"><button data-add="potty">🚽 ${t("记录如厕")}</button></div>`;
-    if (!p) return `<section class="hero"><div class="moon"></div><div class="lbl">${t("距上次如厕")}</div>
-      <div class="big num">--<small>:</small>--</div><div class="meta">${t("点下面的按钮记录第一次如厕")}</div>${act}</section>`;
-    const gap = Date.now() - p.ts, due = gap >= every * 60e3;
-    return `<section class="hero"><div class="moon"></div><div class="lbl">${t("距上次如厕")}</div>
-      <div class="big num">${bigDur(gap)}</div>
-      <div class="meta"><span>${hm(p.ts)} · ${esc(summary(p))}</span>${due ? `<span class="side">${t("该去试试了")}</span>` : `<span>${t("{n} 分钟后提醒去试试", { n: Math.ceil(every - gap / 60e3) })}</span>`}</div>${act}</section>`;
-  }
-  if (hero === "routine") {
+  const [first, ...rest] = heroKeys();
+  return `<section class="hero"><div class="moon"></div>${bigClock(first)}${rest.length ? `<div class="more">${rest.map(smallClock).join("")}</div>` : ""}</section>`;
+}
+// the big number: how long since the last record, or today's routine progress
+function bigClock(k){
+  if (k === "routine") {
     const steps = routineSteps(), done = routineToday(), n = steps.filter(s => done.has(s)).length, next = steps.find(s => !done.has(s));
     const own = steps.filter(s => done.has(s) && done.get(s).self).length, wake = done.get("起床");
-    return `<section class="hero"><div class="moon"></div><div class="lbl">${t("今天的习惯")}</div>
+    return `<div class="lbl">${t("今天的习惯")}</div>
       <div class="big num">${n}<small>/${steps.length}</small></div>
-      <div class="meta">${wake ? `<span>${t("{time} 起床", { time: hm(wake.ts) })}</span>` : ""}${next ? `<span>${t("下一步：{step}", { step: `<span class="side">${esc(t(next))}</span>` })}</span>` : `<span>${t("今天的习惯都做到了")}</span>`}${own ? `<span>${t("{n} 步自己做到", { n: own })}</span>` : ""}</div></section>`;
+      <div class="meta">${wake ? `<span>${t("{time} 起床", { time: hm(wake.ts) })}</span>` : ""}${next ? `<span>${t("下一步：{step}", { step: `<span class="side">${esc(t(next))}</span>` })}</span>` : `<span>${t("今天的习惯都做到了")}</span>`}${own ? `<span>${t("{n} 步自己做到", { n: own })}</span>` : ""}</div>`;
   }
-  if (hero === "companion") {
-    const m = last(e => e.type === "companion");
-    if (!m) return `<section class="hero"><div class="moon"></div><div class="lbl">${t("距上次陪伴")}</div>
-      <div class="big num">--<small>:</small>--</div><div class="meta">${t("点下面的按钮记录一次陪伴")}</div></section>`;
-    return `<section class="hero"><div class="moon"></div><div class="lbl">${t("距上次陪伴")}</div>
-      <div class="big num">${bigDur(Date.now() - m.ts)}</div>
-      <div class="meta"><span>${hm(m.ts)} · ${esc(summary(m))}</span></div></section>`;
+  const c = CLOCKS[k], e = c.find(), act = k === "potty" ? `<div class="act"><button data-add="potty">🚽 ${t("记录如厕")}</button></div>` : "";
+  if (!e) return `<div class="lbl">${t(c.label)}</div><div class="big num">--<small>:</small>--</div><div class="meta">${t(c.empty)}</div>${act}`;
+  const gap = Date.now() - e.ts, side = k === "feed" ? suggestSide(e) : null, every = pottyMin();
+  return `<div class="lbl">${t(c.label)}</div><div class="big num">${bigDur(gap)}</div>
+    <div class="meta"><span>${hm(e.ts)} · ${esc(summary(e))}</span>${side ? `<span>${t("这次建议先喂 {side}", { side: `<span class="side">${t(side)}</span>` })}</span>` : ""}${k === "potty" ? (gap >= every * 60e3 ? `<span class="side">${t("该去试试了")}</span>` : `<span>${t("{n} 分钟后提醒去试试", { n: Math.ceil(every - gap / 60e3) })}</span>`) : ""}</div>${act}`;
+}
+// the other chosen clocks: one small line each under the big one
+function smallClock(k){
+  if (k === "routine") {
+    const steps = routineSteps(), done = routineToday(), next = steps.find(s => !done.has(s));
+    return `<div class="row"><span>${t("今天的习惯")}</span><b class="num">${steps.filter(s => done.has(s)).length}/${steps.length}</b>${next ? `<span>${t("下一步：{step}", { step: esc(t(next)) })}</span>` : ""}</div>`;
   }
-  if (hero === "meal") {
-    const m = last(e => e.type === "food");
-    if (!m) return `<section class="hero"><div class="moon"></div><div class="lbl">${t("距上次吃饭")}</div>
-      <div class="big num">--<small>:</small>--</div><div class="meta">${t("点下面的按钮记录今天第一顿")}</div></section>`;
-    return `<section class="hero"><div class="moon"></div><div class="lbl">${t("距上次吃饭")}</div>
-      <div class="big num">${bigDur(Date.now() - m.ts)}</div>
-      <div class="meta"><span>${hm(m.ts)} · ${esc(summary(m))}</span></div></section>`;
-  }
-  const f = last(e => e.type === "feed" && e.method !== "吸奶");
-  if (!f) return `<section class="hero"><div class="moon"></div><div class="lbl">${t("距上次喂奶")}</div>
-    <div class="big num">--<small>:</small>--</div><div class="meta">${t("点下面的按钮记录第一次喂奶")}</div></section>`;
-  const side = suggestSide(f);
-  return `<section class="hero"><div class="moon"></div>
-    <div class="lbl">${t("距上次喂奶")}</div>
-    <div class="big num">${bigDur(Date.now() - f.ts)}</div>
-    <div class="meta"><span>${hm(f.ts)} · ${esc(summary(f))}</span>${side ? `<span>${t("这次建议先喂 {side}", { side: `<span class="side">${t(side)}</span>` })}</span>` : ""}</div></section>`;
+  const c = CLOCKS[k], e = c.find(), late = k === "potty" && e && Date.now() - e.ts >= pottyMin() * 60e3;
+  return `<div class="row"><span>${t(c.label)}</span><b class="num">${e ? dur(Date.now() - e.ts) : "--"}</b>${e ? `<span>${hm(e.ts)}</span>` : ""}${late ? `<span class="side">${t("该去试试了")}</span>` : ""}</div>`;
 }
 function bigDur(ms){ const m = Math.max(0, Math.floor(ms / 60000)); const h = Math.floor(m / 60); return h ? `${h}<small>${t("小时")}</small>${m % 60}<small>${t("分")}</small>` : `${m}<small>${t("分钟")}</small>`; }
 
