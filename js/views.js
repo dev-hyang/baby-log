@@ -5,8 +5,8 @@ import { byTime, last, medStatus, suggestSide, within } from "./derived.js";
 import { LANGS, lang, langPref, t } from "./i18n.js";
 import { cardsHTML, settingsHTML, viewMe } from "./me.js";
 import { dayNavHTML, viewMeal } from "./meal.js";
-import { activeCards, doctorListHTML, milestoneRef, milestoneRefHTML, quickHTML, stageCfg, stageTypes, statsHTML } from "./stages.js";
-import { CHECKUPS, S, activeKids, STAGES, isKidType, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
+import { activeCards, doctorListHTML, heroOf, milestoneRef, milestoneRefHTML, pottyMin, quickHTML, routineHTML, routineToday, stageCfg, stageTypes, statsHTML } from "./stages.js";
+import { CHECKUPS, S, activeKids, STAGES, routineSteps, isKidType, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
 import { SB, loadTombs, memberName, memberNames } from "./sync.js";
 import { viewTrend } from "./trend.js";
 import { TYPES, flags, isVisit, summary, typeLabel } from "./types.js";
@@ -91,7 +91,24 @@ function heroHTML(){
     <div class="meta"><span>${t("{time} 入睡", { time: hm(sl.ts) })}</span>${sl.where ? `<span>${esc(t(sl.where))}</span>` : ""}</div>
     <div class="act"><button data-act="wake" data-id="${sl.id}">${t("醒了，记录结束")}</button></div></section>`;
   if (!activeCards("stats").includes("hero")) return ""; // the child's card settings turned the clock off
-  if (stageCfg().hero === "companion") {
+  const hero = heroOf();
+  if (hero === "potty") {
+    const p = last(e => e.type === "potty"), every = pottyMin(), act = `<div class="act"><button data-add="potty">🚽 ${t("记录如厕")}</button></div>`;
+    if (!p) return `<section class="hero"><div class="moon"></div><div class="lbl">${t("距上次如厕")}</div>
+      <div class="big num">--<small>:</small>--</div><div class="meta">${t("点下面的按钮记录第一次如厕")}</div>${act}</section>`;
+    const gap = Date.now() - p.ts, due = gap >= every * 60e3;
+    return `<section class="hero"><div class="moon"></div><div class="lbl">${t("距上次如厕")}</div>
+      <div class="big num">${bigDur(gap)}</div>
+      <div class="meta"><span>${hm(p.ts)} · ${esc(summary(p))}</span>${due ? `<span class="side">${t("该去试试了")}</span>` : `<span>${t("{n} 分钟后提醒去试试", { n: Math.ceil(every - gap / 60e3) })}</span>`}</div>${act}</section>`;
+  }
+  if (hero === "routine") {
+    const steps = routineSteps(), done = routineToday(), n = steps.filter(s => done.has(s)).length, next = steps.find(s => !done.has(s));
+    const own = steps.filter(s => done.has(s) && done.get(s).self).length, wake = done.get("起床");
+    return `<section class="hero"><div class="moon"></div><div class="lbl">${t("今天的习惯")}</div>
+      <div class="big num">${n}<small>/${steps.length}</small></div>
+      <div class="meta">${wake ? `<span>${t("{time} 起床", { time: hm(wake.ts) })}</span>` : ""}${next ? `<span>${t("下一步：{step}", { step: `<span class="side">${esc(t(next))}</span>` })}</span>` : `<span>${t("今天的习惯都做到了")}</span>`}${own ? `<span>${t("{n} 步自己做到", { n: own })}</span>` : ""}</div></section>`;
+  }
+  if (hero === "companion") {
     const m = last(e => e.type === "companion");
     if (!m) return `<section class="hero"><div class="moon"></div><div class="lbl">${t("距上次陪伴")}</div>
       <div class="big num">--<small>:</small>--</div><div class="meta">${t("点下面的按钮记录一次陪伴")}</div></section>`;
@@ -99,7 +116,7 @@ function heroHTML(){
       <div class="big num">${bigDur(Date.now() - m.ts)}</div>
       <div class="meta"><span>${hm(m.ts)} · ${esc(summary(m))}</span></div></section>`;
   }
-  if (stageCfg().hero === "meal") {
+  if (hero === "meal") {
     const m = last(e => e.type === "food");
     if (!m) return `<section class="hero"><div class="moon"></div><div class="lbl">${t("距上次吃饭")}</div>
       <div class="big num">--<small>:</small>--</div><div class="meta">${t("点下面的按钮记录今天第一顿")}</div></section>`;
@@ -134,6 +151,7 @@ function viewToday(){
   ${heroHTML()}
   ${alerts.map(a => `<div class="alert red" role="alert"><b>${t("需要留意")}</b> · ${hm(a.e.ts)} ${esc(a.t)}</div>`).join("")}
   ${nc ? `<div class="alert info">${checkup}<button class="chip" data-tab="grow-checkups" style="margin-left:6px">${t("查看全部")}</button></div>` : ""}
+  ${routineHTML()}
   <div class="quick" role="group" aria-label="${t("快速记录")}">${quickHTML()}</div>
   <div style="text-align:right"><button class="chip" data-tab="cards">${t("⚙ 管理卡片")}</button></div>
   ${stats ? `<h2>${t("最近 24 小时")}</h2><div class="stats">${stats}</div>${S.mode === "family" && SB.vis && memberNames().length > 1 ? `<p class="small muted" style="margin:6px 0 0">${t("统计只包含你能看到的记录。")}</p>` : ""}` : ""}

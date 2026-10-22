@@ -54,6 +54,15 @@ function normalizeSettings(){
   // off lists the children it is switched off for.
   const fa = st.faith && typeof st.faith === "object" ? st.faith : {};
   st.faith = { on: !!fa.on, statement: typeof fa.statement === "string" ? fa.statement.slice(0, 400) : "", off: strs(fa.off).filter(id => st.children.some(c => c.id === id)) };
+  // per-child Today choices for toddlers / preschoolers: routine = the child's own step list ([] hides it),
+  // heroPref = what the big clock counts, pottyMin = minutes between potty reminders
+  const own = {}, hp = {}, pm = {};
+  for (const c of st.children) {
+    const r = (st.routine || {})[c.id]; if (Array.isArray(r)) own[c.id] = strs(r).map(s => s.trim().slice(0, 24)).filter(Boolean).slice(0, 20);
+    const h = (st.heroPref || {})[c.id]; if (["meal", "potty", "routine"].includes(h)) hp[c.id] = h;
+    const m = Math.round(+(st.pottyMin || {})[c.id]); if (m >= 15 && m <= 480) pm[c.id] = m;
+  }
+  st.routine = own; st.heroPref = hp; st.pottyMin = pm;
   // keep the single-child fields mirrored to the first child for older exports / clients
   st.babyName = live[0].name; st.birth = live[0].birth;
   let cid = S.childId; if (cid == null) { try { cid = localStorage.getItem(CHILD_KEY); } catch (e) {} }
@@ -126,6 +135,19 @@ function matchCheckup(ts, cid = S.childId){
 }
 function nextCheckup(){ const done = checkupsDone(); return CHECKUPS.map(c => ({ ...c, at: checkupDate(c) })).find(c => c.at && !done[c.k] && c.at > Date.now() - 14 * D); }
 
-const APP_VERSION = "2026-10-23.1";
+/* ---- faith module switch and the daily routine ----
+   The routine is the ordered list of habit steps a parent ticks off each day (get up, toilet, brush teeth …).
+   A child's own list (settings.routine) wins, [] hides it; otherwise toddlers to school-age use the default.
+   The default's prayer step follows the faith module, like every other faith card. */
+const faithOn = (cid = S.childId) => { const f = S.settings.faith; return !!f && f.on && !(f.off || []).includes(cid); };
+const ROUTINE_DEFAULT = ["起床", "上厕所", "刷牙洗漱", "读经祷告", "吃早饭", "收拾饭桌", "读故事 / 户外"];
+const ROUTINE_STAGES = ["toddler", "preschool", "school"];
+function routineSteps(cid = S.childId){
+  const own = (S.settings.routine || {})[cid];
+  if (Array.isArray(own)) return own;
+  return ROUTINE_STAGES.includes(stageOf(cid).key) ? ROUTINE_DEFAULT.filter(s => s !== "读经祷告" || faithOn(cid)) : [];
+}
 
-export { LS_KEY, S, activeKids, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, matchCheckup, nextCheckup, APP_VERSION };
+const APP_VERSION = "2026-10-23.2";
+
+export { faithOn, ROUTINE_DEFAULT, routineSteps, LS_KEY, S, activeKids, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, matchCheckup, nextCheckup, APP_VERSION };

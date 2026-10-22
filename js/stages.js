@@ -1,9 +1,9 @@
 import { expectedDiapers, sleepMsIn } from "./derived.js";
 import { t } from "./i18n.js";
-import { S, ageMonths, babyAgeDays, birthTs, stageOf, vis } from "./state.js";
+import { S, ageMonths, babyAgeDays, birthTs, faithOn, routineSteps, stageOf, vis } from "./state.js";
 import { TYPES } from "./types.js";
 import { isUS, toDisp, trim, unitOf } from "./units.js";
-import { D, H, esc } from "./util.js";
+import { D, H, esc, hm, startOfDay } from "./util.js";
 
 /* ============ stage configuration ============
    One place that says what each growth stage shows: quick buttons and 24h stats on Today, which record
@@ -43,7 +43,8 @@ const Q = {
   habit:   { add: "habit", icon: "🎯", label: "自律" },
   social:  { add: "social", icon: "👫", label: "社交" }
 };
-// hero: what the big clock on Today counts since — the last feed, the last meal, or the last time together
+// hero: what the big clock on Today counts since — the last feed, last potty visit, today's routine progress,
+// the last meal, or the last time together (toddlers and preschoolers can pick, see heroOf)
 const STAGE = {
   newborn:   { hero: "feed",
                quick: ["nurse", "bottle", "formula", "diaper", "sleep", "mmed", "mbody", "health"],
@@ -55,21 +56,21 @@ const STAGE = {
                stats: ["hero", "feeds", "bottle", "solids", "wetpoop", "sleep"],
                types: ["feed", "food", "diaper", "sleep", "milestone", "baby", "bmed", "vax"],
                metrics: ["sleep", "longest", "ml", "nurse", "feeds", "food", "wet", "poop"] },
-  toddler:   { hero: "meal",
+  toddler:   { hero: "potty",
                quick: ["meal", "milk", "potty", "diaper", "sleep", "speech", "activity", "health", "prayer", "scripture"],
-               stats: ["hero", "meals", "milk", "potty", "diapers", "outdoorRead", "sleep"],
-               types: ["food", "feed", "potty", "diaper", "sleep", "speech", "activity", "milestone", "behavior", "baby", "bmed", "vax", "faith"],
-               metrics: ["sleep", "longest", "food", "ml", "potty", "outdoor", "read", "words", "tantrum"] },
-  preschool: { hero: "meal",
+               stats: ["hero", "meals", "mealq", "milk", "potty", "diapers", "outdoorRead", "sleep"],
+               types: ["food", "feed", "potty", "routine", "diaper", "sleep", "speech", "activity", "milestone", "behavior", "baby", "bmed", "vax", "faith"],
+               metrics: ["sleep", "longest", "food", "mealMin", "routine", "ml", "potty", "outdoor", "read", "words", "tantrum"] },
+  preschool: { hero: "routine",
                quick: ["meal", "read", "outdoor", "school", "behavior", "potty", "sleep", "health", "prayer", "scripture"],
-               stats: ["hero", "meals", "read", "outdoor", "screen", "upset", "sleep", "faith"],
-               types: ["food", "activity", "behavior", "potty", "sleep", "speech", "milestone", "baby", "bmed", "vax", "feed", "diaper", "faith"],
-               metrics: ["sleep", "read", "outdoor", "screen", "food", "tantrum", "words", "potty", "faith"] },
+               stats: ["hero", "meals", "mealq", "read", "outdoor", "screen", "upset", "sleep", "faith"],
+               types: ["food", "routine", "activity", "behavior", "potty", "sleep", "speech", "milestone", "baby", "bmed", "vax", "feed", "diaper", "faith"],
+               metrics: ["sleep", "routine", "read", "outdoor", "screen", "food", "mealMin", "tantrum", "words", "potty", "faith"] },
   school:    { hero: "companion",
                quick: ["companion", "mood", "habit", "social", "read", "outdoor", "screen", "health", "worship", "prayer", "scripture", "serve"],
                stats: ["hero", "companion", "mood", "habit", "social", "screen", "sleep", "faith"],
-               types: ["companion", "mood", "habit", "social", "activity", "food", "sleep", "milestone", "baby", "bmed", "vax", "behavior", "speech", "faith"],
-               metrics: ["companion", "mood", "habit", "social", "read", "outdoor", "screen", "sleep", "faith"] },
+               types: ["companion", "mood", "habit", "routine", "social", "activity", "food", "sleep", "milestone", "baby", "bmed", "vax", "behavior", "speech", "faith"],
+               metrics: ["companion", "mood", "habit", "routine", "social", "read", "outdoor", "screen", "sleep", "faith"] },
   teen:      { hero: "companion",
                quick: ["companion", "mood", "habit", "social", "screen", "read", "outdoor", "health", "prayer", "scripture", "serve"],
                stats: ["hero", "companion", "mood", "habit", "social", "screen", "outdoor", "faith"],
@@ -80,11 +81,35 @@ const STAGE = {
    Everything faith-related is simply absent while it is off: its quick cards, stat, trend metric, record type in
    the 补记 picker. Records already written stay in the log and the timeline either way. */
 const FAITH_KEYS = { quick: ["prayer", "worship", "scripture", "serve"], stats: ["faith"], metrics: ["faith"], types: ["faith"] };
-const faithOn = (cid = S.childId) => { const f = S.settings.faith; return !!f && f.on && !(f.off || []).includes(cid); };
 const withoutFaith = (kind, keys, cid) => faithOn(cid) ? keys : keys.filter(k => !FAITH_KEYS[kind].includes(k));
 const stageCfg = () => STAGE[stageOf().key];
 const stageTypes = () => withoutFaith("types", stageCfg().types);
 const stageMetrics = () => withoutFaith("metrics", stageCfg().metrics);
+
+/* ---- toddler / preschool Today: what the clock counts, potty reminders, the daily routine ---- */
+const HERO_PICK = ["toddler", "preschool"], POTTY_DEFAULT_MIN = 90;
+function heroOf(cid = S.childId){
+  const key = stageOf(cid).key, pick = (S.settings.heroPref || {})[cid];
+  const h = HERO_PICK.includes(key) && pick ? pick : STAGE[key].hero;
+  return h === "routine" && !routineSteps(cid).length ? "meal" : h; // no steps to show progress on
+}
+const pottyMin = (cid = S.childId) => (S.settings.pottyMin || {})[cid] || POTTY_DEFAULT_MIN;
+// step name → today's latest record of it, for the active child
+function routineToday(){
+  const from = startOfDay(Date.now()), done = new Map();
+  for (const e of vis().filter(e => e.type === "routine" && e.ts >= from).sort((a, b) => a.ts - b.ts)) done.set(e.step, e);
+  return done;
+}
+function routineHTML(){
+  const steps = routineSteps(); if (!steps.length) return "";
+  const done = routineToday(), n = steps.filter(s => done.has(s)).length;
+  const chip = s => { const e = done.get(s); return e
+    ? `<button class="chip done" data-edit="${esc(e.id)}" aria-label="${esc(t("{step} 已完成，点一下修改", { step: t(s) }))}">✓ ${esc(t(s))} <small>${hm(e.ts)}${e.self ? "" : " · " + t("提醒后")}</small></button>`
+    : `<button class="chip" data-step="${esc(s)}">${esc(t(s))}</button>`; };
+  return `<h2>${t("今天的习惯")} <span class="small muted num" style="font-weight:400">${n}/${steps.length}</span></h2>
+  <div class="panel"><div class="ms">${steps.map(chip).join("")}</div>
+  <p class="small muted" style="margin:8px 0 0">${t("做到一步点一下，默认记为自己做到的；要提醒了才做的，点已完成的那一步改。")}</p></div>`;
+}
 
 /* ---- cards: the stage's defaults, adjusted per child ----
    settings.cardPrefs[child][kind] = { on: [keys added from outside the stage], off: [stage keys hidden] }.
@@ -158,6 +183,12 @@ const STATS = {
     return stat(t("辅食"), n(foods.length), fresh ? `<div class="ref">${t("今天试了 {n} 种新食物", { n: fresh })}</div>` : "");
   } },
   meals:    { label: "吃饭", icon: "🍚", render: day => stat(t("吃饭"), n(ofType(day, "food").filter(f => f.meal !== "奶").length)) },
+  mealq:    { label: "用餐习惯", icon: "🍽", render: day => {
+    const meals = ofType(day, "food").filter(f => ["早餐", "午餐", "晚餐", "加餐"].includes(f.meal));
+    const mm = meals.map(f => +f.minutes).filter(x => x > 0), late = meals.filter(f => f.called && f.called !== "马上来").length;
+    return stat(t("用餐 平均用时 / 饭前洗手"), `${mm.length ? min(Math.round(mm.reduce((a, b) => a + b, 0) / mm.length)) : "–"} ${n(meals.filter(f => f.washed).length)}`,
+      late ? `<div class="ref">${t("{n} 餐叫了才来或催了几次", { n: late })}</div>` : "");
+  } },
   milk:     { label: "喝奶", icon: "🥛", render: day => stat(t("喝奶"), vol(mlOf(day))) },
   potty:    { label: "如厕 成功 / 总", icon: "🚽", render: day => {
     const potty = ofType(day, "potty"), ok = potty.filter(p => ["小马桶", "马桶"].includes(p.where) && p.what !== "坐了没出").length;
@@ -249,4 +280,4 @@ function doctorListHTML(){
   return `<ul class="plain">${list.map(s => `<li>${t(s)}</li>`).join("")}</ul>`;
 }
 
-export { STAGE, faithOn, stageCfg, stageTypes, stageMetrics, activeCards, setCard, resetCards, hasCardPrefs, allCards, quickHTML, statsHTML, MILESTONE_REF, milestoneRef, milestoneNames, milestoneRefHTML, doctorListHTML };
+export { STAGE, faithOn, heroOf, pottyMin, POTTY_DEFAULT_MIN, routineHTML, routineToday, stageCfg, stageTypes, stageMetrics, activeCards, setCard, resetCards, hasCardPrefs, allCards, quickHTML, statsHTML, MILESTONE_REF, milestoneRef, milestoneNames, milestoneRefHTML, doctorListHTML };

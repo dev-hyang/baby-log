@@ -1,5 +1,5 @@
 import { t } from "./i18n.js";
-import { S, ageMonths, babyAgeDays, childOf, stageOf } from "./state.js";
+import { S, ageMonths, babyAgeDays, childOf, routineSteps, stageOf } from "./state.js";
 import { fmtU } from "./units.js";
 import { $, D, dur, hm, num } from "./util.js";
 
@@ -15,6 +15,8 @@ const MILK_2Y = ["全脂牛奶", "2% 低脂", "1% 低脂", "脱脂", "豆奶/植
 function milkOpts(m){ const mo = ageMonths(childOf(m), m.ts || Date.now()); return mo == null || mo < 12 ? MILK_BABY : mo < 24 ? MILK_1Y : MILK_2Y; }
 function milkDef(m){ const opts = milkOpts(m); const prev = S.entries.filter(e => e.type === "feed" && childOf(e) === childOf(m)).sort((a, b) => b.ts - a.ts)[0]; return prev && opts.includes(prev.method) ? prev.method : opts[0]; }
 function milkHint(m){ const mo = ageMonths(childOf(m), m.ts || Date.now()); if (mo == null || mo < 12) return ""; return mo < 24 ? t("AAP：1–2 岁建议全脂牛奶，每天约 2–3 杯（480–720 ml）以内，喝太多会影响吃饭和铁的吸收。") : t("2 岁后可按医生建议换低脂或脱脂奶，每天约 2–2.5 杯（480–600 ml）。"); }
+// a sit-down meal (not purée, snack milk or a tasting), where table manners and routine are worth noting
+const sitDown = m => ["早餐", "午餐", "晚餐", "加餐"].includes(m.meal);
 const TYPES = {
   feed:  { label: "喂奶", icon: "🍼", color: "var(--honey)", fields: [
     { k: "method", label: "方式", type: "seg", opts: milkOpts, def: milkDef, hint: milkHint },
@@ -58,9 +60,18 @@ const TYPES = {
     { k: "meal", label: "哪一餐", type: "seg", opts: ["辅食", "早餐", "午餐", "晚餐", "加餐", "奶"], def: "辅食" },
     { k: "foods", label: "吃了什么", type: "text", list: "foodlist", ph: "米糊、南瓜泥、鸡蛋…" },
     { k: "amount", label: "吃了多少", type: "seg", opts: ["尝一口", "几口", "一半", "大部分", "吃完"] },
+    { k: "called", label: "叫吃饭后", type: "seg", opts: ["马上来", "催了才来", "叫了好几次"], show: sitDown },
+    { k: "washed", label: "饭前洗手", type: "check", show: sitDown },
+    { k: "minutes", label: "用餐时长（分钟）", type: "num", show: sitDown },
+    { k: "focus", label: "吃饭时", type: "seg", opts: ["专心吃", "边吃边玩", "离座走动", "要人追着喂"], show: sitDown },
     { k: "newFood", label: "第一次尝试的新食物", type: "check" },
     { k: "reaction", label: "吃完后的反应", type: "seg", opts: ["无", "皮疹", "呕吐", "腹泻", "拒绝"], def: "无" },
     { k: "note", label: "备注", type: "text", ph: "喜欢 / 不喜欢、呛咳…" } ] },
+  /* ---- 习惯：一天里按顺序做的几件事（起床、上厕所、刷牙…），做到一步点一步；步骤清单在「卡片」里按孩子修改 ---- */
+  routine: { label: "习惯", icon: "🌅", color: "#5F7F9B", fields: [
+    { k: "step", label: "哪一步", type: "seg", opts: m => routineSteps(childOf(m)) },
+    { k: "self", label: "不用提醒，自己做到的", type: "check", def: true },
+    { k: "note", label: "备注", type: "text" } ] },
   milestone: { label: "里程碑", icon: "⭐", color: "#D98E2B", fields: [
     { k: "cat", label: "类别", type: "seg", opts: ["大运动", "精细动作", "语言", "社交情绪", "认知", "自理"], def: "大运动" },
     { k: "name", label: "做到了什么", type: "text", list: "milestonelist", ph: "翻身、独坐、扶站、第一次叫妈妈…" },
@@ -155,7 +166,7 @@ function summary(e){
     case "mmed": p.push(v(e.cat), e.name || "", e.dose || ""); break;
     case "vax": p.push(e.name || t("疫苗"), v(e.dose), v(e.site), e.reaction && e.reaction !== "无" ? t("反应：{r}", { r: t(e.reaction) }) : ""); break;
     case "mbody": if (e.weight) p.push(`${t("体重")} ${fmtU("wmom", e.weight)}`); if (e.lochia) p.push(`${t("恶露")} ${t(e.lochia)}`); if (e.pain != null) p.push(`${t("疼痛")} ${e.pain}`); if (e.mood != null) p.push(`${t("心情")} ${e.mood}/5`); if (e.sleepHrs) p.push(t("睡 {h}h", { h: e.sleepHrs })); break;
-    case "food": p.push(v(e.meal), e.foods || "", v(e.amount), e.newFood ? t("新食物") : "", e.reaction && e.reaction !== "无" ? t("反应：{r}", { r: t(e.reaction) }) : ""); break;
+    case "food": p.push(v(e.meal), e.foods || "", v(e.amount), v(e.called), e.washed ? t("饭前洗手") : "", e.minutes ? t("{n}分钟", { n: e.minutes }) : "", v(e.focus), e.newFood ? t("新食物") : "", e.reaction && e.reaction !== "无" ? t("反应：{r}", { r: t(e.reaction) }) : ""); break;
     case "milestone": p.push(v(e.cat), e.name || t("里程碑")); break;
     case "potty": p.push(v(e.what), v(e.where), e.self ? t("自己说要去") : ""); break;
     case "speech": p.push(v(e.kind), e.words ? `「${e.words}」` : "", e.lang && e.lang !== "中文" ? t(e.lang) : ""); break;
@@ -163,6 +174,7 @@ function summary(e){
     case "behavior": p.push(v(e.kind), e.trigger ? t("起因：{s}", { s: e.trigger }) : "", e.minutes ? t("{n}分钟", { n: e.minutes }) : "", e.how ? t("处理：{s}", { s: e.how }) : ""); break;
     case "companion": p.push(v(e.kind) || t("陪伴"), v(e.who), e.what || "", e.minutes ? t("{n}分钟", { n: e.minutes }) : ""); break;
     case "mood": if (e.level != null) p.push(`${t("心情")} ${e.level}/5`); p.push(v(e.kind), e.trigger ? t("起因：{s}", { s: e.trigger }) : "", e.how ? t("调整：{s}", { s: e.how }) : ""); break;
+    case "routine": p.push(v(e.step) || t("习惯"), e.self ? t("自己做到") : t("提醒后做到"), e.note || ""); break;
     case "habit": p.push(v(e.kind) || t("自律"), e.what || "", e.minutes ? t("{n}分钟", { n: e.minutes }) : "", e.self ? t("自己做到") : ""); break;
     case "faith": p.push(v(e.kind) || t("信仰"), e.what || "", e.minutes ? t("{n}分钟", { n: e.minutes }) : "", e.answered ? t("已蒙应允") : ""); break;
     case "social": p.push(v(e.kind), e.who || "", e.how ? t("处理：{s}", { s: e.how }) : ""); break;

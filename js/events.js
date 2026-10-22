@@ -56,6 +56,14 @@ document.addEventListener("click", async ev => {
     f.off = f.off.includes(id) ? f.off.filter(x => x !== id) : [...f.off, id];
     await saveSettings(); return;
   }
+  if (t0.dataset.step) { // Today → 今天的习惯: one tap ticks the step, by default as done without a reminder
+    await putEntry({ id: newId(), type: "routine", ts: Date.now(), child: S.childId, step: t0.dataset.step, self: true }); toast(t("已记录")); return;
+  }
+  if (t0.dataset.hero || t0.dataset.pottymin) { // card manager: what the big clock counts, how often to nudge about the potty
+    if (t0.dataset.hero) (S.settings.heroPref ||= {})[S.childId] = t0.dataset.hero; else (S.settings.pottyMin ||= {})[S.childId] = +t0.dataset.pottymin;
+    const sel = t0.dataset.hero ? `[data-hero="${t0.dataset.hero}"]` : `[data-pottymin="${t0.dataset.pottymin}"]`;
+    await saveSettings(); const again = document.querySelector(sel); again && again.focus(); return;
+  }
   if (t0.dataset.mealcheck) { await mealCheck(t0.dataset.feed, t0.dataset.mealcheck); return; }
   if (t0.dataset.copy) { try { await navigator.clipboard.writeText(t0.dataset.copy); toast(t("已复制：{s}", { s: t0.dataset.copy })); } catch (e) { toast(t("请手动搜索：{s}", { s: t0.dataset.copy })); } return; }
   if (t0.dataset.kidsel) { setChild(t0.dataset.kidsel); S.mealDay = null; render(); $("#bname").focus(); return; }
@@ -105,6 +113,10 @@ document.addEventListener("click", async ev => {
     case "wake": { const e = S.entries.find(x => x.id === t0.dataset.id); if (e) { await putEntry({ ...e, end: Date.now() }); toast(t("这一觉睡了 {d}", { d: dur(Date.now() - e.ts) })); } break; }
     case "addpick": pickType(); break;
     case "settings": goTab("settings"); break;
+    case "routine-save": { // card manager: one step per line; an empty list hides the routine
+      const list = $("#routineSteps").value.split("\n").map(s => s.trim()).filter(Boolean);
+      (S.settings.routine ||= {})[S.childId] = list; await saveSettings(); toast(t("习惯清单已保存")); break; }
+    case "routine-reset": if (S.settings.routine) delete S.settings.routine[S.childId]; await saveSettings(); toast(t("已恢复默认清单")); break;
     case "cards-reset": resetCards(); await saveSettings(); toast(t("已恢复默认卡片")); break;
     case "print-meal": case "print-trend": case "print-timeline": case "print-medical": openPrint(t0.dataset.act.slice(6)); break;
     case "addrule": readSettingsInputs(); S.settings.medIntervals.push({ name: "", hours: "" }); render(); break;

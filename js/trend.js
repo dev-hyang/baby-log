@@ -18,6 +18,8 @@ const METRICS = {
   pump:    { label: "吸奶量", get unit(){ return unitOf("vol"); }, get dec(){ return isUS() ? 1 : 0; }, color: "#9B7BB8", day: (a, b) => toDisp("vol", inRange(a, b, "feed").filter(e => e.method === "吸奶").reduce((s, e) => s + (+e.ml || 0), 0)) },
   /* 婴儿期起 */
   food:    { label: "吃饭 / 辅食", unit: "次", dec: 1, color: "#C8743A", day: (a, b) => inRange(a, b, "food").filter(e => e.meal !== "奶").length },
+  mealMin: { label: "用餐时长", unit: "分钟", dec: 0, color: "#C8743A", day: (a, b) => { const m = inRange(a, b, "food").map(e => +e.minutes).filter(x => x > 0); return m.length ? m.reduce((s, x) => s + x, 0) / m.length : null; } },
+  routine: { label: "习惯完成", unit: "步", dec: 1, color: "#5F7F9B", day: (a, b) => new Set(inRange(a, b, "routine").map(e => e.step + "|" + Math.floor(e.ts / 864e5))).size },
   potty:   { label: "如厕成功", unit: "次", dec: 1, color: "var(--sky)", day: (a, b) => inRange(a, b, "potty").filter(e => ["小马桶", "马桶"].includes(e.where) && e.what !== "坐了没出").length },
   read:    { label: "阅读", unit: "分钟", dec: 0, color: "#7A6FB5", day: (a, b) => actMinutes(a, b, "阅读") },
   outdoor: { label: "户外", unit: "分钟", dec: 0, color: "var(--sage)", day: (a, b) => actMinutes(a, b, "户外") },

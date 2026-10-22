@@ -1,7 +1,7 @@
 import { APPS, THIS_APP } from "./apps.js";
 import { LANGS, langPref, t } from "./i18n.js";
-import { allCards, hasCardPrefs } from "./stages.js";
-import { APP_VERSION, S, activeKids, kidCount, ageText, childName, stageOf } from "./state.js";
+import { allCards, hasCardPrefs, heroOf, pottyMin } from "./stages.js";
+import { APP_VERSION, S, activeKids, kidCount, ageText, childName, routineSteps, stageOf } from "./state.js";
 import { familyHTML } from "./sync.js";
 import { isUS, unitPref } from "./units.js";
 import { $, esc } from "./util.js";
@@ -47,8 +47,19 @@ function cardsHTML(){
       <div class="lab">${t("{stage}常用", { stage: t(stageOf().name) })}</div><div class="chips" role="group" aria-label="${esc(title)}">${common.map(chip).join("")}</div>
       <div class="lab">${t("其他阶段的卡片")}</div><div class="chips" role="group" aria-label="${esc(title)} · ${t("其他")}">${other.map(chip).join("")}</div></div>`;
   };
+  // toddlers and preschoolers: what the big clock counts, the potty nudge interval, and the daily routine list
+  const little = ["toddler", "preschool"].includes(stageOf().key), hero = heroOf();
+  const pick = (attr, list, cur) => `<div class="chips">${list.map(([v, l]) => `<button class="chip" ${attr}="${v}" aria-pressed="${cur === v}">${esc(t(l))}</button>`).join("")}</div>`;
+  const little_html = little ? `<h2>${t("顶部大计时")}</h2><div class="panel"><p class="small muted" style="margin-top:0">${t("今天页最上面的大数字数什么。如厕训练期选“距上次如厕”，想看习惯养成选“今天的习惯”。")}</p>
+      ${pick("data-hero", [["meal", "距上次吃饭"], ["potty", "距上次如厕"], ["routine", "今天的习惯"]], hero)}
+      ${hero === "potty" ? `<div class="lab">${t("如厕提醒间隔（分钟）")}</div>${pick("data-pottymin", [60, 90, 120, 180].map(m => [String(m), String(m)]), String(pottyMin()))}` : ""}</div>` : "";
+  const routine_html = ["toddler", "preschool", "school"].includes(stageOf().key) || (S.settings.routine || {})[S.childId] ? `<h2>${t("习惯清单")}</h2><div class="panel">
+      <p class="small muted" style="margin-top:0">${t("今天页的“今天的习惯”：一行一步，按一天的先后顺序写。全部清空后保存，就不再显示。")}</p>
+      <label class="lab" for="routineSteps">${t("每行一步")}</label><textarea id="routineSteps" rows="8">${esc(routineSteps().join("\n"))}</textarea>
+      <div class="btns"><button class="btn primary" data-act="routine-save">${t("保存清单")}</button><button class="btn" data-act="routine-reset">${t("恢复默认清单")}</button></div></div>` : "";
   return `<h2>${t("卡片")} <span class="small muted" style="font-weight:400">${esc(childName())} · ${esc(ageText())}</span></h2>
   <p class="small muted">${t("点一下打开或关闭（深色表示正在显示）。关闭只是不再显示在今天页，已有的记录仍在记录页，随时可以重新打开。每个孩子分别设置；顶部切换孩子即可。")}</p>
+  ${little_html}${routine_html}
   ${group("quick", t("快捷按钮"), t("今天页上方的一键记录按钮。"))}
   ${group("stats", t("最近 24 小时统计"), t("今天页的统计，和顶部的大计时。"))}
   ${hasCardPrefs() ? `<div class="btns"><button class="btn" data-act="cards-reset">${t("恢复{stage}的默认卡片", { stage: t(stageOf().name) })}</button></div>` : ""}`;
