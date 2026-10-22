@@ -1,6 +1,6 @@
 import { expectedDiapers, sleepMsIn } from "./derived.js";
 import { t } from "./i18n.js";
-import { S, ageMonths, babyAgeDays, birthTs, faithOn, routineSteps, stageOf, vis } from "./state.js";
+import { S, ageMonths, babyAgeDays, birthTs, faithOn, routineGroups, routineSteps, stageOf, vis } from "./state.js";
 import { TYPES } from "./types.js";
 import { isUS, toDisp, trim, unitOf } from "./units.js";
 import { D, H, esc, hm, startOfDay } from "./util.js";
@@ -107,7 +107,7 @@ function routineHTML(){
     ? `<button class="chip done" data-edit="${esc(e.id)}" aria-label="${esc(t("{step} 已完成，点一下修改", { step: t(s) }))}">✓ ${esc(t(s))} <small>${hm(e.ts)}${e.self ? "" : " · " + t("提醒后")}</small></button>`
     : `<button class="chip" data-step="${esc(s)}">${esc(t(s))}</button>`; };
   return `<h2>${t("今天的习惯")} <span class="small muted num" style="font-weight:400">${n}/${steps.length}</span></h2>
-  <div class="panel"><div class="ms">${steps.map(chip).join("")}</div>
+  <div class="panel">${routineGroups().map(g => `${g.name ? `<div class="lab">${esc(t(g.name))} <span class="num">${g.steps.filter(s => done.has(s)).length}/${g.steps.length}</span></div>` : ""}<div class="ms">${g.steps.map(chip).join("")}</div>`).join("")}
   <p class="small muted" style="margin:8px 0 0">${t("做到一步点一下，默认记为自己做到的；要提醒了才做的，点已完成的那一步改。")}</p></div>`;
 }
 

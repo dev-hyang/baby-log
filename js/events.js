@@ -5,7 +5,7 @@ import { FAITH_TEMPLATE, readSettingsInputs } from "./me.js";
 import { mealCheck } from "./meal.js";
 import { closeSheet, draft, drawForm, openForm, pickType, readDraftInputs, rememberVis } from "./sheet.js";
 import { resetCards, setCard } from "./stages.js";
-import { LS_KEY, S, child, childOf, isKidType, kidCount, matchCheckup, setChild } from "./state.js";
+import { FAITH_STEPS, LS_KEY, ROUTINE_TPL, S, child, childOf, faithOn, isKidType, kidCount, matchCheckup, routineToText, setChild, textToRoutine } from "./state.js";
 import { importJSON, loadDemo, offerFile, putEntry, removeEntry, removeWhere, saveSettings, toCSV } from "./store.js";
 import { sbAuth, sbCreate, sbJoin, sbLogout, sbMember, sbResetCode, syncNow, visSupported } from "./sync.js";
 import { UNIT_KEY, isUS } from "./units.js";
@@ -64,6 +64,10 @@ document.addEventListener("click", async ev => {
     const sel = t0.dataset.hero ? `[data-hero="${t0.dataset.hero}"]` : `[data-pottymin="${t0.dataset.pottymin}"]`;
     await saveSettings(); const again = document.querySelector(sel); again && again.focus(); return;
   }
+  if (t0.dataset.tpl) { // card manager: append a template group to the editor text (saved with 保存清单)
+    const g = ROUTINE_TPL[+t0.dataset.tpl], box = $("#routineSteps"), steps = g.steps.filter(x => !FAITH_STEPS.includes(x) || faithOn());
+    box.value = (box.value.trim() ? box.value.trimEnd() + "\n\n" : "") + routineToText([{ name: g.name, steps }]); box.focus(); return;
+  }
   if (t0.dataset.mealcheck) { await mealCheck(t0.dataset.feed, t0.dataset.mealcheck); return; }
   if (t0.dataset.copy) { try { await navigator.clipboard.writeText(t0.dataset.copy); toast(t("已复制：{s}", { s: t0.dataset.copy })); } catch (e) { toast(t("请手动搜索：{s}", { s: t0.dataset.copy })); } return; }
   if (t0.dataset.kidsel) { setChild(t0.dataset.kidsel); S.mealDay = null; render(); $("#bname").focus(); return; }
@@ -113,8 +117,8 @@ document.addEventListener("click", async ev => {
     case "wake": { const e = S.entries.find(x => x.id === t0.dataset.id); if (e) { await putEntry({ ...e, end: Date.now() }); toast(t("这一觉睡了 {d}", { d: dur(Date.now() - e.ts) })); } break; }
     case "addpick": pickType(); break;
     case "settings": goTab("settings"); break;
-    case "routine-save": { // card manager: one step per line; an empty list hides the routine
-      const list = $("#routineSteps").value.split("\n").map(s => s.trim()).filter(Boolean);
+    case "routine-save": { // card manager: "# group" lines and one step per line; an empty list hides the routine
+      const list = textToRoutine($("#routineSteps").value);
       (S.settings.routine ||= {})[S.childId] = list; await saveSettings(); toast(t("习惯清单已保存")); break; }
     case "routine-reset": if (S.settings.routine) delete S.settings.routine[S.childId]; await saveSettings(); toast(t("已恢复默认清单")); break;
     case "cards-reset": resetCards(); await saveSettings(); toast(t("已恢复默认卡片")); break;

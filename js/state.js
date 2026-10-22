@@ -58,7 +58,7 @@ function normalizeSettings(){
   // heroPref = what the big clock counts, pottyMin = minutes between potty reminders
   const own = {}, hp = {}, pm = {};
   for (const c of st.children) {
-    const r = (st.routine || {})[c.id]; if (Array.isArray(r)) own[c.id] = strs(r).map(s => s.trim().slice(0, 24)).filter(Boolean).slice(0, 20);
+    const r = cleanRoutine((st.routine || {})[c.id]); if (r) own[c.id] = r;
     const h = (st.heroPref || {})[c.id]; if (["meal", "potty", "routine"].includes(h)) hp[c.id] = h;
     const m = Math.round(+(st.pottyMin || {})[c.id]); if (m >= 15 && m <= 480) pm[c.id] = m;
   }
@@ -142,12 +142,39 @@ function nextCheckup(){ const done = checkupsDone(); return CHECKUPS.map(c => ({
 const faithOn = (cid = S.childId) => { const f = S.settings.faith; return !!f && f.on && !(f.off || []).includes(cid); };
 const ROUTINE_DEFAULT = ["起床", "上厕所", "刷牙洗漱", "读经祷告", "吃早饭", "收拾饭桌", "读故事 / 户外"];
 const ROUTINE_STAGES = ["toddler", "preschool", "school"];
-function routineSteps(cid = S.childId){
+// starting points a parent can add to the list and then edit; step names must be unique per child, so repeats are numbered
+const ROUTINE_TPL = [
+  { name: "晨间", steps: ROUTINE_DEFAULT },
+  { name: "午间", steps: ["洗手", "吃午饭", "收拾饭桌 2", "午睡"] },
+  { name: "晚间", steps: ["洗手", "吃晚饭", "收拾饭桌 3", "洗澡"] },
+  { name: "睡前", steps: ["刷牙", "睡前故事", "摇篮曲", "睡前祷告", "晚安"] }
+];
+const FAITH_STEPS = ["读经祷告", "睡前祷告"];
+// the groups to show: the child's own list ([] hides it), else a one-group default for toddlers to school-age
+function routineGroups(cid = S.childId){
   const own = (S.settings.routine || {})[cid];
   if (Array.isArray(own)) return own;
-  return ROUTINE_STAGES.includes(stageOf(cid).key) ? ROUTINE_DEFAULT.filter(s => s !== "读经祷告" || faithOn(cid)) : [];
+  return ROUTINE_STAGES.includes(stageOf(cid).key) ? [{ name: "晨间", steps: ROUTINE_DEFAULT.filter(s => !FAITH_STEPS.includes(s) || faithOn(cid)) }] : [];
+}
+const routineSteps = cid => routineGroups(cid).flatMap(g => g.steps);
+// settings.routine[child] = [{ name, steps }]; an older flat list of step names becomes one group, repeated names get a number
+function cleanRoutine(r){
+  if (!Array.isArray(r)) return null;
+  const groups = r.every(x => typeof x === "string") ? (r.length ? [{ name: "晨间", steps: r }] : []) : r.filter(g => g && Array.isArray(g.steps)), seen = new Set();
+  return groups.slice(0, 8).map(g => ({ name: String(g.name || "").trim().slice(0, 16), steps: g.steps.filter(s => typeof s === "string").map(s => s.trim().slice(0, 24)).filter(Boolean).slice(0, 20).map(s => { let n = s, i = 2; while (seen.has(n)) n = s + " " + i++; seen.add(n); return n; }) })).filter(g => g.steps.length);
+}
+// the editor's text: "# group name" lines, then one step per line
+const routineToText = gs => gs.map(g => (g.name ? "# " + g.name + "\n" : "") + g.steps.join("\n")).join("\n\n");
+function textToRoutine(txt){
+  const gs = []; let g = null;
+  for (const raw of txt.split("\n")) {
+    const l = raw.trim(); if (!l) continue;
+    if (l[0] === "#") { g = { name: l.replace(/^#+\s*/, ""), steps: [] }; gs.push(g); }
+    else { if (!g) { g = { name: "", steps: [] }; gs.push(g); } g.steps.push(l); }
+  }
+  return gs;
 }
 
-const APP_VERSION = "2026-10-23.2";
+const APP_VERSION = "2026-10-23.3";
 
-export { faithOn, ROUTINE_DEFAULT, routineSteps, LS_KEY, S, activeKids, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, matchCheckup, nextCheckup, APP_VERSION };
+export { faithOn, FAITH_STEPS, ROUTINE_TPL, routineGroups, routineSteps, routineToText, textToRoutine, LS_KEY, S, activeKids, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, matchCheckup, nextCheckup, APP_VERSION };

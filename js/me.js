@@ -1,7 +1,7 @@
 import { APPS, THIS_APP } from "./apps.js";
 import { LANGS, langPref, t } from "./i18n.js";
 import { allCards, hasCardPrefs, heroOf, pottyMin } from "./stages.js";
-import { APP_VERSION, S, activeKids, kidCount, ageText, childName, routineSteps, stageOf } from "./state.js";
+import { APP_VERSION, S, activeKids, kidCount, ageText, childName, ROUTINE_TPL, routineGroups, routineToText, stageOf } from "./state.js";
 import { familyHTML } from "./sync.js";
 import { isUS, unitPref } from "./units.js";
 import { $, esc } from "./util.js";
@@ -54,8 +54,9 @@ function cardsHTML(){
       ${pick("data-hero", [["meal", "距上次吃饭"], ["potty", "距上次如厕"], ["routine", "今天的习惯"]], hero)}
       ${hero === "potty" ? `<div class="lab">${t("如厕提醒间隔（分钟）")}</div>${pick("data-pottymin", [60, 90, 120, 180].map(m => [String(m), String(m)]), String(pottyMin()))}` : ""}</div>` : "";
   const routine_html = ["toddler", "preschool", "school"].includes(stageOf().key) || (S.settings.routine || {})[S.childId] ? `<h2>${t("习惯清单")}</h2><div class="panel">
-      <p class="small muted" style="margin-top:0">${t("今天页的“今天的习惯”：一行一步，按一天的先后顺序写。全部清空后保存，就不再显示。")}</p>
-      <label class="lab" for="routineSteps">${t("每行一步")}</label><textarea id="routineSteps" rows="8">${esc(routineSteps().join("\n"))}</textarea>
+      <p class="small muted" style="margin-top:0">${t("今天页的“今天的习惯”：分成晨间、午间、睡前等几组，一行一步，按先后顺序写；同名的步骤会自动加编号。改名或删除不影响已有记录。全部清空后保存，就不再显示。")}</p>
+      <div class="lab">${t("加入模板")}</div><div class="chips">${ROUTINE_TPL.map((g, i) => `<button class="chip" data-tpl="${i}">+ ${esc(t(g.name))}</button>`).join("")}</div>
+      <label class="lab" for="routineSteps">${t("每行一步；以 # 开头的一行是分组名")}</label><textarea id="routineSteps" rows="12">${esc(routineToText(routineGroups()))}</textarea>
       <div class="btns"><button class="btn primary" data-act="routine-save">${t("保存清单")}</button><button class="btn" data-act="routine-reset">${t("恢复默认清单")}</button></div></div>` : "";
   return `<h2>${t("卡片")} <span class="small muted" style="font-weight:400">${esc(childName())} · ${esc(ageText())}</span></h2>
   <p class="small muted">${t("点一下打开或关闭（深色表示正在显示）。关闭只是不再显示在今天页，已有的记录仍在记录页，随时可以重新打开。每个孩子分别设置；顶部切换孩子即可。")}</p>
