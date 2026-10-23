@@ -1,7 +1,7 @@
 import { expectedDiapers, last, sleepMsIn } from "./derived.js";
 import { t } from "./i18n.js";
 import { S, ageMonths, babyAgeDays, birthTs, faithOn, groupTone, routineGroups, routineSteps, stageOf, vis } from "./state.js";
-import { TYPES } from "./types.js";
+import { DIAPER_ICON, TYPES } from "./types.js";
 import { isUS, toDisp, trim, unitOf } from "./units.js";
 import { D, H, dur, esc, hm, startOfDay } from "./util.js";
 
@@ -20,7 +20,7 @@ const Q = {
   milk:    { add: "feed", icon: "🥛", label: "喝奶" }, // method defaults by age and last choice (see types.js)
   solids:  { add: "food", preset: { meal: "辅食" }, icon: "🥣", label: "辅食" },
   meal:    { add: "food", preset: () => ({ meal: mealByHour() }), icon: "🍚", label: "吃饭" },
-  diaper:  { add: "diaper", icon: "🧷", label: "换尿布" },
+  diaper:  { add: "diaper", icon: DIAPER_ICON, label: "换尿布" },
   potty:   { add: "potty", icon: "🚽", label: "如厕" },
   sleep:   { act: "sleepnow", icon: "🌙", label: "开始睡" },
   mmed:    { add: "mmed", icon: "💊", label: "妈妈用药" },
@@ -226,7 +226,7 @@ const STATS = {
     const f = feedsOf(day);
     return stat(t("亲喂 左 / 右"), `${min(f.reduce((a, e) => a + (+e.left || 0), 0))} ${min(f.reduce((a, e) => a + (+e.right || 0), 0))}`);
   } },
-  wetpoop:  { label: "湿尿布 / 大便", icon: "🧷", render: day => {
+  wetpoop:  { label: "湿尿布 / 大便", icon: DIAPER_ICON, render: day => {
     const wet = day.filter(e => e.type === "diaper" && e.pee).length, poop = day.filter(e => e.type === "diaper" && e.poop).length;
     let ref = "";
     if (stageOf().key === "newborn" && birthTs()) {
@@ -251,7 +251,7 @@ const STATS = {
     const potty = ofType(day, "potty"), ok = potty.filter(p => ["小马桶", "马桶"].includes(p.where) && p.what !== "坐了没出").length;
     return stat(t("如厕 成功 / 总"), `${n(ok)} ${n(potty.length)}`);
   } },
-  diapers:  { label: "尿布", icon: "🧷", render: day => stat(t("尿布"), n(ofType(day, "diaper").length)) },
+  diapers:  { label: "尿布", icon: DIAPER_ICON, render: day => stat(t("尿布"), n(ofType(day, "diaper").length)) },
   outdoorRead: { label: "户外 / 阅读", icon: "🌳", render: day => stat(t("户外 / 阅读"), `${min(actMin(day, "户外"))} ${min(actMin(day, "阅读"))}`) },
   read:     { label: "阅读", icon: "📚", render: day => stat(t("阅读"), mins(actMin(day, "阅读"))) },
   outdoor:  { label: "户外", icon: "🌳", render: day => stat(t("户外"), mins(actMin(day, "户外"))) },

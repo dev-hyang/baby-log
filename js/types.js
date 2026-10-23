@@ -3,6 +3,9 @@ import { S, ageMonths, babyAgeDays, childOf, routineSteps, stageOf } from "./sta
 import { fmtU } from "./units.js";
 import { $, D, dur, hm, num } from "./util.js";
 
+// Unicode has no diaper emoji (the old 🧷 safety pin read as a paperclip), so the diaper icon is drawn inline: a white diaper with side tapes.
+// It is sized in em like the emoji beside it and works wherever an icon is dropped into HTML.
+const DIAPER_ICON = `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2.8 5.2h18.4v4.6c-1.7.5-3 2.3-3.3 4.4l-.7 4.6H6.8l-.7-4.6c-.3-2.1-1.6-3.9-3.3-4.4z" fill="#fff" stroke="#3E6FA8" stroke-width="1.5" stroke-linejoin="round"/><path d="M2.8 8.2h18.4" stroke="#9CC3EE" stroke-width="1.4"/><rect x="2.8" y="5.2" width="3.4" height="3.2" rx=".8" fill="#6FA8DC"/><rect x="17.8" y="5.2" width="3.4" height="3.2" rx=".8" fill="#6FA8DC"/></svg>`;
 /* ============ record types ============
    Labels, placeholders and option values below are the canonical simplified-Chinese strings; the form and
    the summaries translate them for display with t(). Option values are what gets stored, so every device
@@ -24,7 +27,7 @@ const TYPES = {
     { k: "right", label: "右侧时长（分钟）", type: "num", show: m => ["亲喂", "混合"].includes(m.method), half: 1 },
     { k: "ml", label: "奶量", type: "num", dim: "vol", show: m => m.method !== "亲喂" },
     { k: "note", label: "备注", type: "text", ph: "吐奶、拒奶、含乳情况…" } ] },
-  diaper:{ label: "尿布", icon: "🧷", color: "var(--sky)", fields: [
+  diaper:{ label: "尿布", icon: DIAPER_ICON, color: "var(--sky)", fields: [
     { k: "pee", label: "尿", type: "check", def: true },
     { k: "poop", label: "便", type: "check" },
     { k: "color", label: "大便颜色", type: "seg", opts: ["黄", "绿", "褐", "黑（胎便）", "白/灰白", "带血"], show: m => m.poop },
@@ -196,4 +199,4 @@ function flags(e){
   return f;
 }
 
-export { TYPES, typeLabel, isVisit, summary, flags };
+export { TYPES, DIAPER_ICON, typeLabel, isVisit, summary, flags };
