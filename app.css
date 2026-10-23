@@ -448,3 +448,6 @@ table.meal th .sortlbl{text-align:center}
 .brand{flex:1 1 auto;min-width:0}
 .bname{white-space:nowrap;max-width:100%}
 .hdr-line{flex-direction:column;align-items:flex-end;gap:0}
+/* version vs sync status: stacked on a phone (status on top, version under it), side by side once there is room */
+.hdr-line{flex-direction:column;align-items:flex-end;gap:0}
+@media (min-width:600px){.hdr-line{flex-direction:row;align-items:center;gap:0 8px}}
