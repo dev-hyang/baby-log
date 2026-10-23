@@ -168,8 +168,8 @@ function viewToday(){
   ${meds.length ? `<h2>${t("妈妈用药")}</h2><div class="panel">${meds.map(medRow).join("")}
      <p class="small muted" style="margin-top:8px">${t("间隔来自你在设置里填写的医嘱。没有填写的只显示距上次服药多久。")}</p></div>` : ""}
 
-  <h2 id="todaySec">${t("今天")}</h2>
-  ${today.length ? today.map(entryRow).join("") : `<div class="empty">${t("今天还没有记录。")}</div>`}
+  <div class="listbar todayhead"><h2 id="todaySec">${t("今天")}</h2>${today.length ? listStyleSwitch() : ""}</div>
+  ${today.length ? (S.listStyle === "axis" ? axisHTML(today) : today.map(entryRow).join("")) : `<div class="empty">${t("今天还没有记录。")}</div>`}
   ${!S.entries.length ? `<div class="empty">${t("想先看看效果？")}<br><button class="btn" data-act="demo">${t("载入演示数据")}</button></div>` : ""}`;
 }
 function medRow(m){
@@ -177,6 +177,8 @@ function medRow(m){
   if (m.next) pill = m.next > Date.now() ? `<span class="pill wait">${t("{time} 后可再服", { time: hm(m.next) })}</span>` : `<span class="pill ok">${t("已过医嘱间隔")}</span>`;
   return `<div class="medrow"><div><b>${esc(t(m.name))}</b><div class="small muted">${t("上次 {time} · {ago}前 · 24小时内 {n} 次", { time: hm(m.at), ago: dur(Date.now() - m.at), n: m.count24 })}</div></div>${pill}</div>`;
 }
+// the "list | axis" switch, shared by the timeline on the Log page and the Today list
+const listStyleSwitch = () => `<div class="segmini" role="group" aria-label="${t("显示方式")}"><button data-liststyle="rows" aria-pressed="${S.listStyle !== "axis"}">${t("列表")}</button><button data-liststyle="axis" aria-pressed="${S.listStyle === "axis"}">${t("时间轴")}</button></div>`;
 // what both timeline styles show about a record: its type colour, warnings, who wrote it (family mode), and who can see it
 function entryBits(e){
   const T = TYPES[e.type] || { color: "var(--muted)", icon: "•" };
@@ -234,7 +236,7 @@ function viewList(){
   ${q ? `<p class="small muted" style="margin:6px 0 0">${t("搜索时显示所有日期的结果。")}</p>` : ""}
   <div class="filterrow"><select id="logFilter" class="filtersel" data-logfilter aria-label="${t("类型")}">${chips.map(([k, l]) => `<option value="${k}"${S.filter === k ? " selected" : ""}>${l}</option>`).join("")}</select><button class="btn" data-act="addpick">${t("＋ 补记一条")}</button></div>
   <div class="listbar"><span class="small muted">${q ? "" : t("{n} 条", { n: list.length })}</span>
-    <div class="segmini" role="group" aria-label="${t("显示方式")}"><button data-liststyle="rows" aria-pressed="${style === "rows"}">${t("列表")}</button><button data-liststyle="axis" aria-pressed="${style === "axis"}">${t("时间轴")}</button></div></div>
+    ${listStyleSwitch()}</div>
   ${body}`;
 }
 
