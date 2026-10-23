@@ -66,7 +66,7 @@ function heroCfgHTML(){
   const avail = [...HERO_BUILTIN, ...cust.map(x => x.id)].filter(k => k !== "routine" || hasRoutine);
   const chip = (op, k, on) => `<button class="chip" data-hc="${op}:${esc(k)}" aria-pressed="${on}">${lab(k)}</button>`;
   // one long pill per card: drag its ⋮⋮ (right end) up or down to reorder, swipe it left to reveal 移除; a tap picks it for the "what does it count" chips above
-  const rows = keys.map((k, i) => `<div class="hcrow">${keys.length > 1 ? `<button class="hcdel" data-hc="del:${i}" aria-label="${t("移除")} ${lab(k)}">${t("移除")}</button>` : ""}<div class="hcpill" aria-current="${i === slot}">
+  const rows = keys.map((k, i) => `<div class="hcrow">${keys.length > 1 ? `<div class="hcdel" aria-hidden="true"><span>${t("向左滑动移除")}</span><b>${t("松手移除")}</b></div>` : ""}<div class="hcpill" aria-current="${i === slot}">
       <button class="hclab" data-hc="sel:${i}" aria-pressed="${i === slot}"><b class="num">${i + 1}</b><span>${lab(k)}</span></button>
       ${cust.some(x => x.id === k) ? `<button class="hcedit" data-hc="edit:${esc(k)}" aria-label="${t("编辑")}">✎</button>` : ""}<span class="grip" aria-hidden="true">⋮⋮</span></div></div>`).join("");
   const types = Object.keys(TYPES).filter(k => isKidType(k) && (k !== "faith" || faithOn()));
@@ -78,7 +78,7 @@ function heroCfgHTML(){
   return `<h2>${t("顶部大计时")} <span class="small muted" style="font-weight:400">${esc(childName())}</span></h2>
   <p class="small muted">${t("今天页最上面的卡片可以左右滑动，每张数一件事。下面可以改每张数什么、调顺序、增删，也能自己做一张。")}</p>
   <h2>${t("第 {n} 张卡数什么", { n: slot + 1 })}</h2><div class="panel"><div class="chips" role="group" aria-label="${t("第 {n} 张卡数什么", { n: slot + 1 })}">${avail.map(k => chip("set", k, keys[slot] === k)).join("")}</div></div>
-  <h2>${t("全部卡片")}</h2><div class="panel"><p class="small muted" style="margin:0 0 8px">${t("拖右边的 ⋮⋮ 上下调顺序；向左滑动胶囊，出现「移除」；点一下胶囊，在上面选它数什么。")}</p><div class="hclist">${rows}</div></div>
+  <h2>${t("全部卡片")}</h2><div class="panel"><p class="small muted" style="margin:0 0 8px">${t("拖右边的 ⋮⋮ 上下调顺序；向左滑动胶囊，滑过一半松手就移除；点一下胶囊，在上面选它数什么。")}</p><div class="hclist">${rows}</div></div>
   <h2>${t("添加")}</h2><div class="panel"><div class="chips">${avail.filter(k => !keys.includes(k)).map(k => chip("add", k, false)).join("")}<button class="chip" data-hc="new:">+ ${t("自定义卡片")}</button></div>${form}</div>
   ${keys.includes("potty") ? `<h2>${t("如厕提醒间隔（分钟）")}</h2><div class="panel"><div class="chips">${[60, 90, 120, 180].map(m => `<button class="chip" data-pottymin="${m}" aria-pressed="${pottyMin() === m}">${m}</button>`).join("")}</div></div>` : ""}
   ${(S.settings.heroPref || {})[S.childId] ? `<div class="btns"><button class="btn" data-hc="reset:">${t("恢复默认")}</button></div>` : ""}`;

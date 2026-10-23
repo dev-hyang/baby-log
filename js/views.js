@@ -95,19 +95,26 @@ function heroHTML(){
   const keys = heroKeys(), n = keys.length, cur = Math.min(S.heroIdx || 0, n - 1);
   const slide = (k, i, clone) => `<section class="hero" ${clone ? 'aria-hidden="true"' : `aria-label="${i + 1}/${n}"`}><div class="moon"></div>
     <button class="gear" data-tab="herocfg" data-slot="${i}" aria-label="${t("编辑顶部卡片")}" ${clone ? 'tabindex="-1"' : ""}>⚙</button>${bigClock(k)}</section>`;
-  // with more than one card the track loops: a copy of the last card sits before the first and a copy of the first after the last,
-  // and the track jumps (unseen) from a copy to the real card once the swipe settles (see js/app.js)
-  const slides = keys.map((k, i) => slide(k, i)).join(""), loop = n > 1;
+  const loop = n > 1, COPIES = 5; // five copies of the list side by side; the middle one is the real one (see heroSettle in js/app.js)
+  const slides = loop ? Array.from({ length: COPIES }, (_, c) => keys.map((k, i) => slide(k, i, c !== 2)).join("")).join("") : slide(keys[0], 0);
   const nav = (d, label, ch) => `<button class="heronav ${d < 0 ? "prev" : "next"}" data-heronav="${d}" aria-label="${label}">${ch}</button>`;
-  return `<div class="herobox"><div class="heroview"><div class="herotrack" ${loop ? 'data-loop="1"' : ""} tabindex="0" role="region" aria-roledescription="carousel" aria-label="${t("顶部大计时")}">${loop ? slide(keys[n - 1], n - 1, true) : ""}${slides}${loop ? slide(keys[0], 0, true) : ""}</div>
+  return `<div class="herobox"><div class="heroview"><div class="herotrack" ${loop ? 'data-loop="1"' : ""} tabindex="0" role="region" aria-roledescription="carousel" aria-label="${t("顶部大计时")}">${slides}</div>
     ${loop ? nav(-1, t("上一张"), "‹") + nav(1, t("下一张"), "›") : ""}</div>
     ${loop ? `<div class="herodots">${keys.map((k, i) => `<button data-heropage="${i}" aria-label="${i + 1}/${n}" aria-current="${i === cur}"></button>`).join("")}</div>` : ""}</div>`;
 }
 // the cards sit side by side and snap; Today re-renders after every save, so put the track back on the card being looked at
-const HERO_GAP = 10;
+const HERO_GAP = 10, heroCount = tr => tr.dataset.loop ? tr.children.length / 5 : tr.children.length;
+const heroPage = tr => Math.round(tr.scrollLeft / (tr.clientWidth + HERO_GAP));
+// a looping track holds five copies of the card list and rests on the middle one; when it has wandered towards either end,
+// jump (unseen) to the same card in the middle copy, so the swiping never runs out
+function heroSettle(tr){
+  if (tr._down || !tr.dataset.loop) return;
+  const n = heroCount(tr), p = heroPage(tr); if (p >= n && p < 4 * n) return; // at least a list's length of room on both sides
+  tr.style.scrollSnapType = "none"; tr.scrollLeft = (2 * n + (((p % n) + n) % n)) * (tr.clientWidth + HERO_GAP); requestAnimationFrame(() => { tr.style.scrollSnapType = ""; });
+}
 function heroRestore(){
   const tr = document.querySelector(".herotrack"); if (!tr) return;
-  const page = Math.min(S.heroIdx || 0, tr.children.length - 1) + (tr.dataset.loop ? 1 : 0); // a looping track starts with a copy in front
+  const n = heroCount(tr), page = Math.min(S.heroIdx || 0, n - 1) + (tr.dataset.loop ? 2 * n : 0); // a looping track rests on its middle copy
   if (page) tr.scrollLeft = page * (tr.clientWidth + HERO_GAP);
 }
 // one card: how long since the last record (with its status and the record button on the same line), or the routine's progress
@@ -451,4 +458,4 @@ function viewLearn(){
     ${["丁香妈妈", "崔玉涛育学园", "年糕妈妈"].map(n => `<div class="medrow"><span>${n}</span><button class="chip" data-copy="${n}">${t("复制名称")}</button></div>`).join("")}</div>`;
 }
 
-export { renderStatus, render, toggleKids, mrow, SUB, heroHTML, heroRestore, bigDur, viewToday, medRow, entryRow, viewLog, viewList, lineChart, sleepBarcode, viewMom, viewGrow, milestonesHTML, foodsHTML, vaxHTML, viewLearn };
+export { heroSettle, heroPage, renderStatus, render, toggleKids, mrow, SUB, heroHTML, heroRestore, bigDur, viewToday, medRow, entryRow, viewLog, viewList, lineChart, sleepBarcode, viewMom, viewGrow, milestonesHTML, foodsHTML, vaxHTML, viewLearn };

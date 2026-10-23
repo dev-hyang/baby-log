@@ -11,7 +11,7 @@ import { sbAuth, sbCreate, sbJoin, sbLogout, sbMember, sbResetCode, syncNow, vis
 import { UNIT_KEY, isUS } from "./units.js";
 import { $, D, H, dayKey, dur, fromInput, newId, startOfDay, toast } from "./util.js";
 import { openPrint } from "./print.js";
-import { render, toggleKids } from "./views.js";
+import { heroPage, heroSettle, render, toggleKids } from "./views.js";
 
 // a page reached from 我的 (settings, about …), from anywhere: the kids menu, the grow page, a form
 function goTab(tab){ closeSheet(); S.tab = tab; render(); window.scrollTo(0, 0); }
@@ -69,13 +69,17 @@ document.addEventListener("click", async ev => {
     (S.settings.pottyMin ||= {})[S.childId] = +t0.dataset.pottymin;
     await saveSettings(); const again = document.querySelector(`[data-pottymin="${t0.dataset.pottymin}"]`); again && again.focus(); return;
   }
-  if (t0.dataset.heronav) { // arrows beside the top cards (mouse users): previous / next card
+  if (t0.dataset.heronav) { // arrows beside the top cards (mouse users): previous / next card, round and round
     const tr = document.querySelector(".herotrack"); if (!tr) return;
-    const i = Math.max(0, Math.min(tr.children.length - 1, Math.round(tr.scrollLeft / (tr.clientWidth + 10)) + +t0.dataset.heronav));
+    heroSettle(tr); // clicking fast can carry the track towards its end: bring it back to the middle first
+    const i = Math.max(0, Math.min(tr.children.length - 1, heroPage(tr) + +t0.dataset.heronav));
     tr.scrollTo({ left: i * (tr.clientWidth + 10), behavior: "smooth" }); return;
   }
-  if (t0.dataset.heropage !== undefined) { // dots under the top cards
-    const tr = document.querySelector(".herotrack"); tr && tr.scrollTo({ left: (+t0.dataset.heropage + (tr.dataset.loop ? 1 : 0)) * (tr.clientWidth + 10), behavior: "smooth" }); return;
+  if (t0.dataset.heropage !== undefined) { // dots under the top cards: to that card, by the shortest way round
+    const tr = document.querySelector(".herotrack"); if (!tr) return;
+    heroSettle(tr); const n = tr.dataset.loop ? tr.children.length / 5 : tr.children.length, p = heroPage(tr), i = +t0.dataset.heropage;
+    const base = p - (((p % n) + n) % n) + i, to = [base - n, base, base + n].filter(x => x >= 0 && x < tr.children.length).sort((a, b) => Math.abs(a - p) - Math.abs(b - p))[0];
+    tr.scrollTo({ left: to * (tr.clientWidth + 10), behavior: "smooth" }); return;
   }
   if (t0.dataset.hc) { // top-card editor: "op:arg"
     const v = t0.dataset.hc, c = v.indexOf(":"), op = c < 0 ? v : v.slice(0, c), arg = c < 0 ? "" : v.slice(c + 1);
@@ -221,15 +225,13 @@ document.addEventListener("input", ev => {
 });
 
 /* ---- top-card list: drag a pill up or down by its ⋮⋮ grip to reorder (mouse: anywhere on the pill); swipe a pill left to reveal 移除 ---- */
-const SWIPE_W = 96; // matches .hcdel in app.css
+const SWIPE_GO = 0.4; // swiped this far across (as a share of the pill) and let go, the card is removed
 let drag = null, dragged = false;
-const closeSwipes = except => document.querySelectorAll(".hcrow.open").forEach(r => { if (r !== except) r.classList.remove("open"); });
 document.addEventListener("pointerdown", ev => {
   const pill = ev.target.closest(".hcpill"); if (!pill || ev.button > 0 || ev.target.closest(".hcedit")) return;
   const row = pill.parentElement, rows = [...row.parentElement.children];
-  closeSwipes(row);
   drag = { pill, row, rows, mode: null, touch: ev.pointerType !== "mouse", grip: !!ev.target.closest(".grip"), canSwipe: rows.length > 1, from: rows.indexOf(row), to: rows.indexOf(row), x0: ev.clientX, y0: ev.clientY, id: ev.pointerId,
-    base: row.classList.contains("open") ? -SWIPE_W : 0, h: row.offsetHeight, mids: rows.map(r => r.offsetTop + r.offsetHeight / 2), top: row.offsetTop, off0: ev.clientY - row.parentElement.getBoundingClientRect().top, x: 0 };
+    h: row.offsetHeight, mids: rows.map(r => r.offsetTop + r.offsetHeight / 2), top: row.offsetTop, off0: ev.clientY - row.parentElement.getBoundingClientRect().top, x: 0 };
 });
 document.addEventListener("pointermove", ev => {
   if (!drag || ev.pointerId !== drag.id) return;
@@ -242,7 +244,9 @@ document.addEventListener("pointermove", ev => {
     drag.row.classList.add(drag.mode === "reorder" ? "dragging" : "swiping");
     try { drag.pill.setPointerCapture(drag.id); } catch (e) { /* capture is only a convenience */ }
   }
-  if (drag.mode === "swipe") { drag.x = Math.max(-SWIPE_W, Math.min(0, drag.base + dx)); drag.pill.style.transform = `translateX(${drag.x}px)`; return; }
+  if (drag.mode === "swipe") { // the pill follows the finger; the red 移除 behind it says "let go to remove" once it is far enough
+    const w = drag.pill.offsetWidth; drag.x = Math.max(-w, Math.min(0, dx)); drag.pill.style.transform = `translateX(${drag.x}px)`; drag.go = drag.x < -w * SWIPE_GO; drag.row.classList.toggle("ready", drag.go); return;
+  }
   const lo = -drag.top, hi = drag.mids.at(-1) + drag.rows.at(-1).offsetHeight / 2 - drag.top - drag.h, y = Math.max(lo, Math.min(hi, dy));
   drag.row.style.transform = `translateY(${y}px)`;
   // the pointer decides the slot: past a lower neighbour's middle it moves down, above an upper one's middle it moves up
@@ -255,10 +259,15 @@ async function endDrag(ev, cancel){
   if (!drag || ev.pointerId !== drag.id) return;
   const d = drag; drag = null;
   d.rows.forEach(r => { r.style.transform = ""; r.classList.remove("dragging"); });
-  d.row.classList.remove("swiping"); d.pill.style.transform = "";
+  d.row.classList.remove("swiping"); if (!(d.mode === "swipe" && d.go && !cancel)) d.pill.style.transform = "";
   if (!d.mode) return;
   dragged = true; setTimeout(() => { dragged = false; }, 0); // the click that follows the release must not select the pill
-  if (d.mode === "swipe") { d.row.classList.toggle("open", !cancel && d.x < -SWIPE_W / 2); return; }
+  if (d.mode === "swipe") {
+    d.row.classList.remove("ready");
+    if (cancel || !d.go) return; // not far enough: the pill springs back
+    d.row.classList.add("leaving"); d.pill.style.transform = `translateX(${-d.pill.offsetWidth}px)`; await new Promise(r => setTimeout(r, 180));
+    const ks = heroKeys().filter((_, i) => i !== d.from); (S.settings.heroPref ||= {})[S.childId] = ks; S.heroEdit = 0; await saveSettings(); return;
+  }
   if (cancel || d.to === d.from) return;
   const ks = heroKeys().slice(); const [k] = ks.splice(d.from, 1); ks.splice(d.to, 0, k);
   (S.settings.heroPref ||= {})[S.childId] = ks; S.heroEdit = d.to; await saveSettings();
