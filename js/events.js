@@ -1,3 +1,4 @@
+import { initSwipeRows } from "./swipe-rows.js";
 import { ask } from "./ask.js";
 import { last } from "./derived.js";
 import { setLang, t } from "./i18n.js";
@@ -293,5 +294,12 @@ document.addEventListener("keydown", async ev => {
   const again = document.querySelector(`[data-hc="sel:${ev.key === "Delete" ? 0 : S.heroEdit}"]`); again && again.focus();
 });
 
+
+// 行记录左滑删除（js/swipe-rows.js）：记录行没有自己的删除按钮，这里替它删（同样先确认）
+initSwipeRows({ del: () => t("删除"), release: () => t("松手删除"), onDelete: async (el) => {
+  const id = el.dataset.edit; if (!id) return false;
+  if (!confirm(t("删除这条记录？"))) return false;
+  await removeEntry(id); toast(t("已删除"));
+} });
 // language chosen from the header switcher (shared component)
 document.addEventListener("eco-set-lang", e => { readSettingsInputs(); setLang(e.detail); render(); });
