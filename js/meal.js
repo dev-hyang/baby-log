@@ -59,7 +59,7 @@ function sortMealRows(rows){
 // a column header you can click; aria-sort tells screen readers which one is sorted and which way
 const sortTh = (k, label, attrs = "") => {
   const on = (S.mealSort || {}).k === k, dir = on ? S.mealSort.dir : 0;
-  return `<th ${attrs} aria-sort="${on ? (dir > 0 ? "ascending" : "descending") : "none"}"><button class="sortbtn" data-mealsort="${k}">${label}<span class="sortmark" aria-hidden="true">${on ? (dir > 0 ? "▲" : "▼") : "↕"}</span></button></th>`;
+  return `<th ${attrs} aria-sort="${on ? (dir > 0 ? "ascending" : "descending") : "none"}"><button class="sortbtn" data-mealsort="${k}"><span class="sortlbl">${label}</span><span class="sortmark" aria-hidden="true">${on ? (dir > 0 ? "▲" : "▼") : "↕"}</span></button></th>`;
 };
 function viewMeal(){
   const d0 = S.mealDay ?? startOfDay(Date.now());
