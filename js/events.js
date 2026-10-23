@@ -75,7 +75,7 @@ document.addEventListener("click", async ev => {
     tr.scrollTo({ left: i * (tr.clientWidth + 10), behavior: "smooth" }); return;
   }
   if (t0.dataset.heropage !== undefined) { // dots under the top cards
-    const tr = document.querySelector(".herotrack"); tr && tr.scrollTo({ left: +t0.dataset.heropage * (tr.clientWidth + 10), behavior: "smooth" }); return;
+    const tr = document.querySelector(".herotrack"); tr && tr.scrollTo({ left: (+t0.dataset.heropage + (tr.dataset.loop ? 1 : 0)) * (tr.clientWidth + 10), behavior: "smooth" }); return;
   }
   if (t0.dataset.hc) { // top-card editor: "op:arg"
     const v = t0.dataset.hc, c = v.indexOf(":"), op = c < 0 ? v : v.slice(0, c), arg = c < 0 ? "" : v.slice(c + 1);
@@ -220,21 +220,32 @@ document.addEventListener("input", ev => {
   if (ev.target.type === "range") { const o = ev.target.parentElement.querySelector("output"); if (o) o.textContent = ev.target.value; }
 });
 
-/* ---- top-card list: drag a pill up or down to reorder (mouse: the whole pill; touch: the ⋮⋮ grip, so the page can still scroll) ---- */
+/* ---- top-card list: drag a pill up or down by its ⋮⋮ grip to reorder (mouse: anywhere on the pill); swipe a pill left to reveal 移除 ---- */
+const SWIPE_W = 96; // matches .hcdel in app.css
 let drag = null, dragged = false;
+const closeSwipes = except => document.querySelectorAll(".hcrow.open").forEach(r => { if (r !== except) r.classList.remove("open"); });
 document.addEventListener("pointerdown", ev => {
-  const pill = ev.target.closest(".hcpill"); if (!pill || ev.button > 0) return;
-  if (ev.pointerType !== "mouse" && !ev.target.closest(".grip")) return;
+  const pill = ev.target.closest(".hcpill"); if (!pill || ev.button > 0 || ev.target.closest(".hcedit")) return;
   const row = pill.parentElement, rows = [...row.parentElement.children];
-  drag = { pill, row, rows, from: rows.indexOf(row), to: rows.indexOf(row), y0: ev.clientY, id: ev.pointerId, moved: false, h: row.offsetHeight, mids: rows.map(r => r.offsetTop + r.offsetHeight / 2), top: row.offsetTop, off0: ev.clientY - row.parentElement.getBoundingClientRect().top };
+  closeSwipes(row);
+  drag = { pill, row, rows, mode: null, touch: ev.pointerType !== "mouse", grip: !!ev.target.closest(".grip"), canSwipe: rows.length > 1, from: rows.indexOf(row), to: rows.indexOf(row), x0: ev.clientX, y0: ev.clientY, id: ev.pointerId,
+    base: row.classList.contains("open") ? -SWIPE_W : 0, h: row.offsetHeight, mids: rows.map(r => r.offsetTop + r.offsetHeight / 2), top: row.offsetTop, off0: ev.clientY - row.parentElement.getBoundingClientRect().top, x: 0 };
 });
 document.addEventListener("pointermove", ev => {
   if (!drag || ev.pointerId !== drag.id) return;
-  const dy = ev.clientY - drag.y0;
-  if (!drag.moved) { if (Math.abs(dy) < 5) return; drag.moved = true; drag.row.classList.add("dragging"); try { drag.pill.setPointerCapture(drag.id); } catch (e) { /* capture is only a convenience */ } }
+  const dx = ev.clientX - drag.x0, dy = ev.clientY - drag.y0;
+  if (!drag.mode) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 6) return;
+    // up/down reorders (touch: only from the grip, so the page still scrolls); left/right swipes the pill (not from the grip)
+    drag.mode = Math.abs(dy) > Math.abs(dx) ? (!drag.touch || drag.grip ? "reorder" : "none") : (!drag.grip && drag.canSwipe ? "swipe" : "none");
+    if (drag.mode === "none") { drag = null; return; }
+    drag.row.classList.add(drag.mode === "reorder" ? "dragging" : "swiping");
+    try { drag.pill.setPointerCapture(drag.id); } catch (e) { /* capture is only a convenience */ }
+  }
+  if (drag.mode === "swipe") { drag.x = Math.max(-SWIPE_W, Math.min(0, drag.base + dx)); drag.pill.style.transform = `translateX(${drag.x}px)`; return; }
   const lo = -drag.top, hi = drag.mids.at(-1) + drag.rows.at(-1).offsetHeight / 2 - drag.top - drag.h, y = Math.max(lo, Math.min(hi, dy));
   drag.row.style.transform = `translateY(${y}px)`;
-  // the pointer decides the slot (a selected row is taller than its pill): past a lower neighbour's middle it moves down, above an upper one's middle it moves up
+  // the pointer decides the slot: past a lower neighbour's middle it moves down, above an upper one's middle it moves up
   const centre = drag.off0 + dy;
   const below = drag.mids.filter((m, i) => i > drag.from && centre > m).length, above = drag.mids.filter((m, i) => i < drag.from && centre < m).length;
   const to = below ? drag.from + below : drag.from - above; drag.to = to;
@@ -244,8 +255,10 @@ async function endDrag(ev, cancel){
   if (!drag || ev.pointerId !== drag.id) return;
   const d = drag; drag = null;
   d.rows.forEach(r => { r.style.transform = ""; r.classList.remove("dragging"); });
-  if (!d.moved) return;
+  d.row.classList.remove("swiping"); d.pill.style.transform = "";
+  if (!d.mode) return;
   dragged = true; setTimeout(() => { dragged = false; }, 0); // the click that follows the release must not select the pill
+  if (d.mode === "swipe") { d.row.classList.toggle("open", !cancel && d.x < -SWIPE_W / 2); return; }
   if (cancel || d.to === d.from) return;
   const ks = heroKeys().slice(); const [k] = ks.splice(d.from, 1); ks.splice(d.to, 0, k);
   (S.settings.heroPref ||= {})[S.childId] = ks; S.heroEdit = d.to; await saveSettings();
@@ -253,6 +266,16 @@ async function endDrag(ev, cancel){
 document.addEventListener("pointerup", ev => endDrag(ev, false));
 document.addEventListener("pointercancel", ev => endDrag(ev, true));
 document.addEventListener("click", ev => { if (dragged) { ev.stopPropagation(); ev.preventDefault(); } }, true);
+// keyboard: ↑ ↓ move the focused card, Delete removes it
+document.addEventListener("keydown", async ev => {
+  const b = ev.target.closest && ev.target.closest(".hclab"); if (!b || !["ArrowUp", "ArrowDown", "Delete"].includes(ev.key)) return;
+  ev.preventDefault();
+  const keys = heroKeys().slice(), i = +b.dataset.hc.split(":")[1], hp = S.settings.heroPref ||= {};
+  if (ev.key === "Delete") { if (keys.length < 2) return; keys.splice(i, 1); S.heroEdit = 0; }
+  else { const j = i + (ev.key === "ArrowUp" ? -1 : 1); if (j < 0 || j >= keys.length) return; [keys[i], keys[j]] = [keys[j], keys[i]]; S.heroEdit = j; }
+  hp[S.childId] = keys; await saveSettings();
+  const again = document.querySelector(`[data-hc="sel:${ev.key === "Delete" ? 0 : S.heroEdit}"]`); again && again.focus();
+});
 
 // language chosen from the header switcher (shared component)
 document.addEventListener("eco-set-lang", e => { readSettingsInputs(); setLang(e.detail); render(); });

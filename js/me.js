@@ -65,12 +65,10 @@ function heroCfgHTML(){
   const lab = k => esc(t(clockLabel(k)));
   const avail = [...HERO_BUILTIN, ...cust.map(x => x.id)].filter(k => k !== "routine" || hasRoutine);
   const chip = (op, k, on) => `<button class="chip" data-hc="${op}:${esc(k)}" aria-pressed="${on}">${lab(k)}</button>`;
-  // one long pill per card: drag it (or its grip, on touch) to reorder; tap to select, which opens its actions below it
-  const rows = keys.map((k, i) => `<div class="hcrow"><div class="hcpill" aria-current="${i === slot}"><span class="grip" aria-hidden="true">⋮⋮</span>
-      <button class="hclab" data-hc="sel:${i}" aria-expanded="${i === slot}"><b class="num">${i + 1}</b><span>${lab(k)}</span></button></div>
-      ${i === slot ? `<div class="hcact"><button class="chip" data-hc="up:${i}" ${i ? "" : "disabled"} aria-label="${t("上移")}">↑ ${t("上移")}</button><button class="chip" data-hc="down:${i}" ${i < keys.length - 1 ? "" : "disabled"} aria-label="${t("下移")}">↓ ${t("下移")}</button>
-      ${cust.some(x => x.id === k) ? `<button class="chip" data-hc="edit:${esc(k)}">${t("编辑")}</button>` : ""}
-      <button class="chip danger" data-hc="del:${i}" ${keys.length > 1 ? "" : "disabled"}>${t("移除")}</button></div>` : ""}</div>`).join("");
+  // one long pill per card: drag its ⋮⋮ (right end) up or down to reorder, swipe it left to reveal 移除; a tap picks it for the "what does it count" chips above
+  const rows = keys.map((k, i) => `<div class="hcrow">${keys.length > 1 ? `<button class="hcdel" data-hc="del:${i}" aria-label="${t("移除")} ${lab(k)}">${t("移除")}</button>` : ""}<div class="hcpill" aria-current="${i === slot}">
+      <button class="hclab" data-hc="sel:${i}" aria-pressed="${i === slot}"><b class="num">${i + 1}</b><span>${lab(k)}</span></button>
+      ${cust.some(x => x.id === k) ? `<button class="hcedit" data-hc="edit:${esc(k)}" aria-label="${t("编辑")}">✎</button>` : ""}<span class="grip" aria-hidden="true">⋮⋮</span></div></div>`).join("");
   const types = Object.keys(TYPES).filter(k => isKidType(k) && (k !== "faith" || faithOn()));
   const kinds = d && TYPES[d.type] ? ((TYPES[d.type].fields.find(f => f.k === "kind" && Array.isArray(f.opts)) || {}).opts || []) : [];
   const form = d ? `<div class="panel" style="margin-top:10px"><div class="field"><label for="hcName">${t("卡片名称（留空自动命名）")}</label><input id="hcName" type="text" maxlength="30" value="${esc(d.name)}" placeholder="${esc(t("例如：距上次洗澡"))}"></div>
@@ -80,7 +78,7 @@ function heroCfgHTML(){
   return `<h2>${t("顶部大计时")} <span class="small muted" style="font-weight:400">${esc(childName())}</span></h2>
   <p class="small muted">${t("今天页最上面的卡片可以左右滑动，每张数一件事。下面可以改每张数什么、调顺序、增删，也能自己做一张。")}</p>
   <h2>${t("第 {n} 张卡数什么", { n: slot + 1 })}</h2><div class="panel"><div class="chips" role="group" aria-label="${t("第 {n} 张卡数什么", { n: slot + 1 })}">${avail.map(k => chip("set", k, keys[slot] === k)).join("")}</div></div>
-  <h2>${t("全部卡片")}</h2><div class="panel"><p class="small muted" style="margin:0 0 8px">${t("按住上下拖动调顺序（触屏请拖左边的 ⋮⋮）；点一下选中，再选移动或移除。")}</p><div class="hclist">${rows}</div></div>
+  <h2>${t("全部卡片")}</h2><div class="panel"><p class="small muted" style="margin:0 0 8px">${t("拖右边的 ⋮⋮ 上下调顺序；向左滑动胶囊，出现「移除」；点一下胶囊，在上面选它数什么。")}</p><div class="hclist">${rows}</div></div>
   <h2>${t("添加")}</h2><div class="panel"><div class="chips">${avail.filter(k => !keys.includes(k)).map(k => chip("add", k, false)).join("")}<button class="chip" data-hc="new:">+ ${t("自定义卡片")}</button></div>${form}</div>
   ${keys.includes("potty") ? `<h2>${t("如厕提醒间隔（分钟）")}</h2><div class="panel"><div class="chips">${[60, 90, 120, 180].map(m => `<button class="chip" data-pottymin="${m}" aria-pressed="${pottyMin() === m}">${m}</button>`).join("")}</div></div>` : ""}
   ${(S.settings.heroPref || {})[S.childId] ? `<div class="btns"><button class="btn" data-hc="reset:">${t("恢复默认")}</button></div>` : ""}`;

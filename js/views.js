@@ -93,18 +93,22 @@ function heroHTML(){
     <div class="act"><button data-act="wake" data-id="${sl.id}">${t("醒了，记录结束")}</button></div></section></div>`;
   if (!activeCards("stats").includes("hero")) return ""; // the child's card settings turned the clock off
   const keys = heroKeys(), n = keys.length, cur = Math.min(S.heroIdx || 0, n - 1);
-  const slide = (k, i) => `<section class="hero" aria-label="${i + 1}/${n}"><div class="moon"></div>
-    <button class="gear" data-tab="herocfg" data-slot="${i}" aria-label="${t("编辑顶部卡片")}">⚙</button>${bigClock(k)}</section>`;
-  const nav = (d, label, ch) => `<button class="heronav ${d < 0 ? "prev" : "next"}" data-heronav="${d}" aria-label="${label}"${(d < 0 ? cur === 0 : cur === n - 1) ? " disabled" : ""}>${ch}</button>`;
-  return `<div class="herobox"><div class="heroview"><div class="herotrack" tabindex="0" role="region" aria-roledescription="carousel" aria-label="${t("顶部大计时")}">${keys.map(slide).join("")}</div>
-    ${n > 1 ? nav(-1, t("上一张"), "‹") + nav(1, t("下一张"), "›") : ""}</div>
-    ${n > 1 ? `<div class="herodots">${keys.map((k, i) => `<button data-heropage="${i}" aria-label="${i + 1}/${n}" aria-current="${i === cur}"></button>`).join("")}</div>` : ""}</div>`;
+  const slide = (k, i, clone) => `<section class="hero" ${clone ? 'aria-hidden="true"' : `aria-label="${i + 1}/${n}"`}><div class="moon"></div>
+    <button class="gear" data-tab="herocfg" data-slot="${i}" aria-label="${t("编辑顶部卡片")}" ${clone ? 'tabindex="-1"' : ""}>⚙</button>${bigClock(k)}</section>`;
+  // with more than one card the track loops: a copy of the last card sits before the first and a copy of the first after the last,
+  // and the track jumps (unseen) from a copy to the real card once the swipe settles (see js/app.js)
+  const slides = keys.map((k, i) => slide(k, i)).join(""), loop = n > 1;
+  const nav = (d, label, ch) => `<button class="heronav ${d < 0 ? "prev" : "next"}" data-heronav="${d}" aria-label="${label}">${ch}</button>`;
+  return `<div class="herobox"><div class="heroview"><div class="herotrack" ${loop ? 'data-loop="1"' : ""} tabindex="0" role="region" aria-roledescription="carousel" aria-label="${t("顶部大计时")}">${loop ? slide(keys[n - 1], n - 1, true) : ""}${slides}${loop ? slide(keys[0], 0, true) : ""}</div>
+    ${loop ? nav(-1, t("上一张"), "‹") + nav(1, t("下一张"), "›") : ""}</div>
+    ${loop ? `<div class="herodots">${keys.map((k, i) => `<button data-heropage="${i}" aria-label="${i + 1}/${n}" aria-current="${i === cur}"></button>`).join("")}</div>` : ""}</div>`;
 }
 // the cards sit side by side and snap; Today re-renders after every save, so put the track back on the card being looked at
 const HERO_GAP = 10;
 function heroRestore(){
-  const tr = document.querySelector(".herotrack");
-  if (tr && S.heroIdx) tr.scrollLeft = Math.min(S.heroIdx, tr.children.length - 1) * (tr.clientWidth + HERO_GAP);
+  const tr = document.querySelector(".herotrack"); if (!tr) return;
+  const page = Math.min(S.heroIdx || 0, tr.children.length - 1) + (tr.dataset.loop ? 1 : 0); // a looping track starts with a copy in front
+  if (page) tr.scrollLeft = page * (tr.clientWidth + HERO_GAP);
 }
 // one card: how long since the last record (with its status and the record button on the same line), or the routine's progress
 function bigClock(k){
@@ -142,10 +146,10 @@ function viewToday(){
   ${heroHTML()}
   ${alerts.map(a => `<div class="alert red" role="alert"><b>${t("需要留意")}</b> · ${hm(a.e.ts)} ${esc(a.t)}</div>`).join("")}
   ${nc ? `<div class="alert info">${checkup}<button class="chip" data-tab="grow-checkups" style="margin-left:6px">${t("查看全部")}</button></div>` : ""}
-  ${routineHTML()}
   <div class="quick" role="group" aria-label="${t("快速记录")}">${quickHTML()}</div>
   <div style="text-align:right"><button class="chip" data-tab="cards">${t("⚙ 管理卡片")}</button></div>
   ${stats ? `<h2>${t("最近 24 小时")}</h2><div class="stats">${stats}</div>${S.mode === "family" && SB.vis && memberNames().length > 1 ? `<p class="small muted" style="margin:6px 0 0">${t("统计只包含你能看到的记录。")}</p>` : ""}` : ""}
+  ${routineHTML()}
 
   ${meds.length ? `<h2>${t("妈妈用药")}</h2><div class="panel">${meds.map(medRow).join("")}
      <p class="small muted" style="margin-top:8px">${t("间隔来自你在设置里填写的医嘱。没有填写的只显示距上次服药多久。")}</p></div>` : ""}

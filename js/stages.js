@@ -58,22 +58,22 @@ const STAGE = {
                metrics: ["sleep", "longest", "ml", "nurse", "feeds", "food", "wet", "poop"] },
   toddler:   { heroes: ["potty", "meal", "routine", "wake"],
                quick: ["meal", "milk", "potty", "diaper", "sleep", "speech", "activity", "health", "prayer", "scripture"],
-               stats: ["hero", "meals", "mealq", "milk", "potty", "diapers", "outdoorRead", "sleep"],
+               stats: ["hero", "meals", "mealq", "milk", "potty", "diapers", "outdoorRead", "routine", "sleep"],
                types: ["food", "feed", "potty", "routine", "diaper", "sleep", "speech", "activity", "milestone", "behavior", "baby", "bmed", "vax", "faith"],
                metrics: ["sleep", "longest", "food", "mealMin", "routine", "ml", "potty", "outdoor", "read", "words", "tantrum"] },
   preschool: { heroes: ["routine", "meal", "potty", "outdoor"],
                quick: ["meal", "read", "outdoor", "school", "behavior", "potty", "sleep", "health", "prayer", "scripture"],
-               stats: ["hero", "meals", "mealq", "read", "outdoor", "screen", "upset", "sleep", "faith"],
+               stats: ["hero", "meals", "mealq", "read", "outdoor", "screen", "upset", "routine", "sleep", "faith"],
                types: ["food", "routine", "activity", "behavior", "potty", "sleep", "speech", "milestone", "baby", "bmed", "vax", "feed", "diaper", "faith"],
                metrics: ["sleep", "routine", "read", "outdoor", "screen", "food", "mealMin", "tantrum", "words", "potty", "faith"] },
   school:    { heroes: ["companion", "routine", "outdoor"],
                quick: ["companion", "mood", "habit", "social", "read", "outdoor", "screen", "health", "worship", "prayer", "scripture", "serve"],
-               stats: ["hero", "companion", "mood", "habit", "social", "screen", "sleep", "faith"],
+               stats: ["hero", "companion", "mood", "habit", "social", "screen", "routine", "sleep", "faith"],
                types: ["companion", "mood", "habit", "routine", "social", "activity", "food", "sleep", "milestone", "baby", "bmed", "vax", "behavior", "speech", "faith"],
                metrics: ["companion", "mood", "habit", "routine", "social", "read", "outdoor", "screen", "sleep", "faith"] },
   teen:      { heroes: ["companion", "outdoor", "routine"],
                quick: ["companion", "mood", "habit", "social", "screen", "read", "outdoor", "health", "prayer", "scripture", "serve"],
-               stats: ["hero", "companion", "mood", "habit", "social", "screen", "outdoor", "faith"],
+               stats: ["hero", "companion", "mood", "habit", "social", "screen", "outdoor", "routine", "faith"],
                types: ["companion", "mood", "habit", "social", "activity", "sleep", "baby", "bmed", "vax", "milestone", "food", "faith"],
                metrics: ["companion", "mood", "habit", "social", "screen", "sleep", "outdoor", "read", "faith"] }
 };
@@ -132,9 +132,9 @@ function routineHTML(){
     ? `<button class="chip done" data-edit="${esc(e.id)}" aria-label="${esc(t("{step} 已完成，点一下修改", { step: t(s) }))}">✓ ${esc(t(s))} <small>${hm(e.ts)}${e.self ? "" : " · " + t("提醒后")}</small></button>`
     : `<button class="chip" data-step="${esc(s)}">${esc(t(s))}</button>`; };
   return `<div class="panel routine"><div class="phead"><h2>${t("今天的习惯")} <span class="small muted num" style="font-weight:400">${n}/${steps.length}</span></h2>
-    <button class="gear" data-tab="routinecfg" aria-label="${t("编辑习惯清单")}">⚙</button></div>
+    <span class="btns" style="margin:0;gap:6px"><button class="chip" data-add="routine">${t("＋ 补记")}</button><button class="gear" data-tab="routinecfg" aria-label="${t("编辑习惯清单")}">⚙</button></span></div>
   ${routineGroups().map(g => `<div class="rgroup ${groupTone(g.name)}">${g.name ? `<div class="lab"><span class="rgtag">${esc(t(g.name))}</span> <span class="num">${g.steps.filter(s => done.has(s)).length}/${g.steps.length}</span></div>` : ""}<div class="ms">${g.steps.map(chip).join("")}</div></div>`).join("")}
-  <p class="small muted" style="margin:8px 0 0">${t("做到一步点一下，默认记为自己做到的；要提醒了才做的，点已完成的那一步改。")}</p></div>`;
+  <p class="small muted" style="margin:8px 0 0">${t("做到一步点一下，默认记为自己做到的；要提醒了才做的，点已完成的那一步改。")} ${t("忘了记的，点「＋ 补记」选步骤和当时的时间。")}</p></div>`;
 }
 
 /* ---- cards: the stage's defaults, adjusted per child ----
@@ -242,6 +242,12 @@ const STATS = {
   faith:    { label: "敬拜 / 祷告", icon: "🕊", render: day => {
     const f = ofType(day, "faith");
     return stat(t("敬拜 / 祷告"), `${n(f.filter(e => e.kind === "家庭敬拜").length)} ${n(f.filter(e => e.kind === "祷告").length)}`);
+  } },
+  routine:  { label: "习惯完成", icon: "🌅", render: day => {
+    const steps = routineSteps(); if (!steps.length) return ""; // no routine set up: no tile
+    const done = new Map(); for (const e of ofType(day, "routine")) done.set(e.step, e);
+    const n = steps.filter(s => done.has(s)).length, own = steps.filter(s => done.has(s) && done.get(s).self).length;
+    return stat(t("习惯完成"), `${n}<small>/${steps.length}</small>`, n ? `<div class="ref">${t("自己做到 {n} 步", { n: own })}</div>` : "");
   } },
   sleep:    { label: "睡眠", icon: "🌙", render: () => stat(t("睡眠"), `${Math.round(sleepMsIn(Date.now() - D, Date.now()) / H * 10) / 10}<small>${t("小时")}</small>`) }
 };

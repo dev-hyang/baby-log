@@ -361,17 +361,6 @@ a{color:var(--slate)}
 .routine-ed .chips{margin-bottom:4px}
 /* top-card list: long pills, drag to reorder */
 .hclist{position:relative;display:flex;flex-direction:column;gap:8px}
-.hcrow{position:relative;transition:transform .15s}
-.hcrow.dragging{transition:none;z-index:5;filter:drop-shadow(0 6px 12px rgba(0,0,0,.25))}
-.hcpill{display:flex;align-items:center;min-height:48px;border:1px solid var(--line);border-radius:999px;background:var(--surface);user-select:none;-webkit-user-select:none;cursor:grab}
-.hcrow.dragging .hcpill{cursor:grabbing}
-.hcpill[aria-current="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
-.hcpill .grip{flex:none;width:40px;align-self:stretch;display:flex;align-items:center;justify-content:center;font-size:16px;letter-spacing:-3px;opacity:.55;touch-action:none;cursor:grab}
-.hcpill .hclab{all:unset;box-sizing:border-box;flex:1;min-width:0;display:flex;align-items:center;gap:10px;min-height:48px;padding-right:18px;cursor:pointer}
-.hcpill .hclab:focus-visible{outline:2px solid var(--slate);outline-offset:2px;border-radius:999px}
-.hcpill .hclab b{flex:none;opacity:.7}
-.hcpill .hclab span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hcact{display:flex;flex-wrap:wrap;gap:6px;padding:8px 6px 2px 40px}
 /* routine groups: one colour each (accent bar and tag; soft fill for ticked steps) */
 .rg-honey{--gc:#E9B83A;--gs:#FFF0BD}.rg-sage{--gc:#4F8D6A;--gs:#D6EBDF}.rg-slate{--gc:#45658F;--gs:#DCE6F5}
 .rg-rose{--gc:#B44B60;--gs:#F9DCE2}.rg-sky{--gc:#5F95CC;--gs:#D8E9F8}.rg-plum{--gc:#8A5FB0;--gs:#EADFF5}
@@ -383,3 +372,19 @@ a{color:var(--slate)}
 .rgroup .lab{margin-top:0}
 .rgroup .ms .chip{border-color:var(--gc)}
 .rgroup .ms .chip.done{background:var(--gs);border-color:var(--gc);color:var(--ink)}
+.hcrow{position:relative;overflow:hidden;border-radius:999px;transition:transform .15s}
+.hcrow.dragging{transition:none;z-index:5;overflow:visible;filter:drop-shadow(0 6px 12px rgba(0,0,0,.25))}
+.hcpill{position:relative;z-index:1;display:flex;align-items:center;min-height:48px;border:1px solid var(--line);border-radius:999px;background:var(--surface);user-select:none;-webkit-user-select:none;cursor:grab;touch-action:pan-y;transition:transform .18s}
+.hcrow.swiping .hcpill{transition:none}
+.hcrow.open .hcpill{transform:translateX(-96px)}
+.hcrow.dragging .hcpill{cursor:grabbing}
+.hcpill[aria-current="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.hcpill .grip{flex:none;width:44px;align-self:stretch;display:flex;align-items:center;justify-content:center;font-size:16px;letter-spacing:-3px;opacity:.6;touch-action:none;cursor:grab}
+.hcpill .hclab{all:unset;box-sizing:border-box;flex:1;min-width:0;display:flex;align-items:center;gap:10px;min-height:48px;padding-left:18px;cursor:pointer}
+.hcpill .hclab:focus-visible{outline:2px solid var(--slate);outline-offset:-4px;border-radius:999px}
+.hcpill .hclab b{flex:none;opacity:.7}
+.hcpill .hclab span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hcpill .hcedit{all:unset;flex:none;box-sizing:border-box;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:50%;cursor:pointer;opacity:.8}
+.hcpill .hcedit:hover,.hcpill .hcedit:focus-visible{background:rgba(127,127,127,.25);outline:none}
+.hcdel{position:absolute;right:0;top:0;bottom:0;width:96px;border:0;background:#B44B60;color:#fff;font-weight:700;cursor:pointer;border-radius:0 999px 999px 0}
+.panel.routine{margin-top:14px}
