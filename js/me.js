@@ -2,7 +2,7 @@ import { APPS, THIS_APP } from "./apps.js";
 import { LANGS, langPref, t } from "./i18n.js";
 import { HERO_BUILTIN, allCards, clockLabel, faithOn, hasCardPrefs, heroCustom, heroKeys, pottyMin } from "./stages.js";
 import { TYPES, typeLabel } from "./types.js";
-import { APP_VERSION, S, activeKids, kidCount, ageText, childName, ROUTINE_TPL, isKidType, routineGroups, routineSteps, routineToText, stageOf } from "./state.js";
+import { APP_VERSION, S, activeKids, kidCount, ageText, childName, groupTone, ROUTINE_TPL, isKidType, routineGroups, routineSteps, routineToText, stageOf } from "./state.js";
 import { familyHTML } from "./sync.js";
 import { isUS, unitPref } from "./units.js";
 import { $, esc } from "./util.js";
@@ -65,10 +65,12 @@ function heroCfgHTML(){
   const lab = k => esc(t(clockLabel(k)));
   const avail = [...HERO_BUILTIN, ...cust.map(x => x.id)].filter(k => k !== "routine" || hasRoutine);
   const chip = (op, k, on) => `<button class="chip" data-hc="${op}:${esc(k)}" aria-pressed="${on}">${lab(k)}</button>`;
-  const rows = keys.map((k, i) => `<div class="medrow"><span><b class="num">${i + 1}</b> ${lab(k)}</span><span class="chips" style="margin:0">
-      <button class="chip" data-hc="up:${i}" ${i ? "" : "disabled"} aria-label="${t("上移")}">↑</button><button class="chip" data-hc="down:${i}" ${i < keys.length - 1 ? "" : "disabled"} aria-label="${t("下移")}">↓</button>
+  // one long pill per card: drag it (or its grip, on touch) to reorder; tap to select, which opens its actions below it
+  const rows = keys.map((k, i) => `<div class="hcrow"><div class="hcpill" aria-current="${i === slot}"><span class="grip" aria-hidden="true">⋮⋮</span>
+      <button class="hclab" data-hc="sel:${i}" aria-expanded="${i === slot}"><b class="num">${i + 1}</b><span>${lab(k)}</span></button></div>
+      ${i === slot ? `<div class="hcact"><button class="chip" data-hc="up:${i}" ${i ? "" : "disabled"} aria-label="${t("上移")}">↑ ${t("上移")}</button><button class="chip" data-hc="down:${i}" ${i < keys.length - 1 ? "" : "disabled"} aria-label="${t("下移")}">↓ ${t("下移")}</button>
       ${cust.some(x => x.id === k) ? `<button class="chip" data-hc="edit:${esc(k)}">${t("编辑")}</button>` : ""}
-      <button class="chip danger" data-hc="del:${i}" ${keys.length > 1 ? "" : "disabled"}>${t("移除")}</button></span></div>`).join("");
+      <button class="chip danger" data-hc="del:${i}" ${keys.length > 1 ? "" : "disabled"}>${t("移除")}</button></div>` : ""}</div>`).join("");
   const types = Object.keys(TYPES).filter(k => isKidType(k) && (k !== "faith" || faithOn()));
   const kinds = d && TYPES[d.type] ? ((TYPES[d.type].fields.find(f => f.k === "kind" && Array.isArray(f.opts)) || {}).opts || []) : [];
   const form = d ? `<div class="panel" style="margin-top:10px"><div class="field"><label for="hcName">${t("卡片名称（留空自动命名）")}</label><input id="hcName" type="text" maxlength="30" value="${esc(d.name)}" placeholder="${esc(t("例如：距上次洗澡"))}"></div>
@@ -78,7 +80,7 @@ function heroCfgHTML(){
   return `<h2>${t("顶部大计时")} <span class="small muted" style="font-weight:400">${esc(childName())}</span></h2>
   <p class="small muted">${t("今天页最上面的卡片可以左右滑动，每张数一件事。下面可以改每张数什么、调顺序、增删，也能自己做一张。")}</p>
   <h2>${t("第 {n} 张卡数什么", { n: slot + 1 })}</h2><div class="panel"><div class="chips" role="group" aria-label="${t("第 {n} 张卡数什么", { n: slot + 1 })}">${avail.map(k => chip("set", k, keys[slot] === k)).join("")}</div></div>
-  <h2>${t("全部卡片")}</h2><div class="panel">${rows}</div>
+  <h2>${t("全部卡片")}</h2><div class="panel"><p class="small muted" style="margin:0 0 8px">${t("按住上下拖动调顺序（触屏请拖左边的 ⋮⋮）；点一下选中，再选移动或移除。")}</p><div class="hclist">${rows}</div></div>
   <h2>${t("添加")}</h2><div class="panel"><div class="chips">${avail.filter(k => !keys.includes(k)).map(k => chip("add", k, false)).join("")}<button class="chip" data-hc="new:">+ ${t("自定义卡片")}</button></div>${form}</div>
   ${keys.includes("potty") ? `<h2>${t("如厕提醒间隔（分钟）")}</h2><div class="panel"><div class="chips">${[60, 90, 120, 180].map(m => `<button class="chip" data-pottymin="${m}" aria-pressed="${pottyMin() === m}">${m}</button>`).join("")}</div></div>` : ""}
   ${(S.settings.heroPref || {})[S.childId] ? `<div class="btns"><button class="btn" data-hc="reset:">${t("恢复默认")}</button></div>` : ""}`;
@@ -88,6 +90,7 @@ function routineCfgHTML(){
   return `<h2>${t("习惯清单")} <span class="small muted" style="font-weight:400">${esc(childName())}</span></h2><div class="panel routine-ed">
     <p class="small muted" style="margin-top:0">${t("今天页的“今天的习惯”：分成晨间、午间、睡前等几组，一行一步，按先后顺序写；同名的步骤会自动加编号。改名或删除不影响已有记录。全部清空后保存，就不再显示。")}</p>
     <div class="lab">${t("加入模板")}</div><div class="chips">${ROUTINE_TPL.map((g, i) => `<button class="chip" data-tpl="${i}">+ ${esc(t(g.name))}</button>`).join("")}</div>
+    ${routineGroups().some(g => g.name) ? `<div class="lab">${t("当前分组颜色")}</div><div class="chips">${routineGroups().map(g => g.name ? `<span class="rgtag ${groupTone(g.name)}">${esc(t(g.name))}</span>` : "").join("")}</div>` : ""}
     <label class="lab" for="routineSteps">${t("每行一步；以 # 开头的一行是分组名")}</label><textarea id="routineSteps" rows="12">${esc(routineToText(routineGroups()))}</textarea>
     <div class="btns"><button class="btn primary" data-act="routine-save">${t("保存清单")}</button><button class="btn" data-act="routine-reset">${t("恢复默认清单")}</button></div></div>`;
 }

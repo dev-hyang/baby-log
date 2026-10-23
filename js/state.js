@@ -154,6 +154,9 @@ const ROUTINE_TPL = [
   { name: "晚间", steps: ["洗手", "吃晚饭", "收拾饭桌 3", "洗澡"] },
   { name: "睡前", steps: ["刷牙", "睡前故事", "摇篮曲", "睡前祷告", "晚安"] }
 ];
+// each group gets a colour: the four template groups keep theirs wherever they sit in the list, any other name is sky or plum, picked from the name so it keeps its colour
+const GROUP_TONES = ["rg-honey", "rg-sage", "rg-slate", "rg-rose", "rg-sky", "rg-plum"], GROUP_BY_NAME = { "晨间": 0, "午间": 1, "晚间": 2, "睡前": 3 };
+const groupTone = name => Object.hasOwn(GROUP_BY_NAME, name) ? GROUP_TONES[GROUP_BY_NAME[name]] : GROUP_TONES[4 + [...name].reduce((n, c) => n + c.charCodeAt(0), 0) % 2];
 const FAITH_STEPS = ["读经祷告", "睡前祷告"];
 // the groups to show: the child's own list ([] hides it), else a one-group default for toddlers to school-age
 function routineGroups(cid = S.childId){
@@ -180,6 +183,6 @@ function textToRoutine(txt){
   return gs;
 }
 
-const APP_VERSION = "2026-10-24.4";
+const APP_VERSION = "2026-10-24.5";
 
-export { cleanRoutine, faithOn, FAITH_STEPS, ROUTINE_TPL, routineGroups, routineSteps, routineToText, textToRoutine, LS_KEY, S, activeKids, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, matchCheckup, nextCheckup, APP_VERSION };
+export { cleanRoutine, groupTone, faithOn, FAITH_STEPS, ROUTINE_TPL, routineGroups, routineSteps, routineToText, textToRoutine, LS_KEY, S, activeKids, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, matchCheckup, nextCheckup, APP_VERSION };

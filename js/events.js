@@ -83,6 +83,7 @@ document.addEventListener("click", async ev => {
     const readName = () => { const el = $("#hcName"); if (el && S.hcDraft) S.hcDraft.name = el.value.trim().slice(0, 30); };
     let ks = null;
     if (op === "set") { ks = keys.slice(); const j = ks.indexOf(arg); if (j >= 0 && j !== slot) ks[j] = ks[slot]; ks[slot] = arg; }
+    else if (op === "sel") { S.heroEdit = +arg; render(); return; }
     else if (op === "add") { ks = [...keys, arg]; S.heroEdit = ks.length - 1; }
     else if (op === "up" || op === "down") { ks = keys.slice(); const i = +arg, j = i + (op === "up" ? -1 : 1); if (j >= 0 && j < ks.length) { [ks[i], ks[j]] = [ks[j], ks[i]]; if (S.heroEdit === i) S.heroEdit = j; } }
     else if (op === "del") { if (keys.length > 1) { ks = keys.filter((_, i) => i !== +arg); S.heroEdit = 0; } }
@@ -218,6 +219,40 @@ document.addEventListener("input", ev => {
   if (ev.target.id === "q") { S.q = ev.target.value; S.logFocus = true; render(); return; }
   if (ev.target.type === "range") { const o = ev.target.parentElement.querySelector("output"); if (o) o.textContent = ev.target.value; }
 });
+
+/* ---- top-card list: drag a pill up or down to reorder (mouse: the whole pill; touch: the ⋮⋮ grip, so the page can still scroll) ---- */
+let drag = null, dragged = false;
+document.addEventListener("pointerdown", ev => {
+  const pill = ev.target.closest(".hcpill"); if (!pill || ev.button > 0) return;
+  if (ev.pointerType !== "mouse" && !ev.target.closest(".grip")) return;
+  const row = pill.parentElement, rows = [...row.parentElement.children];
+  drag = { pill, row, rows, from: rows.indexOf(row), to: rows.indexOf(row), y0: ev.clientY, id: ev.pointerId, moved: false, h: row.offsetHeight, mids: rows.map(r => r.offsetTop + r.offsetHeight / 2), top: row.offsetTop, off0: ev.clientY - row.parentElement.getBoundingClientRect().top };
+});
+document.addEventListener("pointermove", ev => {
+  if (!drag || ev.pointerId !== drag.id) return;
+  const dy = ev.clientY - drag.y0;
+  if (!drag.moved) { if (Math.abs(dy) < 5) return; drag.moved = true; drag.row.classList.add("dragging"); try { drag.pill.setPointerCapture(drag.id); } catch (e) { /* capture is only a convenience */ } }
+  const lo = -drag.top, hi = drag.mids.at(-1) + drag.rows.at(-1).offsetHeight / 2 - drag.top - drag.h, y = Math.max(lo, Math.min(hi, dy));
+  drag.row.style.transform = `translateY(${y}px)`;
+  // the pointer decides the slot (a selected row is taller than its pill): past a lower neighbour's middle it moves down, above an upper one's middle it moves up
+  const centre = drag.off0 + dy;
+  const below = drag.mids.filter((m, i) => i > drag.from && centre > m).length, above = drag.mids.filter((m, i) => i < drag.from && centre < m).length;
+  const to = below ? drag.from + below : drag.from - above; drag.to = to;
+  drag.rows.forEach((r, i) => { if (i === drag.from) return; r.style.transform = i > drag.from && i <= to ? `translateY(${-(drag.h + 8)}px)` : i < drag.from && i >= to ? `translateY(${drag.h + 8}px)` : ""; });
+});
+async function endDrag(ev, cancel){
+  if (!drag || ev.pointerId !== drag.id) return;
+  const d = drag; drag = null;
+  d.rows.forEach(r => { r.style.transform = ""; r.classList.remove("dragging"); });
+  if (!d.moved) return;
+  dragged = true; setTimeout(() => { dragged = false; }, 0); // the click that follows the release must not select the pill
+  if (cancel || d.to === d.from) return;
+  const ks = heroKeys().slice(); const [k] = ks.splice(d.from, 1); ks.splice(d.to, 0, k);
+  (S.settings.heroPref ||= {})[S.childId] = ks; S.heroEdit = d.to; await saveSettings();
+}
+document.addEventListener("pointerup", ev => endDrag(ev, false));
+document.addEventListener("pointercancel", ev => endDrag(ev, true));
+document.addEventListener("click", ev => { if (dragged) { ev.stopPropagation(); ev.preventDefault(); } }, true);
 
 // language chosen from the header switcher (shared component)
 document.addEventListener("eco-set-lang", e => { readSettingsInputs(); setLang(e.detail); render(); });

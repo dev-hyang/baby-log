@@ -1104,6 +1104,8 @@ export default {
 "恢复默认": "Restore default",
 "今天页最上面那张卡。可以选一个或几个：第一个是大数字，其余在下面用小字显示（取消再点选可以换顺序）。": "The card at the top of Today. Pick one or several: the first is the big number and the rest show below in small text (deselect and select again to change the order).",
 "上移": "Move up",
+"按住上下拖动调顺序（触屏请拖左边的 ⋮⋮）；点一下选中，再选移动或移除。": "Hold and drag up or down to reorder (on touch, drag the ⋮⋮ on the left). Tap to select, then move or remove.",
+"当前分组颜色": "Group colours",
 "下移": "Move down",
 "编辑": "Edit",
 "添加": "Add",
