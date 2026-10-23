@@ -85,7 +85,7 @@ function heroCfgHTML(){
 }
 /* ---- the daily routine list: groups and steps ---- */
 function routineCfgHTML(){
-  return `<h2>${t("习惯清单")} <span class="small muted" style="font-weight:400">${esc(childName())}</span></h2><div class="panel">
+  return `<h2>${t("习惯清单")} <span class="small muted" style="font-weight:400">${esc(childName())}</span></h2><div class="panel routine-ed">
     <p class="small muted" style="margin-top:0">${t("今天页的“今天的习惯”：分成晨间、午间、睡前等几组，一行一步，按先后顺序写；同名的步骤会自动加编号。改名或删除不影响已有记录。全部清空后保存，就不再显示。")}</p>
     <div class="lab">${t("加入模板")}</div><div class="chips">${ROUTINE_TPL.map((g, i) => `<button class="chip" data-tpl="${i}">+ ${esc(t(g.name))}</button>`).join("")}</div>
     <label class="lab" for="routineSteps">${t("每行一步；以 # 开头的一行是分组名")}</label><textarea id="routineSteps" rows="12">${esc(routineToText(routineGroups()))}</textarea>

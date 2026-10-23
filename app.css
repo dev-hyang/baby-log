@@ -351,3 +351,11 @@ a{color:var(--slate)}
 .hdr-tools{display:inline-flex;align-items:center;gap:2px;margin:-4px -6px -2px 0}   /* language + app switcher: two 44px touch targets side by side, header stays compact */
 /* sub-page "‹ hub" chip stays pinned under the notch while the page scrolls, so the way back is always there */
 .backbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;margin:0 -16px 8px;padding:8px 16px;background:var(--bg);border-bottom:1px solid var(--line)}
+/* routine editor: the text box sits on a white panel, so give it its own tint, a firm border and a scrollbar that is always visible */
+.routine-ed .lab{display:block;font-size:14px;color:var(--muted);margin:12px 0 6px}
+.routine-ed textarea{box-sizing:border-box;width:100%;min-height:260px;max-height:60vh;resize:vertical;overflow-y:scroll;padding:12px 14px;font-size:16px;line-height:1.7;color:var(--ink);background:var(--bg);border:2px solid var(--muted);border-radius:var(--radius-sm);scrollbar-width:auto;scrollbar-color:var(--muted) var(--line)}
+.routine-ed textarea:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px var(--slate-soft)}
+.routine-ed textarea::-webkit-scrollbar{width:14px}
+.routine-ed textarea::-webkit-scrollbar-track{background:var(--line);border-radius:7px}
+.routine-ed textarea::-webkit-scrollbar-thumb{background:var(--muted);border-radius:7px;border:3px solid var(--line)}
+.routine-ed .chips{margin-bottom:4px}
