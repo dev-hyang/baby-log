@@ -1,3 +1,4 @@
+import { updateMiniBar } from "./minibar.js";
 import { aboutHTML } from "./about.js";
 import { APPS, THIS_APP } from "./apps.js";
 import { ask } from "./ask.js";
@@ -81,6 +82,7 @@ function render(){
   const v = sub ? sub[1] : ({ today: viewToday, log: viewLog, mom: viewMom, grow: viewGrow, me: viewMe }[S.tab] || viewToday);
   const back = sub ? `<div class="backbar"><button class="chip" data-tab="${sub[0]}">‹ ${t(TAB_LABEL[sub[0]])}</button></div>` : "";
   $("#main").innerHTML = back + v();
+  updateMiniBar($("#bname").textContent, sub ? `<button class="chip" data-tab="${sub[0]}">‹ ${t(TAB_LABEL[sub[0]])}</button>` : "", t("回到顶部"));
   heroRestore();
   if (S.tab === "log") { const s = $("#q"); if (s && document.activeElement !== s && S.logFocus) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); S.logFocus = false; } }
 }

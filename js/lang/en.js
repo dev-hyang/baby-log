@@ -348,6 +348,7 @@ export default {
 "日期": "Date",
 "孩子": "Child",
 "类型": "Type",
+"回到顶部": "Back to top",
 "显示方式": "View",
 "列表": "List",
 "时间轴": "Axis",
