@@ -399,3 +399,19 @@ a{color:var(--slate)}
 .hero.severe .heroalert .tri{animation-duration:.6s}
 @keyframes heroblink{50%{opacity:.15}}
 @media (prefers-reduced-motion:reduce){.heroalert .tri{animation:none}}
+/* log filters: drop-downs under the search box (timeline type; trend range and metric) */
+.filterbar{display:flex;flex-direction:column;gap:4px;margin:10px 0}
+.filterbar.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.filterbar.two > div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.filterbar label{font-size:13px;color:var(--muted);margin-left:4px}
+.filtersel{box-sizing:border-box;width:100%;min-height:46px;padding:10px 12px;font-size:16px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);cursor:pointer}
+.filtersel:focus-visible{outline:2px solid var(--slate);outline-offset:1px}
+@media (max-width:380px){.filterbar.two{grid-template-columns:1fr}}
+/* meal table: clickable column headers */
+table.meal th{padding:0}
+table.meal th .sortbtn{all:unset;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;width:100%;min-height:44px;padding:6px;cursor:pointer;font-size:12px;font-weight:500;line-height:1.3;text-align:inherit;color:var(--ink)}
+table.meal th .sortbtn:hover{background:rgba(127,127,127,.15)}
+table.meal th .sortbtn:focus-visible{outline:2px solid var(--slate);outline-offset:-2px}
+table.meal th .sortmark{font-size:9px;opacity:.45}
+table.meal th[aria-sort="ascending"] .sortmark,table.meal th[aria-sort="descending"] .sortmark{opacity:1}
+table.meal th.t .sortbtn{align-items:flex-start;padding-left:10px}

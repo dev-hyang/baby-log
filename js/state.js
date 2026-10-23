@@ -9,7 +9,7 @@ const S = {
   childId: null, // which child this device is looking at
   mode: "local", col: null, prof: null, sample: null,
   tab: "today", filter: "all", q: "",
-  logView: "meal", mealDay: null, gran: "day", metric: "sleep", checkupView: "plan",
+  logView: "meal", mealDay: null, gran: "day", span: 14, mealSort: { k: "t", dir: -1 }, metric: "sleep", checkupView: "plan",
   flashId: null, // the entry just saved on Today, highlighted for a moment
   logFocus: false // re-focus the search box after the log view re-renders on typing
 };
@@ -184,6 +184,6 @@ function textToRoutine(txt){
   return gs;
 }
 
-const APP_VERSION = "2026-10-24.8";
+const APP_VERSION = "2026-10-24.9";
 
 export { cleanRoutine, groupTone, faithOn, FAITH_STEPS, ROUTINE_TPL, routineGroups, routineSteps, routineToText, textToRoutine, LS_KEY, S, activeKids, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, matchCheckup, nextCheckup, APP_VERSION };

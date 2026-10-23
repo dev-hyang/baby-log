@@ -33,9 +33,37 @@ function dayNavHTML(d0){
     <button class="iconbtn" data-mealday="1" aria-label="${t("后一天")}" ${isToday ? "disabled" : ""}>›</button>
   </div>`;
 }
+/* column sorting: the time column runs newest first by default; click a header to sort by it, click again to flip. Blanks always sort last. */
+const noteOf = r => [r.poop.map(p => p.color).filter(Boolean).map(c => t(c)).join("、") && t("便") + r.poop.map(p => p.color).filter(Boolean).map(c => t(c)).join("、"), ...r.meds, r.f.note].filter(Boolean).join(" · ");
+const MEAL_COLS = {
+  t:      { get: r => r.f.ts },
+  gap:    { get: r => r.gap },
+  method: { get: r => (r.f.method ? t(r.f.method) : null), text: true },
+  left:   { get: r => (+r.f.left || null) },
+  right:  { get: r => (+r.f.right || null) },
+  ml:     { get: r => (+r.f.ml || null) },
+  pee:    { get: r => r.pee.length },
+  poop:   { get: r => r.poop.length },
+  sleep:  { get: r => (r.sleepMs || null) },
+  note:   { get: r => noteOf(r) || null, text: true }
+};
+function sortMealRows(rows){
+  const { k, dir } = S.mealSort || { k: "t", dir: -1 }, col = MEAL_COLS[k] || MEAL_COLS.t;
+  return rows.slice().sort((a, b) => {
+    const x = col.get(a), y = col.get(b);
+    if (x == null || y == null) return x == null && y == null ? b.f.ts - a.f.ts : x == null ? 1 : -1; // blanks last, whichever way it runs
+    const c = col.text ? String(x).localeCompare(String(y)) : x - y;
+    return (c || b.f.ts - a.f.ts) * dir; // ties keep the newest first
+  });
+}
+// a column header you can click; aria-sort tells screen readers which one is sorted and which way
+const sortTh = (k, label, attrs = "") => {
+  const on = (S.mealSort || {}).k === k, dir = on ? S.mealSort.dir : 0;
+  return `<th ${attrs} aria-sort="${on ? (dir > 0 ? "ascending" : "descending") : "none"}"><button class="sortbtn" data-mealsort="${k}">${label}<span class="sortmark" aria-hidden="true">${on ? (dir > 0 ? "▲" : "▼") : "↕"}</span></button></th>`;
+};
 function viewMeal(){
   const d0 = S.mealDay ?? startOfDay(Date.now());
-  const rows = mealRows().filter(r => r.f.ts >= d0 && r.f.ts < d0 + D);
+  const rows = sortMealRows(mealRows().filter(r => r.f.ts >= d0 && r.f.ts < d0 + D));
   const isToday = d0 === startOfDay(Date.now());
   const sum = (k) => rows.reduce((a, r) => a + (+r.f[k] || 0), 0);
   const newborn = (babyAgeDays(d0) ?? 999) < 91;
@@ -47,7 +75,7 @@ function viewMeal(){
   };
   const cell = (r, txt, label) => `<td><button class="cellbtn" data-edit="${r.f.id}" aria-label="${label}">${txt}</button></td>`;
   const body = rows.map(r => {
-    const f = r.f, poopColors = r.poop.map(p => p.color).filter(Boolean).map(c => t(c)).join("、");
+    const f = r.f;
     const longGap = newborn && r.gap && r.gap >= 4 * H;
     return `<tr>
       <td class="t"><button class="cellbtn" style="text-align:left" data-edit="${f.id}" aria-label="${t("修改 {time} 的喂奶", { time: hm(f.ts) })}">${hm(f.ts)}</button></td>
@@ -58,7 +86,7 @@ function viewMeal(){
       ${cell(r, f.ml ? trim(toDisp("vol", f.ml), isUS() ? 1 : 0) : "", t("奶量"))}
       ${ck(r, "pee")}${ck(r, "poop")}
       <td class="num">${r.sleepMs ? (r.sleepMs / H).toFixed(1) + "h" : ""}</td>
-      <td class="left">${esc([poopColors && t("便") + poopColors, ...r.meds, f.note].filter(Boolean).join(" · "))}</td></tr>`;
+      <td class="left">${esc(noteOf(r))}</td></tr>`;
   }).join("");
   const peeN = rows.reduce((a, r) => a + r.pee.length, 0), poopN = rows.reduce((a, r) => a + r.poop.length, 0);
   const sleepT = rows.reduce((a, r) => a + r.sleepMs, 0);
@@ -66,7 +94,7 @@ function viewMeal(){
   ${dayNavHTML(d0)}
   ${rows.length ? `<div class="meal-wrap"><table class="meal">
     <caption class="small muted" style="caption-side:bottom;text-align:left;padding:8px 10px">${t("每行是一餐：尿布、睡眠、用药按“这一餐到下一餐之间”归到该行。点 ○ 直接打勾，点其他格子修改这一餐。")}</caption>
-    <thead><tr><th class="t">${t("时间")}</th><th>${t("距上餐")}</th><th>${t("方式")}</th><th>${t("左<br>分钟")}</th><th>${t("右<br>分钟")}</th><th>${t("奶量")}<br>${unitOf("vol")}</th><th>${t("尿")}</th><th>${t("便")}</th><th>${t("之后<br>睡眠")}</th><th style="text-align:left">${t("备注 / 用药")}</th></tr></thead>
+    <thead><tr>${sortTh("t", t("时间"), `class="t"`)}${sortTh("gap", t("距上餐"))}${sortTh("method", t("方式"))}${sortTh("left", t("左<br>分钟"))}${sortTh("right", t("右<br>分钟"))}${sortTh("ml", `${t("奶量")}<br>${unitOf("vol")}`)}${sortTh("pee", t("尿"))}${sortTh("poop", t("便"))}${sortTh("sleep", t("之后<br>睡眠"))}${sortTh("note", t("备注 / 用药"), `style="text-align:left"`)}</tr></thead>
     <tbody>${body}</tbody>
     <tfoot><tr><td class="t">${t("{n} 餐", { n: rows.length })}</td><td></td><td></td><td>${sum("left") || ""}</td><td>${sum("right") || ""}</td><td>${sum("ml") ? trim(toDisp("vol", sum("ml")), isUS() ? 1 : 0) : ""}</td><td>${peeN}</td><td>${poopN}</td><td>${sleepT ? (sleepT / H).toFixed(1) + "h" : ""}</td><td></td></tr></tfoot>
   </table></div>
@@ -84,4 +112,10 @@ async function mealCheck(feedId, kind){
   toast(kind === "poop" ? t("已打勾，点 ✓ 可补充大便颜色") : t("已打勾"));
 }
 
-export { mealRows, dayNavHTML, viewMeal, mealCheck };
+// header clicked: a new column starts newest / biggest first (text columns A→Z); the same column flips
+function sortMealBy(k){
+  const cur = S.mealSort || { k: "t", dir: -1 };
+  S.mealSort = cur.k === k ? { k, dir: -cur.dir } : { k, dir: (MEAL_COLS[k] || {}).text ? 1 : -1 };
+}
+
+export { mealRows, dayNavHTML, viewMeal, mealCheck, sortMealBy };

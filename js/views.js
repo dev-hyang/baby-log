@@ -216,7 +216,7 @@ function viewList(){
   return `${dayNavHTML(d0)}
   <input id="q" class="search" type="search" value="${esc(S.q)}" placeholder="${t("搜索备注、药名、日期（如 2026-10-11）")}" aria-label="${t("搜索备注、药名、日期（如 2026-10-11）")}" autocomplete="off">
   ${q ? `<p class="small muted" style="margin:6px 0 0">${t("搜索时显示所有日期的结果。")}</p>` : ""}
-  <div class="chips" role="group" aria-label="${t("按类型筛选")}">${chips.map(([k, l]) => `<button class="chip" data-filter="${k}" aria-pressed="${S.filter === k}">${l}</button>`).join("")}</div>
+  <div class="filterbar"><label for="logFilter">${t("类型")}</label><select id="logFilter" class="filtersel" data-logfilter>${chips.map(([k, l]) => `<option value="${k}"${S.filter === k ? " selected" : ""}>${l}</option>`).join("")}</select></div>
   ${list.length ? `<div class="btns" style="margin-top:0"><button class="btn" data-act="addpick">${t("＋ 补记一条")}</button></div>` : ""}
   ${body}`;
 }

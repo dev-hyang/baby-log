@@ -70,15 +70,18 @@ function barChart(m, bks, vals){
       g += `<rect x="${x.toFixed(1)}" y="${Y(v).toFixed(1)}" width="${w.toFixed(1)}" height="${(Hh - P.b - Y(v)).toFixed(1)}" rx="3" fill="${M.color}" ${bk.partial ? 'fill-opacity=".45"' : ""}/>`;
       if (bks.length <= 14) g += `<text x="${(x + w / 2).toFixed(1)}" y="${(Y(v) - 4).toFixed(1)}" text-anchor="middle">${fmtV(m, v)}</text>`;
     }
-    if (bks.length <= 8 || i % 2 === (bks.length - 1) % 2) g += `<text x="${(x + w / 2).toFixed(1)}" y="${Hh - 6}" text-anchor="middle">${bk.label}</text>`;
+    if ((bks.length - 1 - i) % (bks.length <= 8 ? 1 : bks.length <= 14 ? 2 : Math.ceil(bks.length / 8)) === 0) g += `<text x="${(x + w / 2).toFixed(1)}" y="${Hh - 6}" text-anchor="middle">${bk.label}</text>`;
   });
   if (avg != null) g += `<line x1="${P.l}" x2="${W - P.r}" y1="${Y(avg).toFixed(1)}" y2="${Y(avg).toFixed(1)}" stroke="var(--ink)" stroke-dasharray="4 4" stroke-opacity=".5"/>`;
   const per = S.gran === "day" ? t("每天") : t("每周日均");
   return `<div class="scroll-x"><svg viewBox="0 0 ${W} ${Hh}" width="100%" role="img" aria-label="${t("{metric}{per}柱状图，虚线为平均值 {avg}{unit}", { metric: mLabel(m), per, avg: avg == null ? t("无") : fmtV(m, avg), unit: mUnit(m) })}">${g}</svg></div>
   <div class="legend"><span style="--c:${M.color}">${S.gran === "day" ? t("每天") : t("每周日均（日期为周一）")}</span><span style="--c:${M.color};opacity:.5">${t("进行中")}</span><span style="--c:transparent">${t("┅ 虚线为平均")}</span></div>`;
 }
+// the time ranges on offer: by day or by week, how many of them. The first of each kind is the default.
+const RANGES = [["day", 7], ["day", 14], ["day", 30], ["week", 8], ["week", 12], ["week", 26]];
+const rangeLabel = (g, n) => g === "day" ? t("按天 · 最近 {n} 天", { n }) : t("按周 · 最近 {n} 周", { n });
 function viewTrend(){
-  const n = S.gran === "day" ? 14 : 8;
+  const n = RANGES.some(([g, k]) => g === S.gran && k === S.span) ? S.span : S.gran === "day" ? 14 : 8; // an unknown range falls back to the default
   const keys = stageMetrics();
   if (!keys.includes(S.metric)) S.metric = keys[0]; // the stage (or the child) changed since the metric was picked
   const bks = buckets(S.gran, n);
@@ -101,11 +104,10 @@ function viewTrend(){
   }).join("");
   if (!vis().length) return `<div class="empty">${t("还没有记录。记录几天后这里会显示趋势。")}</div>`;
   return `
-  <div class="chips" role="group" aria-label="${t("时间粒度")}" style="margin-top:12px">
-    <button class="chip" data-gran="day" aria-pressed="${S.gran === "day"}">${t("按天（14 天）")}</button>
-    <button class="chip" data-gran="week" aria-pressed="${S.gran === "week"}">${t("按周（8 周）")}</button>
+  <div class="filterbar two">
+    <div><label for="trendRange">${t("时间范围")}</label><select id="trendRange" class="filtersel" data-trendrange>${RANGES.map(([g, k]) => `<option value="${g}:${k}"${g === S.gran && k === n ? " selected" : ""}>${rangeLabel(g, k)}</option>`).join("")}</select></div>
+    <div><label for="trendMetric">${t("指标")}</label><select id="trendMetric" class="filtersel" data-trendmetric>${keys.map(k => `<option value="${k}"${S.metric === k ? " selected" : ""}>${mLabel(k)}</option>`).join("")}</select></div>
   </div>
-  <div class="chips" role="group" aria-label="${t("指标")}">${keys.map(k => `<button class="chip" data-metric="${k}" aria-pressed="${S.metric === k}">${mLabel(k)}</button>`).join("")}</div>
   <div class="panel">
     <div class="small muted">${mLabel(S.metric)} · ${per[0]}${S.gran === "week" ? (M.max ? t("最长") : t("日均")) : ""}${bks[bks.length - 1].partial ? t("（进行中）") : ""}</div>
     <div class="kpi"><span class="v">${fmtV(S.metric, cur)}</span><span class="muted">${mUnit(S.metric)}</span>
