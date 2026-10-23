@@ -95,7 +95,9 @@ function heroHTML(){
   const keys = heroKeys(), n = keys.length, cur = Math.min(S.heroIdx || 0, n - 1);
   const slide = (k, i) => `<section class="hero" aria-label="${i + 1}/${n}"><div class="moon"></div>
     <button class="gear" data-tab="herocfg" data-slot="${i}" aria-label="${t("编辑顶部卡片")}">⚙</button>${bigClock(k)}</section>`;
-  return `<div class="herobox"><div class="herotrack" tabindex="0" role="region" aria-roledescription="carousel" aria-label="${t("顶部大计时")}">${keys.map(slide).join("")}</div>
+  const nav = (d, label, ch) => `<button class="heronav ${d < 0 ? "prev" : "next"}" data-heronav="${d}" aria-label="${label}"${(d < 0 ? cur === 0 : cur === n - 1) ? " disabled" : ""}>${ch}</button>`;
+  return `<div class="herobox"><div class="heroview"><div class="herotrack" tabindex="0" role="region" aria-roledescription="carousel" aria-label="${t("顶部大计时")}">${keys.map(slide).join("")}</div>
+    ${n > 1 ? nav(-1, t("上一张"), "‹") + nav(1, t("下一张"), "›") : ""}</div>
     ${n > 1 ? `<div class="herodots">${keys.map((k, i) => `<button data-heropage="${i}" aria-label="${i + 1}/${n}" aria-current="${i === cur}"></button>`).join("")}</div>` : ""}</div>`;
 }
 // the cards sit side by side and snap; Today re-renders after every save, so put the track back on the card being looked at

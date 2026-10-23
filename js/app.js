@@ -15,7 +15,9 @@ setInterval(() => { if (S.tab === "today" && !$("#sheet").open) { const h = docu
 document.addEventListener("scroll", e => {
   const tr = e.target; if (!tr.classList || !tr.classList.contains("herotrack")) return;
   const i = Math.round(tr.scrollLeft / (tr.clientWidth + 10)); if (i === S.heroIdx) return;
-  S.heroIdx = i; tr.parentElement.querySelectorAll(".herodots button").forEach((b, k) => b.setAttribute("aria-current", String(k === i)));
+  S.heroIdx = i; const box = tr.closest(".herobox");
+  box.querySelectorAll(".herodots button").forEach((b, k) => b.setAttribute("aria-current", String(k === i)));
+  const pv = box.querySelector(".heronav.prev"), nx = box.querySelector(".heronav.next"); if (pv) { pv.disabled = i <= 0; nx.disabled = i >= tr.children.length - 1; }
 }, true);
 if (!initSupabase()) initCloud();
 setInterval(() => syncNow(), 60e3);

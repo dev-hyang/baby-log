@@ -69,6 +69,11 @@ document.addEventListener("click", async ev => {
     (S.settings.pottyMin ||= {})[S.childId] = +t0.dataset.pottymin;
     await saveSettings(); const again = document.querySelector(`[data-pottymin="${t0.dataset.pottymin}"]`); again && again.focus(); return;
   }
+  if (t0.dataset.heronav) { // arrows beside the top cards (mouse users): previous / next card
+    const tr = document.querySelector(".herotrack"); if (!tr) return;
+    const i = Math.max(0, Math.min(tr.children.length - 1, Math.round(tr.scrollLeft / (tr.clientWidth + 10)) + +t0.dataset.heronav));
+    tr.scrollTo({ left: i * (tr.clientWidth + 10), behavior: "smooth" }); return;
+  }
   if (t0.dataset.heropage !== undefined) { // dots under the top cards
     const tr = document.querySelector(".herotrack"); tr && tr.scrollTo({ left: +t0.dataset.heropage * (tr.clientWidth + 10), behavior: "smooth" }); return;
   }
