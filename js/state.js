@@ -57,7 +57,7 @@ function normalizeSettings(){
   st.faith = { on: !!fa.on, statement: typeof fa.statement === "string" ? fa.statement.slice(0, 400) : "", off: strs(fa.off).filter(id => st.children.some(c => c.id === id)) };
   // per-child Today choices for toddlers / preschoolers: routine = the child's own step list ([] hides it),
   // heroPref = what the big clock counts, pottyMin = minutes between potty reminders
-  const own = {}, hp = {}, pm = {}, cu = {};
+  const own = {}, hp = {}, pm = {}, cu = {}, aoff = {};
   for (const c of st.children) {
     const r = cleanRoutine((st.routine || {})[c.id]); if (r) own[c.id] = r;
     // heroCustom[child] = [{ id: "u_…", name, type, kind }]: the child's own "since last" cards; heroPref[child] = the cards in order
@@ -66,8 +66,9 @@ function normalizeSettings(){
     if (cl.length) cu[c.id] = cl;
     const h = [].concat((st.heroPref || {})[c.id] || []).filter((k, i, a) => (HERO_KEYS.includes(k) || cl.some(x => x.id === k)) && a.indexOf(k) === i); if (h.length) hp[c.id] = h;
     const m = Math.round(+(st.pottyMin || {})[c.id]); if (m >= 15 && m <= 480) pm[c.id] = m;
+    const ao = strs((st.heroAlertOff || {})[c.id]).filter(k => ["feed", "diaper", "potty", "meal"].includes(k)); if (ao.length) aoff[c.id] = ao; // cards the child has switched the "running long" alert off for
   }
-  st.routine = own; st.heroPref = hp; st.heroCustom = cu; st.pottyMin = pm;
+  st.routine = own; st.heroPref = hp; st.heroCustom = cu; st.pottyMin = pm; st.heroAlertOff = aoff;
   // keep the single-child fields mirrored to the first child for older exports / clients
   st.babyName = live[0].name; st.birth = live[0].birth;
   let cid = S.childId; if (cid == null) { try { cid = localStorage.getItem(CHILD_KEY); } catch (e) {} }
@@ -183,6 +184,6 @@ function textToRoutine(txt){
   return gs;
 }
 
-const APP_VERSION = "2026-10-24.7";
+const APP_VERSION = "2026-10-24.8";
 
 export { cleanRoutine, groupTone, faithOn, FAITH_STEPS, ROUTINE_TPL, routineGroups, routineSteps, routineToText, textToRoutine, LS_KEY, S, activeKids, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, matchCheckup, nextCheckup, APP_VERSION };

@@ -5,7 +5,7 @@ import { byTime, last, medStatus, suggestSide, within } from "./derived.js";
 import { LANGS, lang, langPref, t } from "./i18n.js";
 import { cardsHTML, heroCfgHTML, routineCfgHTML, settingsHTML, viewMe } from "./me.js";
 import { dayNavHTML, viewMeal } from "./meal.js";
-import { activeCards, clockOf, doctorListHTML, heroKeys, milestoneRef, milestoneRefHTML, pottyMin, quickHTML, routineHTML, routineToday, stageCfg, stageTypes, statsHTML } from "./stages.js";
+import { activeCards, anomalyText, clockOf, doctorListHTML, heroAnomalies, heroKeys, milestoneRef, milestoneRefHTML, pottyMin, quickHTML, routineHTML, routineToday, stageCfg, stageTypes, statsHTML } from "./stages.js";
 import { CHECKUPS, S, activeKids, STAGES, routineSteps, isKidType, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
 import { SB, loadTombs, memberName, memberNames } from "./sync.js";
 import { viewTrend } from "./trend.js";
@@ -92,11 +92,16 @@ function heroHTML(){
     <div class="meta"><span>${t("{time} 入睡", { time: hm(sl.ts) })}</span>${sl.where ? `<span>${esc(t(sl.where))}</span>` : ""}</div>
     <div class="act"><button data-act="wake" data-id="${sl.id}">${t("醒了，记录结束")}</button></div></section></div>`;
   if (!activeCards("stats").includes("hero")) return ""; // the child's card settings turned the clock off
-  const keys = heroKeys(), n = keys.length, cur = Math.min(S.heroIdx || 0, n - 1);
-  const slide = (k, i, clone) => `<section class="hero" ${clone ? 'aria-hidden="true"' : `aria-label="${i + 1}/${n}"`}><div class="moon"></div>
-    <button class="gear" data-tab="herocfg" data-slot="${i}" aria-label="${t("编辑顶部卡片")}" ${clone ? 'tabindex="-1"' : ""}>⚙</button>${bigClock(k)}</section>`;
+  // a card that has run well past the child's usual rhythm moves to the front (worst first) and changes colour; the saved order is untouched
+  const own = heroKeys(), an = heroAnomalies(), bad = new Map(an.map(a => [a.k, a]));
+  const order = [...an.map(a => own.indexOf(a.k)), ...own.map((_, i) => i).filter(i => !bad.has(own[i]))], keys = order.map(i => own[i]), n = keys.length;
+  const sig = an.map(a => a.k).join(","); // a card newly running long: bring the track back to the front so it is seen
+  if (sig !== S.heroAnomSig) { if (an.some(a => !(S.heroAnomSig || "").split(",").includes(a.k))) S.heroIdx = 0; S.heroAnomSig = sig; }
+  const cur = Math.min(S.heroIdx || 0, n - 1);
+  const slide = (k, j, clone) => { const a = bad.get(k); return `<section class="hero${a ? " alert " + a.level : ""}" ${clone ? 'aria-hidden="true"' : `aria-label="${j + 1}/${n}"`}><div class="moon"></div>
+    <button class="gear" data-tab="herocfg" data-slot="${order[j]}" aria-label="${t("编辑顶部卡片")}" ${clone ? 'tabindex="-1"' : ""}>⚙</button>${a ? `<div class="heroalert" ${clone ? "" : 'role="status"'}><i class="tri" aria-hidden="true">⚠️</i><span>${esc(anomalyText(a))}</span></div>` : ""}${bigClock(k)}</section>`; };
   const loop = n > 1, COPIES = 5; // five copies of the list side by side; the middle one is the real one (see heroSettle in js/app.js)
-  const slides = loop ? Array.from({ length: COPIES }, (_, c) => keys.map((k, i) => slide(k, i, c !== 2)).join("")).join("") : slide(keys[0], 0);
+  const slides = loop ? Array.from({ length: COPIES }, (_, c) => keys.map((k, j) => slide(k, j, c !== 2)).join("")).join("") : slide(keys[0], 0);
   const nav = (d, label, ch) => `<button class="heronav ${d < 0 ? "prev" : "next"}" data-heronav="${d}" aria-label="${label}">${ch}</button>`;
   return `<div class="herobox"><div class="heroview"><div class="herotrack" ${loop ? 'data-loop="1"' : ""} tabindex="0" role="region" aria-roledescription="carousel" aria-label="${t("顶部大计时")}">${slides}</div>
     ${loop ? nav(-1, t("上一张"), "‹") + nav(1, t("下一张"), "›") : ""}</div>
@@ -152,6 +157,7 @@ function viewToday(){
   return `
   ${heroHTML()}
   ${alerts.map(a => `<div class="alert red" role="alert"><b>${t("需要留意")}</b> · ${hm(a.e.ts)} ${esc(a.t)}</div>`).join("")}
+  ${heroAnomalies().map(a => `<div class="alert red" role="alert"><b>${t("需要留意")}</b> · ⚠️ ${esc(t(clockOf(a.k).label))}：${t("已 {d}", { d: dur(a.gap) })}，${esc(anomalyText(a))}</div>`).join("")}
   ${nc ? `<div class="alert info">${checkup}<button class="chip" data-tab="grow-checkups" style="margin-left:6px">${t("查看全部")}</button></div>` : ""}
   <div class="quick" role="group" aria-label="${t("快速记录")}">${quickHTML()}</div>
   <div style="text-align:right"><button class="chip" data-tab="cards">${t("⚙ 管理卡片")}</button></div>

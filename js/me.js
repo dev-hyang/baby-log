@@ -1,6 +1,6 @@
 import { APPS, THIS_APP } from "./apps.js";
 import { LANGS, langPref, t } from "./i18n.js";
-import { HERO_BUILTIN, allCards, clockLabel, faithOn, hasCardPrefs, heroCustom, heroKeys, pottyMin } from "./stages.js";
+import { ANOM_MATCH, HERO_BUILTIN, allCards, anomalyOff, clockLabel, faithOn, hasCardPrefs, heroCustom, heroKeys, pottyMin } from "./stages.js";
 import { TYPES, typeLabel } from "./types.js";
 import { APP_VERSION, S, activeKids, kidCount, ageText, childName, groupTone, ROUTINE_TPL, isKidType, routineGroups, routineSteps, routineToText, stageOf } from "./state.js";
 import { familyHTML } from "./sync.js";
@@ -69,6 +69,9 @@ function heroCfgHTML(){
   const rows = keys.map((k, i) => `<div class="hcrow">${keys.length > 1 ? `<div class="hcdel" aria-hidden="true"><span>${t("向左滑动移除")}</span><b>${t("松手移除")}</b></div>` : ""}<div class="hcpill" aria-current="${i === slot}">
       <button class="hclab" data-hc="sel:${i}" aria-pressed="${i === slot}"><b class="num">${i + 1}</b><span>${lab(k)}</span></button>
       ${cust.some(x => x.id === k) ? `<button class="hcedit" data-hc="edit:${esc(k)}" aria-label="${t("编辑")}">✎</button>` : ""}<span class="grip" aria-hidden="true">⋮⋮</span></div></div>`).join("");
+  // "running long" alert, per card: on by default, the child can switch it off for a card
+  const watched = keys.filter(k => ANOM_MATCH[k]);
+  const alertCfg = watched.length ? `<h2>${t("异常提醒")}</h2><div class="panel"><p class="small muted" style="margin:0 0 8px">${t("喂奶、换尿布、如厕、吃饭的计时，比平时（最近 7 天的中位间隔）长 50% 以上，这张卡会排到最前、变色并闪烁；超过 1 倍更醒目。夜里 22:00–6:00 和宝宝睡着时不提醒。新生儿喂奶超过 3 小时就提醒。")}</p><div class="chips" role="group" aria-label="${t("异常提醒")}">${watched.map(k => `<button class="chip" data-hc="alert:${k}" aria-pressed="${!anomalyOff(k)}">${lab(k)}</button>`).join("")}</div></div>` : "";
   const types = Object.keys(TYPES).filter(k => isKidType(k) && (k !== "faith" || faithOn()));
   const kinds = d && TYPES[d.type] ? ((TYPES[d.type].fields.find(f => f.k === "kind" && Array.isArray(f.opts)) || {}).opts || []) : [];
   const form = d ? `<div class="panel" style="margin-top:10px"><div class="field"><label for="hcName">${t("卡片名称（留空自动命名）")}</label><input id="hcName" type="text" maxlength="30" value="${esc(d.name)}" placeholder="${esc(t("例如：距上次洗澡"))}"></div>
@@ -81,6 +84,7 @@ function heroCfgHTML(){
   <h2>${t("全部卡片")}</h2><div class="panel"><p class="small muted" style="margin:0 0 8px">${t("拖右边的 ⋮⋮ 上下调顺序；向左滑动胶囊，滑过一半松手就移除；点一下胶囊，在上面选它数什么。")}</p><div class="hclist">${rows}</div></div>
   <h2>${t("添加")}</h2><div class="panel"><div class="chips">${avail.filter(k => !keys.includes(k)).map(k => chip("add", k, false)).join("")}<button class="chip" data-hc="new:">+ ${t("自定义卡片")}</button></div>${form}</div>
   ${keys.includes("potty") ? `<h2>${t("如厕提醒间隔（分钟）")}</h2><div class="panel"><div class="chips">${[60, 90, 120, 180].map(m => `<button class="chip" data-pottymin="${m}" aria-pressed="${pottyMin() === m}">${m}</button>`).join("")}</div></div>` : ""}
+  ${alertCfg}
   ${(S.settings.heroPref || {})[S.childId] ? `<div class="btns"><button class="btn" data-hc="reset:">${t("恢复默认")}</button></div>` : ""}`;
 }
 /* ---- the daily routine list: groups and steps ---- */

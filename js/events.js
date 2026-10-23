@@ -88,6 +88,7 @@ document.addEventListener("click", async ev => {
     let ks = null;
     if (op === "set") { ks = keys.slice(); const j = ks.indexOf(arg); if (j >= 0 && j !== slot) ks[j] = ks[slot]; ks[slot] = arg; }
     else if (op === "sel") { S.heroEdit = +arg; render(); return; }
+    else if (op === "alert") { const ao = S.settings.heroAlertOff ||= {}, cur = ao[S.childId] || []; ao[S.childId] = cur.includes(arg) ? cur.filter(x => x !== arg) : [...cur, arg]; }
     else if (op === "add") { ks = [...keys, arg]; S.heroEdit = ks.length - 1; }
     else if (op === "up" || op === "down") { ks = keys.slice(); const i = +arg, j = i + (op === "up" ? -1 : 1); if (j >= 0 && j < ks.length) { [ks[i], ks[j]] = [ks[j], ks[i]]; if (S.heroEdit === i) S.heroEdit = j; } }
     else if (op === "del") { if (keys.length > 1) { ks = keys.filter((_, i) => i !== +arg); S.heroEdit = 0; } }

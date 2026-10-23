@@ -391,3 +391,11 @@ a{color:var(--slate)}
 .hcrow.ready .hcdel span{display:none}.hcrow.ready .hcdel b{display:inline}
 .hcrow.leaving .hcpill{transition:transform .18s}
 .panel.routine{margin-top:14px}
+/* a top card running well past the child's usual rhythm: warmer colour, a blinking warning sign, and a line saying by how much */
+.hero.alert{background:#F7B267}
+.hero.alert.severe{background:#F08080;box-shadow:inset 0 0 0 3px #7A1F2E}
+.heroalert{display:flex;align-items:center;gap:8px;width:fit-content;max-width:calc(100% - 52px);margin-bottom:8px;padding:3px 12px 3px 8px;border-radius:999px;background:#7A1F2E;color:#fff;font-size:13px;font-weight:700;line-height:1.35}
+.heroalert .tri{font-style:normal;font-size:18px;line-height:1;animation:heroblink 1.1s steps(2,start) infinite}
+.hero.severe .heroalert .tri{animation-duration:.6s}
+@keyframes heroblink{50%{opacity:.15}}
+@media (prefers-reduced-motion:reduce){.heroalert .tri{animation:none}}

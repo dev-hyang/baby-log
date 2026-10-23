@@ -119,6 +119,37 @@ function heroKeys(cid = S.childId){
   return keys.length ? keys : ["meal"];
 }
 const pottyMin = (cid = S.childId) => (S.settings.pottyMin || {})[cid] || POTTY_DEFAULT_MIN;
+
+/* ---- a "since last" card that has run well past the child's own rhythm ----
+   Judged for the clocks that repeat all day (feed, diaper, potty, meal): the baseline is the median gap between the last 7 days of
+   those records, leaving out gaps that run through the night (22:00–06:00). Past 1.5× the baseline the card is "warn", past 2× "severe".
+   Needs 5 or more gaps and at least an hour since the last record; nothing is judged at night or while the baby sleeps.
+   A newborn's feed uses a fixed rule instead (over 3 h warn, over 4 h severe), since their rhythm is still forming. */
+const ANOM_MATCH = { feed: e => e.type === "feed" && e.method !== "吸奶", diaper: e => e.type === "diaper", potty: e => e.type === "potty", meal: e => e.type === "food" };
+const ANOM_WARN = 1.5, ANOM_SEVERE = 2, ANOM_MIN_GAPS = 5, ANOM_MIN_WAIT = H;
+const isNight = ts => { const h = new Date(ts).getHours(); return h >= 22 || h < 6; };
+// does the stretch a..b run into the night? (each date's night is from 22:00 the evening before to 06:00)
+function crossesNight(a, b){ for (let d = startOfDay(a); d <= b + D; d += D) if (a < d + 6 * H && b > d - 2 * H) return true; return false; }
+const median = xs => { const s = xs.slice().sort((p, q) => p - q), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+const anomalyOff = (k, cid = S.childId) => ((S.settings.heroAlertOff || {})[cid] || []).includes(k);
+function anomalyOf(k, cid = S.childId, now = Date.now()){
+  const match = ANOM_MATCH[k]; if (!match || anomalyOff(k, cid) || isNight(now)) return null;
+  if (last(e => e.type === "sleep" && !e.end)) return null; // asleep: nothing is due
+  const list = vis().filter(match).sort((a, b) => a.ts - b.ts); if (!list.length) return null;
+  const gap = now - list[list.length - 1].ts; if (gap < ANOM_MIN_WAIT) return null;
+  if (k === "feed" && stageOf(cid).key === "newborn") return gap > 3 * H ? { k, level: gap > 4 * H ? "severe" : "warn", gap, base: 3 * H, fixed: true, pct: Math.round((gap / (3 * H) - 1) * 100) } : null;
+  const recent = list.filter(e => e.ts >= now - 7 * D), gaps = [];
+  for (let i = 1; i < recent.length; i++) if (!crossesNight(recent[i - 1].ts, recent[i].ts)) gaps.push(recent[i].ts - recent[i - 1].ts);
+  if (gaps.length < ANOM_MIN_GAPS) return null;
+  const base = median(gaps), ratio = gap / base; if (!(base > 0) || ratio < ANOM_WARN) return null;
+  return { k, level: ratio >= ANOM_SEVERE ? "severe" : "warn", gap, base, fixed: false, pct: Math.round((ratio - 1) * 100) };
+}
+// the cards to flag, worst first, among the ones the child's top clock actually shows
+function heroAnomalies(){
+  const shown = heroKeys();
+  return Object.keys(ANOM_MATCH).filter(k => shown.includes(k)).map(k => anomalyOf(k)).filter(Boolean).sort((a, b) => (b.level === "severe") - (a.level === "severe") || b.pct - a.pct);
+}
+const anomalyText = a => a.fixed ? t("已超过 {base}，该留意了", { base: dur(a.base) }) : t("比平时长 {pct}%（平时约 {base}）", { pct: a.pct, base: dur(a.base) });
 // step name → today's latest record of it, for the active child
 function routineToday(){
   const from = startOfDay(Date.now()), done = new Map();
@@ -312,4 +343,4 @@ function doctorListHTML(){
   return `<ul class="plain">${list.map(s => `<li>${t(s)}</li>`).join("")}</ul>`;
 }
 
-export { STAGE, faithOn, CLOCKS, HERO_BUILTIN, clockOf, clockLabel, heroCustom, heroKeys, pottyMin, POTTY_DEFAULT_MIN, routineHTML, routineToday, stageCfg, stageTypes, stageMetrics, activeCards, setCard, resetCards, hasCardPrefs, allCards, quickHTML, statsHTML, MILESTONE_REF, milestoneRef, milestoneNames, milestoneRefHTML, doctorListHTML };
+export { STAGE, anomalyOf, anomalyOff, anomalyText, heroAnomalies, ANOM_MATCH, faithOn, CLOCKS, HERO_BUILTIN, clockOf, clockLabel, heroCustom, heroKeys, pottyMin, POTTY_DEFAULT_MIN, routineHTML, routineToday, stageCfg, stageTypes, stageMetrics, activeCards, setCard, resetCards, hasCardPrefs, allCards, quickHTML, statsHTML, MILESTONE_REF, milestoneRef, milestoneNames, milestoneRefHTML, doctorListHTML };
