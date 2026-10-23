@@ -6,7 +6,7 @@ import { LANGS, lang, langPref, t } from "./i18n.js";
 import { cardsHTML, heroCfgHTML, routineCfgHTML, settingsHTML, viewMe } from "./me.js";
 import { dayNavHTML, viewMeal } from "./meal.js";
 import { activeCards, anomalyText, clockOf, doctorListHTML, heroAnomalies, heroKeys, milestoneRef, milestoneRefHTML, pottyMin, quickHTML, routineHTML, routineToday, stageCfg, stageTypes, statsHTML } from "./stages.js";
-import { CHECKUPS, S, activeKids, STAGES, routineSteps, isKidType, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
+import { APP_VERSION, CHECKUPS, S, activeKids, STAGES, routineSteps, isKidType, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
 import { SB, loadTombs, memberName, memberNames } from "./sync.js";
 import { viewTrend } from "./trend.js";
 import { TYPES, flags, isVisit, summary, typeLabel } from "./types.js";
@@ -21,6 +21,7 @@ function renderStatus(){
     : S.mode === "cloud" ? `<span class="dot ok"></span>${t("已同步到你的账号")}` : `<span class="dot"></span>${t("保存在本设备")}`;
   $("#bname").innerHTML = `${esc(child().name ? t("{name}的记录", { name: child().name }) : t("小月亮"))}<span class="chev" aria-hidden="true"></span>`;
   $("#bage").textContent = ageText();
+  $("#appver").textContent = "v" + APP_VERSION;
   $("#kids").innerHTML = activeKids().map(c => `<button role="menuitemradio" aria-checked="${c.id === S.childId}" data-kidsel="${esc(c.id)}"><b>${esc(c.name || t("宝宝"))}</b><small>${esc(ageText(c.id))}</small></button>`).join("")
     + `<button class="manage" role="menuitem" data-act="settings">${t("管理孩子…")}</button>`;
   renderAppSwitch();
