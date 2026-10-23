@@ -416,3 +416,25 @@ table.meal th .sortmark{font-size:9px;opacity:.45}
 table.meal th[aria-sort="ascending"] .sortmark,table.meal th[aria-sort="descending"] .sortmark{opacity:1}
 table.meal th.t .sortbtn{align-items:flex-start;padding-left:10px}
 table.meal th .sortlbl{text-align:center}
+/* timeline: type drop-down and 补记 on one row; list / vertical-axis switch */
+.filterrow{display:flex;gap:8px;align-items:stretch;margin:10px 0}
+.filterrow .filtersel{flex:1 1 0;min-width:0;width:auto}
+.filterrow .btn{flex:none;white-space:nowrap;min-height:46px;padding:0 14px}
+.listbar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:14px 0 4px}
+.segmini{display:inline-grid;grid-template-columns:1fr 1fr;background:var(--slate-soft);border-radius:999px;padding:3px}
+.segmini button{border:0;background:none;border-radius:999px;min-height:36px;padding:0 14px;cursor:pointer;font-size:14px;color:var(--muted)}
+.segmini button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.axis{position:relative;margin:6px 0 12px}
+.axis::before{content:"";position:absolute;left:61px;top:14px;bottom:14px;width:2px;background:var(--line);border-radius:1px}
+.anode{display:grid;grid-template-columns:46px 30px 1fr;gap:0 10px;align-items:start;width:100%;border:0;background:none;padding:2px 0;text-align:left;cursor:pointer;color:inherit;position:relative}
+.anode .at{font-family:var(--f-num);font-size:14px;text-align:right;padding-top:5px}
+.anode .adot{position:relative;z-index:1;width:30px;height:30px;border-radius:50%;background:var(--c);display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;box-shadow:0 0 0 4px var(--bg)}
+.anode .abody{display:block;min-width:0;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--c);border-radius:var(--radius-sm);padding:7px 12px}
+.anode:hover .abody,.anode:focus-visible .abody{background:var(--slate-soft)}
+.anode:focus-visible{outline:2px solid var(--slate);outline-offset:2px;border-radius:var(--radius-sm)}
+.anode .s{font-size:15px}
+.anode .n{font-size:13px;color:var(--muted)}
+.anode .anote{display:block;margin-top:2px}
+.anode.flash .abody{animation:flash 2.6s ease-out}
+.agap{padding:2px 0 2px 94px;font-size:12px;color:var(--muted);line-height:1.2;position:relative}
+.agap span::before{content:"↓ "}

@@ -25,6 +25,7 @@ document.addEventListener("click", async ev => {
   if (t0.dataset.tab) { if (t0.dataset.slot !== undefined) S.heroEdit = +t0.dataset.slot; goTab(t0.dataset.tab); return; } // the card's gear opens the editor on that card
   if (t0.dataset.add) { openForm(t0.dataset.add, null, t0.dataset.preset ? JSON.parse(t0.dataset.preset) : {}); return; }
   if (t0.dataset.edit) { const e = S.entries.find(x => x.id === t0.dataset.edit); e && openForm(e.type, e); return; }
+  if (t0.dataset.liststyle) { S.listStyle = t0.dataset.liststyle; try { localStorage.setItem("baby.listStyle", S.listStyle); } catch (e) { /* only a convenience */ } render(); const again = document.querySelector(`[data-liststyle="${S.listStyle}"]`); again && again.focus(); return; } // timeline: list rows or vertical axis
   if (t0.dataset.filter) { S.filter = t0.dataset.filter; render(); return; }
   if (t0.dataset.mealsort) { sortMealBy(t0.dataset.mealsort); render(); const again = document.querySelector(`[data-mealsort="${t0.dataset.mealsort}"]`); again && again.focus(); return; } // meal table column header
   if (t0.dataset.logview) { S.logView = t0.dataset.logview; render(); return; }

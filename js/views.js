@@ -176,13 +176,27 @@ function medRow(m){
   if (m.next) pill = m.next > Date.now() ? `<span class="pill wait">${t("{time} 后可再服", { time: hm(m.next) })}</span>` : `<span class="pill ok">${t("已过医嘱间隔")}</span>`;
   return `<div class="medrow"><div><b>${esc(t(m.name))}</b><div class="small muted">${t("上次 {time} · {ago}前 · 24小时内 {n} 次", { time: hm(m.at), ago: dur(Date.now() - m.at), n: m.count24 })}</div></div>${pill}</div>`;
 }
-function entryRow(e){
-  const T = TYPES[e.type] || { color: "var(--muted)" };
-  const fl = flags(e);
+// what both timeline styles show about a record: its type colour, warnings, who wrote it (family mode), and who can see it
+function entryBits(e){
+  const T = TYPES[e.type] || { color: "var(--muted)", icon: "•" };
   const by = S.mode === "family" && e.by && memberName(e.by);
   // who can see it, for records that are not family-wide: "🔒 仅我" / "👥 指定家人" for the author, "👥 分享给你" for a recipient
   const mine = !e.cby || !SB.user || e.cby === SB.user.id;
   const vb = e.vis === "private" ? `🔒 ${t("仅我")}` : e.vis === "shared" ? `👥 ${mine ? t("指定家人") : t("分享给你")}` : "";
+  return { T, fl: flags(e), by, vb };
+}
+// the vertical-line timeline: newest at the top, a coloured dot per record on the line, the time beside it and what happened to the right;
+// between two records the line says how long it was
+function axisHTML(es){
+  return `<div class="axis">${es.map((e, i) => {
+    const { T, fl, by, vb } = entryBits(e), older = es[i + 1], gap = older && e.ts - older.ts;
+    return `<button class="anode ${e.id === S.flashId ? "flash" : ""}" data-edit="${e.id}" style="--c:${T.color}">
+      <span class="at">${hm(e.ts)}</span><span class="adot" aria-hidden="true">${T.icon || ""}</span>
+      <span class="abody"><span class="s"><b>${esc(typeLabel(e.type))}</b> · ${esc(summary(e))}</span>${by ? `<span class="n"> · ${esc(by)}</span>` : ""}${vb ? `<span class="n"> · ${vb}</span>` : ""}${e.note ? `<span class="n anote">${esc(e.note)}</span>` : ""}${fl.map(f => `<span class="n anote" style="color:var(--rose)">${esc(f)}</span>`).join("")}</span></button>${gap >= 60e3 ? `<div class="agap"><span>${dur(gap)}</span></div>` : ""}`;
+  }).join("")}</div>`;
+}
+function entryRow(e){
+  const { T, fl, by, vb } = entryBits(e);
   return `<button class="entry ${e.id === S.flashId ? "flash" : ""}" data-edit="${e.id}">
     <span class="t">${hm(e.ts)}</span><span class="c" style="background:${T.color}" aria-hidden="true"></span>
     <span><span class="s">${esc(typeLabel(e.type))} · ${esc(summary(e))}</span>${by ? `<span class="n"> · ${esc(by)}</span>` : ""}${vb ? `<span class="n"> · ${vb}</span>` : ""}${e.note ? `<br><span class="n">${esc(e.note)}</span>` : ""}${fl.map(f => `<br><span class="n" style="color:var(--rose)">${esc(f)}</span>`).join("")}</span></button>`;
@@ -209,15 +223,17 @@ function viewList(){
   const own = new Set(vis().map(e => e.type)), extra = Object.keys(TYPES).filter(ty => isKidType(ty) && own.has(ty) && !stageTypes().includes(ty));
   const chips = [["all", t("全部")], ...[...stageTypes(), ...extra].map(ty => [ty, typeLabel(ty)]), ["momall", t("妈妈")]];
   if (!chips.some(([k]) => k === S.filter)) { S.filter = "all"; return viewList(); } // filter from another stage / child
+  const style = S.listStyle === "axis" ? "axis" : "rows", show = es => style === "axis" ? axisHTML(es) : es.map(entryRow).join("");
   const body = !list.length
-    ? `<div class="empty"><div class="eicon" aria-hidden="true">${q ? "🔍" : "🗓"}</div>${q ? t("没有符合条件的记录，换个关键词试试。") : S.filter !== "all" ? t("这一天没有这类记录。") : t("这一天没有记录。")}<br><button class="btn" data-act="addpick">${t("＋ 补记一条")}</button></div>`
-    : q ? Object.entries(groups).map(([d, es]) => `<div class="day">${d} ${weekday(es[0].ts)} · ${t("{n} 条", { n: es.length })}</div>${es.map(entryRow).join("")}`).join("")
-    : `<div class="day">${t("{n} 条", { n: list.length })}</div>${list.map(entryRow).join("")}`;
+    ? `<div class="empty"><div class="eicon" aria-hidden="true">${q ? "🔍" : "🗓"}</div>${q ? t("没有符合条件的记录，换个关键词试试。") : S.filter !== "all" ? t("这一天没有这类记录。") : t("这一天没有记录。")}</div>`
+    : q ? Object.entries(groups).map(([d, es]) => `<div class="day">${d} ${weekday(es[0].ts)} · ${t("{n} 条", { n: es.length })}</div>${show(es)}`).join("")
+    : show(list);
   return `${dayNavHTML(d0)}
   <input id="q" class="search" type="search" value="${esc(S.q)}" placeholder="${t("搜索备注、药名、日期（如 2026-10-11）")}" aria-label="${t("搜索备注、药名、日期（如 2026-10-11）")}" autocomplete="off">
   ${q ? `<p class="small muted" style="margin:6px 0 0">${t("搜索时显示所有日期的结果。")}</p>` : ""}
-  <div class="filterbar"><label for="logFilter">${t("类型")}</label><select id="logFilter" class="filtersel" data-logfilter>${chips.map(([k, l]) => `<option value="${k}"${S.filter === k ? " selected" : ""}>${l}</option>`).join("")}</select></div>
-  ${list.length ? `<div class="btns" style="margin-top:0"><button class="btn" data-act="addpick">${t("＋ 补记一条")}</button></div>` : ""}
+  <div class="filterrow"><select id="logFilter" class="filtersel" data-logfilter aria-label="${t("类型")}">${chips.map(([k, l]) => `<option value="${k}"${S.filter === k ? " selected" : ""}>${l}</option>`).join("")}</select><button class="btn" data-act="addpick">${t("＋ 补记一条")}</button></div>
+  <div class="listbar"><span class="small muted">${q ? "" : t("{n} 条", { n: list.length })}</span>
+    <div class="segmini" role="group" aria-label="${t("显示方式")}"><button data-liststyle="rows" aria-pressed="${style === "rows"}">${t("列表")}</button><button data-liststyle="axis" aria-pressed="${style === "axis"}">${t("时间轴")}</button></div></div>
   ${body}`;
 }
 
