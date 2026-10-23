@@ -5,7 +5,7 @@ import { FAITH_TEMPLATE, readSettingsInputs } from "./me.js";
 import { mealCheck } from "./meal.js";
 import { closeSheet, draft, drawForm, openForm, pickType, readDraftInputs, rememberVis } from "./sheet.js";
 import { heroCustom, heroKeys, resetCards, setCard } from "./stages.js";
-import { FAITH_STEPS, LS_KEY, ROUTINE_TPL, S, child, childOf, faithOn, isKidType, kidCount, matchCheckup, routineToText, setChild, textToRoutine } from "./state.js";
+import { FAITH_STEPS, LS_KEY, cleanRoutine, ROUTINE_TPL, S, child, childOf, faithOn, isKidType, kidCount, matchCheckup, routineToText, setChild, textToRoutine } from "./state.js";
 import { importJSON, loadDemo, offerFile, putEntry, removeEntry, removeWhere, saveSettings, toCSV } from "./store.js";
 import { sbAuth, sbCreate, sbJoin, sbLogout, sbMember, sbResetCode, syncNow, visSupported } from "./sync.js";
 import { UNIT_KEY, isUS } from "./units.js";
@@ -55,6 +55,12 @@ document.addEventListener("click", async ev => {
     readSettingsInputs(); const f = S.settings.faith, id = t0.dataset.faithKid;
     f.off = f.off.includes(id) ? f.off.filter(x => x !== id) : [...f.off, id];
     await saveSettings(); return;
+  }
+  if (t0.dataset.tpl) { // routine editor: append a template group to the text box (kept unsaved so it can be tweaked first)
+    const g = ROUTINE_TPL[+t0.dataset.tpl], box = $("#routineSteps"); if (!g || !box) return;
+    const add = routineToText([{ name: t(g.name), steps: g.steps.map(t) }]);
+    box.value = box.value.trim() ? box.value.trim() + "\n\n" + add : add;
+    box.focus(); toast(t("已加入，记得保存")); return;
   }
   if (t0.dataset.step) { // Today → 今天的习惯: one tap ticks the step, by default as done without a reminder
     await putEntry({ id: newId(), type: "routine", ts: Date.now(), child: S.childId, step: t0.dataset.step, self: true }); toast(t("已记录")); return;
@@ -135,7 +141,7 @@ document.addEventListener("click", async ev => {
     case "addpick": pickType(); break;
     case "settings": goTab("settings"); break;
     case "routine-save": { // card manager: "# group" lines and one step per line; an empty list hides the routine
-      const list = textToRoutine($("#routineSteps").value);
+      const list = cleanRoutine(textToRoutine($("#routineSteps").value)) || [];
       (S.settings.routine ||= {})[S.childId] = list; await saveSettings(); toast(t("习惯清单已保存")); break; }
     case "hc-save": { // top-card editor: save the child's own card (new ones are added to the end of the list)
       const d = S.hcDraft; if (!d) break;

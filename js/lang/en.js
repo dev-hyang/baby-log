@@ -1038,6 +1038,7 @@ export default {
 "哪一步": "Which step",
 "习惯清单": "Routine list",
 "习惯清单已保存": "Routine list saved",
+"已加入，记得保存": "Added — remember to save",
 "保存清单": "Save list",
 "恢复默认清单": "Restore default list",
 "已恢复默认清单": "Default list restored",
