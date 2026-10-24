@@ -296,7 +296,7 @@ document.addEventListener("keydown", async ev => {
 
 
 // 行记录左滑删除（js/swipe-rows.js）：记录行没有自己的删除按钮，这里替它删（同样先确认）
-initSwipeRows({ del: () => t("删除"), release: () => t("松手删除"), onDelete: async (el) => {
+initSwipeRows({ kinds: ["entry"], del: () => t("删除"), release: () => t("松手删除"), onDelete: async (el) => {
   const id = el.dataset.edit; if (!id) return false;
   if (!confirm(t("删除这条记录？"))) return false;
   await removeEntry(id); toast(t("已删除"));

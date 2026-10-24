@@ -195,14 +195,14 @@ function entryBits(e){
 function axisHTML(es){
   return `<div class="axis">${es.map((e, i) => {
     const { T, fl, by, vb } = entryBits(e), older = es[i + 1], gap = older && e.ts - older.ts;
-    return `<button class="anode ${e.id === S.flashId ? "flash" : ""}" data-edit="${e.id}" style="--c:${T.color}" data-swipe>
+    return `<button class="anode ${e.id === S.flashId ? "flash" : ""}" data-edit="${e.id}" style="--c:${T.color}" data-swipe-del="entry">
       <span class="at">${hm(e.ts)}</span><span class="adot" aria-hidden="true">${T.icon || ""}</span>
       <span class="abody"><span class="s"><b>${esc(typeLabel(e.type))}</b> · ${esc(summary(e))}</span>${by ? `<span class="n"> · ${esc(by)}</span>` : ""}${vb ? `<span class="n"> · ${vb}</span>` : ""}${e.note ? `<span class="n anote">${esc(e.note)}</span>` : ""}${fl.map(f => `<span class="n anote" style="color:var(--rose)">${esc(f)}</span>`).join("")}</span></button>${gap >= 60e3 ? `<div class="agap"><span>${dur(gap)}</span></div>` : ""}`;
   }).join("")}</div>`;
 }
 function entryRow(e){
   const { T, fl, by, vb } = entryBits(e);
-  return `<button class="entry ${e.id === S.flashId ? "flash" : ""}" data-edit="${e.id}" data-swipe>
+  return `<button class="entry ${e.id === S.flashId ? "flash" : ""}" data-edit="${e.id}" data-swipe-del="entry">
     <span class="t">${hm(e.ts)}</span><span class="c" style="background:${T.color}" aria-hidden="true"></span>
     <span><span class="s">${esc(typeLabel(e.type))} · ${esc(summary(e))}</span>${by ? `<span class="n"> · ${esc(by)}</span>` : ""}${vb ? `<span class="n"> · ${vb}</span>` : ""}${e.note ? `<br><span class="n">${esc(e.note)}</span>` : ""}${fl.map(f => `<br><span class="n" style="color:var(--rose)">${esc(f)}</span>`).join("")}</span></button>`;
 }
