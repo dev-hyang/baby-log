@@ -144,7 +144,7 @@ const deleteCloud = (name) => bucket().remove([`${prefix()}/${name}`]);
 
 /* ---- 云盘：Google Drive、Dropbox（代码在 cloud-drives.js，四个应用共用；各自要在 js/config.js 填应用 key，见 README「云盘备份」）
    备份放在你在设置里填的文件夹路径下（Drive 默认「小月亮备份」；Dropbox 相对应用文件夹），不再往根目录随便放 ---- */
-const DR = createDrives({ googleClientId: GOOGLE_CLIENT_ID, googleApiKey: GOOGLE_API_KEY, dropboxAppKey: DROPBOX_APP_KEY, tokPrefix: "homeworks.backup", defaultFolder: "小月亮备份", fileRe: FILE_RE, keepDays: KEEP_DAYS, t, load: loadJSON, save: saveJSON, getPaths: () => { const s = settings(); return { gd: s.gdPath, gdId: s.gdId, gdName: s.gdName, dbx: s.dbxPath }; } });   // 令牌前缀四个应用相同：连一次全连上
+const DR = createDrives({ googleClientId: GOOGLE_CLIENT_ID, googleApiKey: GOOGLE_API_KEY, dropboxAppKey: DROPBOX_APP_KEY, tokPrefix: "homeworks.backup", legacyPrefixes: ["xiaoyueliang.backup"], defaultFolder: "小月亮备份", fileRe: FILE_RE, keepDays: KEEP_DAYS, t, load: loadJSON, save: saveJSON, getPaths: () => { const s = settings(); return { gd: s.gdPath, gdId: s.gdId, gdName: s.gdName, dbx: s.dbxPath }; } });   // 令牌前缀四个应用相同：连一次全连上
 const { tok, gdConfigured, dbxConfigured, gdOn, dbxOn, gdConnect, gdDisconnect, gdList, gdWrite, gdRead, gdDelete, dbxConnect, dbxDisconnect, dbxList, dbxWrite, dbxRead, dbxDelete } = DR;
 /** 打开应用时调一次：从 Dropbox 授权页跳回来（?code=…&state=dbx）就换成令牌，勾上 Dropbox 并打开「同步、备份与恢复」 */
 async function initProviders() {
