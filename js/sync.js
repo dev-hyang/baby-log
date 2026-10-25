@@ -206,7 +206,7 @@ async function syncNow(force){
       if (data.length) newest = data[data.length - 1].server_updated;
       if (data.length < 1000) break; from += 1000;
     }
-    saveJSON(SYNC_KEY, { familyId: SB.family.id, lastPull: newest });
+    saveJSON(SYNC_KEY, { familyId: SB.family.id, lastPull: newest, syncedAt: new Date().toISOString() });
     // 3) drop cached records this member can no longer see (only when visibility exists, at most every 5 minutes)
     if (SB.vis && (SB.forceReconcile || Date.now() - SB.reconciledAt > 5 * 60e3)) { SB.forceReconcile = false; await reconcile(); }
     // 4) realtime drops quietly while the phone sleeps; bring it back if it is no longer subscribed

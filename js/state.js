@@ -184,6 +184,6 @@ function textToRoutine(txt){
   return gs;
 }
 
-const APP_VERSION = "2026-10-25.35";
+const APP_VERSION = "2026-10-25.36";
 
 export { cleanRoutine, groupTone, faithOn, FAITH_STEPS, ROUTINE_TPL, routineGroups, routineSteps, routineToText, textToRoutine, LS_KEY, S, activeKids, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, matchCheckup, nextCheckup, APP_VERSION };

@@ -535,7 +535,10 @@ body.sheet-open .minibar,body.printview .minibar{display:none}
 .synccard .stext{flex:1;min-width:0;display:flex;flex-direction:column}
 .synccard .stext b{font-size:16px} .synccard .stext small{font-size:13px;color:var(--muted);line-height:1.4}
 .synccard .btn{flex:none;white-space:nowrap;min-height:40px;padding:8px 16px}
-@media (max-width:420px){.synccard{flex-wrap:wrap}.synccard .btn{flex:0 0 auto;width:calc(100% - 24px);margin-left:24px}}
+.synccard .sact{flex:none;display:flex;align-items:center;gap:12px}
+.synccard .synced{display:flex;flex-direction:column;line-height:1.25;white-space:nowrap}
+.synccard .synced small{font-size:11px;color:var(--muted)} .synccard .synced b{font-size:13px;font-family:var(--f-num);font-weight:600}
+@media (max-width:420px){.synccard{flex-wrap:wrap}.synccard>.btn,.synccard .sact{flex:0 0 auto;width:calc(100% - 24px);margin-left:24px}}
 .bkhead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .bkhead > div:first-child{display:flex;flex-direction:column;min-width:0}
 .bkhead small{font-size:13px;line-height:1.4}

@@ -1497,4 +1497,7 @@ export default {
 "填接口地址（到 /v1 为止）、模型名和 key；要能读图才能拍照识字。": "Enter the endpoint (up to /v1), model name and key.",
   "备份记录": "Backup history",
   "更早的 {n} 条": "{n} earlier",
+"上次同步": "Last synced",
+"还没同步过": "Not yet",
+"昨天 {t}": "Yesterday {t}",
 };

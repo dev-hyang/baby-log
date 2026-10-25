@@ -5,11 +5,11 @@
    云端、云盘和文件夹只留 60 天。网页没法在关着时跑：到期后下次打开应用时在后台做一次。
    恢复 = 把备份里的记录合并进来（已有同 id 的不动，缺的补上；设置合并），家庭模式下会同步给全家。老版本「导出备份」的文件也能恢复。 */
 import { S, APP_VERSION } from "./state.js";
-import { SB, isOwner, lapsed, loadJSON, memberNames, saveJSON } from "./sync.js";
+import { SB, SYNC_KEY, isOwner, lapsed, loadJSON, memberNames, saveJSON } from "./sync.js";
 import { DROPBOX_APP_KEY, GOOGLE_API_KEY, GOOGLE_CLIENT_ID } from "./config.js";
 import { createDrives } from "./cloud-drives.js";
 import { importJSON } from "./store.js";
-import { $, esc, toast } from "./util.js";
+import { $, esc, hm, toast } from "./util.js";
 import { t } from "./i18n.js";
 import { refreshSettingsIfOpen } from "./me.js";
 
@@ -225,6 +225,15 @@ async function restoreBundle(d) {
    导出 CSV、演示数据、清空全部收在最下面的「数据工具」里，默认折叠。 */
 const UI = { folder: null, lists: {}, loading: false, stale: true, preview: null, result: null, src: null };
 const when = (iso) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "");
+// 「上次同步」用短格式：今天只给时间，昨天标「昨天」，更早带上日期
+const syncedLabel = (iso) => {
+  if (!iso) return t("还没同步过");
+  const d = new Date(iso), now = new Date(), y = new Date(now); y.setDate(y.getDate() - 1);
+  const tm = hm(d); // 24 小时制，和记录列表里的时间一个样子
+  if (d.toDateString() === now.toDateString()) return tm;
+  if (d.toDateString() === y.toDateString()) return t("昨天 {t}", { t: tm });
+  return `${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })} ${tm}`;
+};
 const kb = (n) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 // where backups can be listed / restored from (the folder and plain downloads are read back through 「选文件」)
 const SOURCES = {   // 顺序即显示顺序：Google Drive 在前（默认选它），再 Dropbox，最后应用云端
@@ -250,7 +259,8 @@ function syncHTML() {
     : lapsed() ? ["bad", t("家庭登录已失效，记录暂存本机"), t("再输一次邀请码就能回来，这期间记的内容会一并上传")]
     : ["off", t("保存在本设备"), t("换手机或清理浏览器数据会丢失；加入家庭，或在下面设好定时备份")];
   const status = `<div class="panel synccard ${st[0]}"><span class="sdot" aria-hidden="true"></span><div class="stext"><b>${st[1]}</b><small>${st[2]}</small></div>
-    ${fam ? `<button class="btn" data-act="sb-sync">${t("立即同步")}</button>` : `<button class="btn primary" data-tab="family-members">${lapsed() ? t("重新加入") : t("加入家庭")}</button>`}</div>`;
+    ${fam ? `<div class="sact"><button class="btn" data-act="sb-sync">${t("立即同步")}</button><span class="synced"><small>${t("上次同步")}</small><b>${esc(syncedLabel(loadJSON(SYNC_KEY, {}).syncedAt))}</b></span></div>`
+      : `<button class="btn primary" data-tab="family-members">${lapsed() ? t("重新加入") : t("加入家庭")}</button>`}</div>`;
   // 2) 备份：目的地卡片
   const card = (k, icon, label, desc, body = "", off = false) => `<div class="tcard" data-on="${has(k) && !off}" ${off ? 'data-off="true"' : ""}>
       <label class="tsel"><input type="checkbox" name="target" value="${k}" ${has(k) ? "checked" : ""} ${off ? "disabled" : ""}><span class="ti" aria-hidden="true">${icon}</span><span class="tt"><b>${label}</b><small>${desc}</small></span></label>
