@@ -77,6 +77,12 @@ async function enterFamily(fam){
     S.entries.forEach(e => { e._dirty = true; });
     saveTombs([]);
     saveJSON(SYNC_KEY, { familyId: fam.id, lastPull: null });
+  } else {
+    // Back in the same family (e.g. the invite code entered again after the login lapsed): anything written since
+    // the last pull that the server never confirmed (no e.by, which only a push or a pull sets) goes up now. The
+    // upsert is idempotent, so a record that did reach the server is simply written once more.
+    const since = sync.lastPull ? Date.parse(sync.lastPull) || 0 : 0;
+    S.entries.forEach(e => { if (!e.by && !e.demo && (e.updated || 0) >= since) e._dirty = true; });
   }
   SB.family = fam; S.mode = "family";
   const cloudHasKids = !!(fam.settings && Array.isArray(fam.settings.children) && fam.settings.children.length);
