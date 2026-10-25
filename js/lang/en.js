@@ -1364,4 +1364,7 @@ export default {
 "supabase/schema.sql 和 migrations 只在你的电脑上（不进 git）。电脑没了，备份文件就导不回去。请把这个文件夹手动拷到云盘或别的位置；选了「这台电脑的文件夹」的话，可以让每次备份顺带把 .sql 一起拷进去：": "supabase/schema.sql and the migrations live only on your computer (not in git). Without them a backup can't be imported. Copy that folder to a cloud drive or elsewhere by hand; with “A folder on this computer” chosen, each backup can copy the .sql files along:",
 "在电脑上打开这一页可以设置自动拷贝": "Open this page on a computer to set up automatic copying",
 "以后每次写文件夹时会把 .sql 一起拷进 sql/ 子目录": "From now on each folder backup also copies the .sql files into a sql/ subfolder",
+"Drive 里的文件夹路径": "Folder path in Drive",
+"应用文件夹里的子路径": "Sub-path inside the app folder",
+"留空 = 直接放应用文件夹": "blank = app folder root",
 };

@@ -52,6 +52,7 @@ js/
   - Google Drive：Google Cloud Console → APIs & Services → 启用 Google Drive API → OAuth 2.0 客户端（类型 Web 应用），「已获授权的 JavaScript 来源」填站点地址（如 `https://dev-hyang.github.io`，本地调试再加 `http://127.0.0.1:8765`），把客户端 ID 填进 `GOOGLE_CLIENT_ID`。权限只要 `drive.file`（只能看到应用自己建的文件），备份放在「小月亮备份」文件夹。令牌一小时过期，续期要用户点一下，所以定时备份到期时会出现「继续备份」。
   - Dropbox：Dropbox App Console → Create app → Scoped access，Access type 选 **App folder**，Permissions 勾 `files.content.write` / `files.content.read` / `account_info.read`，Redirect URIs 填站点地址（带结尾 `/`），把 App key 填进 `DROPBOX_APP_KEY`。用 OAuth 2 PKCE 拿 refresh token，定时备份可静默续期。
   - 令牌存在本机 localStorage；「断开」会吊销并清掉。
+  - 备份放在设置里填的路径下：Google Drive 默认文件夹「小月亮备份」（可改成「备份/小月亮」这类多级路径，不存在就逐级建）；Dropbox 是应用文件夹（Apps/<应用名>/）里的子路径（留空 = 直接放应用文件夹）。不往云盘根目录随便放。代码在 `js/cloud-drives.js`，四个应用共用同一份。
 - 恢复 = 把备份里的记录合并进来（已有同 id 的不动，缺的补上；设置合并），家庭模式下同步给全家。老版本「导出备份」的文件也能恢复。
 - 打印四种页面：按餐表格（记录页当前显示的那一天，横版）、趋势对比（按天最近 7 天 / 按周最近 8 周，横版）、时间线（当前筛选和搜索，最近 30 天）、就医记录（体检与就诊、体检时间表、疫苗、生长测量、最近 90 天宝宝用药）。黑白表格，不依赖主题色。
 

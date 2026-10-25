@@ -564,3 +564,4 @@ details.more summary::before{content:"›";display:inline-block;transition:trans
 details.more[open] summary::before{transform:rotate(90deg)}
 details.more summary .small{font-weight:400}
 .sched label[hidden]{display:none}
+.bk-path{width:100%}.bk-path label{flex:none}.bk-path input{flex:1 1 160px;min-height:34px;min-width:0}

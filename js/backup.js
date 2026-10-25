@@ -7,6 +7,7 @@
 import { S, APP_VERSION } from "./state.js";
 import { SB, lapsed, loadJSON, memberNames, saveJSON } from "./sync.js";
 import { DROPBOX_APP_KEY, GOOGLE_CLIENT_ID } from "./config.js";
+import { createDrives } from "./cloud-drives.js";
 import { importJSON } from "./store.js";
 import { $, esc, toast } from "./util.js";
 import { t } from "./i18n.js";
@@ -20,7 +21,7 @@ const cutoff = () => new Date(Date.now() - KEEP_DAYS * 864e5).toISOString().slic
 const prefix = () => `family/${SB.family.id}`;
 
 /* ---- 设置（存本机） ---- */
-const DEFAULTS = { every: "off", days: 14, targets: ["download"], provider: "any", last: null, lastInfo: "" };
+const DEFAULTS = { every: "off", days: 14, targets: ["download"], provider: "any", gdPath: "", dbxPath: "", last: null, lastInfo: "" };
 const settings = () => ({ ...DEFAULTS, ...loadJSON(CFG.key, {}) });
 const saveSettings = (patch) => { const s = { ...settings(), ...patch }; saveJSON(CFG.key, s); return s; };
 const intervalDays = (s = settings()) => (s.every === "week" ? 7 : s.every === "month" ? 30 : s.every === "custom" ? Math.max(1, +s.days || 14) : 0);
@@ -105,123 +106,15 @@ async function listCloud() {
 async function readCloud(name) { const { data, error } = await bucket().download(`${prefix()}/${name}`); if (error) throw new Error(error.message); return JSON.parse(await data.text()); }
 const deleteCloud = (name) => bucket().remove([`${prefix()}/${name}`]);
 
-/* ---- 云盘：Google Drive、Dropbox（各自要在 js/config.js 填应用 key，见 README「云盘备份」） ----
-   令牌存在本机 localStorage；备份文件放在云盘里应用自己的位置（Drive：「小月亮备份」文件夹；Dropbox：应用文件夹），
-   应用只看得到自己写的文件。iCloud Drive / OneDrive 没有网页接口：电脑上选它们同步的文件夹（下面的「文件夹」），
-   iPhone 上用「下载」再分享到「文件」存进 iCloud Drive。 */
-const TOK = { gd: `${CFG.key}.gdrive`, dbx: `${CFG.key}.dropbox` };
-const tok = (k) => loadJSON(TOK[k], null), setTok = (k, v) => saveJSON(TOK[k], v);
-const gdConfigured = () => /\.apps\.googleusercontent\.com$/.test(GOOGLE_CLIENT_ID || "");
-const dbxConfigured = () => !!DROPBOX_APP_KEY && !/YOUR/.test(DROPBOX_APP_KEY);
-const gdOn = () => gdConfigured() && !!tok("gd"), dbxOn = () => dbxConfigured() && !!tok("dbx");
-
-// Google：Identity Services 的令牌流程（弹窗；令牌一小时，续期也要用户点一下，所以定时备份到期时会出现「继续备份」）
-let gis = null;
-function loadGis() { if (gis) return gis; gis = new Promise((res, rej) => { if (window.google?.accounts?.oauth2) return res(); const el = document.createElement("script"); el.src = "https://accounts.google.com/gsi/client"; el.onload = () => res(); el.onerror = () => rej(new Error(t("Google 组件加载失败"))); document.head.appendChild(el); }); return gis; }
-async function gdToken(gesture) {
-  const cur = tok("gd");
-  if (cur && cur.exp > Date.now() + 60e3) return cur.access_token;
-  if (!gesture) throw new Error("NEED_GESTURE");
-  await loadGis();
-  return new Promise((res, rej) => {
-    window.google.accounts.oauth2.initTokenClient({ client_id: GOOGLE_CLIENT_ID, scope: "https://www.googleapis.com/auth/drive.file", prompt: cur ? "" : "consent",
-      callback: (r) => { if (r.error) return rej(new Error(r.error_description || r.error)); setTok("gd", { ...(cur || {}), access_token: r.access_token, exp: Date.now() + (+r.expires_in || 3600) * 1000 }); res(r.access_token); },
-      error_callback: (e) => rej(new Error(e.message || e.type || "popup")) }).requestAccessToken();
-  });
-}
-async function gdFetch(url, init = {}, gesture = false) {
-  const at = await gdToken(gesture);
-  const r = await fetch(url, { ...init, headers: { ...(init.headers || {}), Authorization: `Bearer ${at}` } });
-  if (r.status === 401) { setTok("gd", { ...(tok("gd") || {}), exp: 0 }); throw new Error(gesture ? t("Google 登录已过期，请重新连接") : "NEED_GESTURE"); }
-  if (!r.ok) throw new Error(`Google Drive ${r.status}`);
-  return r;
-}
-const GD_FOLDER = "小月亮备份", GD_API = "https://www.googleapis.com/drive/v3/files";
-async function gdFolder(gesture) {
-  const cur = tok("gd"); if (cur?.folder) return cur.folder;
-  const q = encodeURIComponent(`name='${GD_FOLDER}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
-  const found = await (await gdFetch(`${GD_API}?q=${q}&fields=files(id)`, {}, gesture)).json();
-  let id = found.files?.[0]?.id;
-  if (!id) id = (await (await gdFetch(`${GD_API}?fields=id`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: GD_FOLDER, mimeType: "application/vnd.google-apps.folder" }) }, gesture)).json()).id;
-  setTok("gd", { ...tok("gd"), folder: id }); return id;
-}
-async function gdList(gesture = false) {
-  if (!gdOn()) return [];
-  const q = encodeURIComponent(`'${await gdFolder(gesture)}' in parents and trashed=false`);
-  const d = await (await gdFetch(`${GD_API}?q=${q}&fields=files(id,name,size,createdTime)&orderBy=createdTime desc&pageSize=100`, {}, gesture)).json();
-  return (d.files || []).filter((f) => FILE_RE.test(f.name)).map((f) => ({ id: f.id, name: f.name, at: f.createdTime, size: +f.size || 0 }));
-}
-async function gdWrite(blob, name, gesture) {
-  const folder = await gdFolder(gesture), body = new FormData();
-  body.append("metadata", new Blob([JSON.stringify({ name, parents: [folder], mimeType: "application/json" })], { type: "application/json" })); body.append("file", blob);
-  await gdFetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", { method: "POST", body }, gesture);
-  const cut = cutoff(); for (const f of await gdList(gesture)) if ((FILE_RE.exec(f.name) || [])[1] < cut) await gdDelete(f.id).catch(() => {});
-}
-const gdRead = async (id) => (await gdFetch(`${GD_API}/${id}?alt=media`, {}, true)).json();
-const gdDelete = (id) => gdFetch(`${GD_API}/${id}`, { method: "DELETE" }, true);
-async function gdConnect() {
-  setTok("gd", null); await gdToken(true);
-  try { const me = await (await gdFetch("https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)", {}, true)).json(); setTok("gd", { ...tok("gd"), email: me.user?.emailAddress || "" }); } catch (e) { /* 邮箱只是显示用 */ }
-}
-function gdDisconnect() { const c = tok("gd"); try { if (c?.access_token && window.google?.accounts?.oauth2) window.google.accounts.oauth2.revoke(c.access_token, () => {}); } catch (e) { /* 忽略 */ } setTok("gd", null); }
-
-// Dropbox：OAuth 2 PKCE，拿到 refresh token，定时备份可以静默续期
-const dbxRedirect = () => location.origin + location.pathname;
-const PKCE_KEY = `${CFG.key}.dbx.pkce`;
-const b64url = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-async function dbxConnect() {
-  const verifier = b64url(crypto.getRandomValues(new Uint8Array(48)));
-  const challenge = b64url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));
-  sessionStorage.setItem(PKCE_KEY, verifier);
-  const p = new URLSearchParams({ client_id: DROPBOX_APP_KEY, response_type: "code", code_challenge: challenge, code_challenge_method: "S256", token_access_type: "offline", redirect_uri: dbxRedirect(), state: "dbx" });
-  location.href = `https://www.dropbox.com/oauth2/authorize?${p}`;
-}
-async function dbxTokenCall(body) {
-  const r = await fetch("https://api.dropboxapi.com/oauth2/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ client_id: DROPBOX_APP_KEY, ...body }) });
-  if (!r.ok) throw new Error(`Dropbox ${r.status}`);
-  const d = await r.json(), cur = tok("dbx") || {};
-  setTok("dbx", { ...cur, access_token: d.access_token, refresh_token: d.refresh_token || cur.refresh_token, exp: Date.now() + (+d.expires_in || 14400) * 1000 });
-  return d.access_token;
-}
-async function dbxToken() {
-  const c = tok("dbx"); if (!c) throw new Error(t("还没连接 Dropbox"));
-  if (c.exp > Date.now() + 60e3) return c.access_token;
-  if (!c.refresh_token) throw new Error("NEED_GESTURE");
-  return dbxTokenCall({ grant_type: "refresh_token", refresh_token: c.refresh_token });
-}
-async function dbxFetch(url, init = {}) {
-  const r = await fetch(url, { ...init, headers: { ...(init.headers || {}), Authorization: `Bearer ${await dbxToken()}` } });
-  if (r.status === 401) { setTok("dbx", null); throw new Error(t("Dropbox 登录已过期，请重新连接")); }
-  if (!r.ok) throw new Error(`Dropbox ${r.status}`);
-  return r;
-}
-const dbxJSON = (o) => ({ method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(o) });
-const dbxArg = (o) => ({ "Dropbox-API-Arg": JSON.stringify(o) });
-async function dbxList() {
-  if (!dbxOn()) return [];
-  const d = await (await dbxFetch("https://api.dropboxapi.com/2/files/list_folder", dbxJSON({ path: "" }))).json();
-  return (d.entries || []).filter((f) => f[".tag"] === "file" && FILE_RE.test(f.name)).map((f) => ({ id: f.path_lower, name: f.name, at: f.server_modified, size: f.size || 0 })).sort((a, b) => (a.name < b.name ? 1 : -1));
-}
-async function dbxWrite(blob, name) {
-  await dbxFetch("https://content.dropboxapi.com/2/files/upload", { method: "POST", headers: { "Content-Type": "application/octet-stream", ...dbxArg({ path: `/${name}`, mode: "overwrite", mute: true }) }, body: blob });
-  const cut = cutoff(); for (const f of await dbxList()) if ((FILE_RE.exec(f.name) || [])[1] < cut) await dbxDelete(f.id).catch(() => {});
-}
-const dbxRead = async (path) => (await dbxFetch("https://content.dropboxapi.com/2/files/download", { method: "POST", headers: dbxArg({ path }) })).json();
-const dbxDelete = (path) => dbxFetch("https://api.dropboxapi.com/2/files/delete_v2", dbxJSON({ path }));
-async function dbxDisconnect() { try { await dbxFetch("https://api.dropboxapi.com/2/auth/token/revoke", { method: "POST" }); } catch (e) { /* 忽略 */ } setTok("dbx", null); }
-/** 打开应用时调一次：从 Dropbox 授权页跳回来（?code=…&state=dbx）就换成令牌，并打开「同步、备份与恢复」 */
+/* ---- 云盘：Google Drive、Dropbox（代码在 cloud-drives.js，四个应用共用；各自要在 js/config.js 填应用 key，见 README「云盘备份」）
+   备份放在你在设置里填的文件夹路径下（Drive 默认「小月亮备份」；Dropbox 相对应用文件夹），不再往根目录随便放 ---- */
+const DR = createDrives({ googleClientId: GOOGLE_CLIENT_ID, dropboxAppKey: DROPBOX_APP_KEY, tokPrefix: CFG.key, defaultFolder: "小月亮备份", fileRe: FILE_RE, keepDays: KEEP_DAYS, t, load: loadJSON, save: saveJSON, getPaths: () => ({ gd: settings().gdPath, dbx: settings().dbxPath }) });
+const { tok, gdConfigured, dbxConfigured, gdOn, dbxOn, gdConnect, gdDisconnect, gdList, gdWrite, gdRead, gdDelete, dbxConnect, dbxDisconnect, dbxList, dbxWrite, dbxRead, dbxDelete } = DR;
+/** 打开应用时调一次：从 Dropbox 授权页跳回来（?code=…&state=dbx）就换成令牌，勾上 Dropbox 并打开「同步、备份与恢复」 */
 async function initProviders() {
-  const u = new URL(location.href), code = u.searchParams.get("code"), verifier = sessionStorage.getItem(PKCE_KEY);
-  if (!code || u.searchParams.get("state") !== "dbx") return;
-  u.searchParams.delete("code"); u.searchParams.delete("state"); history.replaceState(null, "", u.pathname + u.search + u.hash);
-  sessionStorage.removeItem(PKCE_KEY);
-  if (!verifier) return;
-  try {
-    await dbxTokenCall({ code, grant_type: "authorization_code", code_verifier: verifier, redirect_uri: dbxRedirect() });
-    try { const me = await (await dbxFetch("https://api.dropboxapi.com/2/users/get_current_account", dbxJSON(null))).json(); setTok("dbx", { ...tok("dbx"), email: me.email || "" }); } catch (e) { /* 邮箱只是显示用 */ }
-    saveSettings({ targets: [...new Set([...settings().targets, "dropbox"])] });
-    toast(t("已连接 Dropbox"));
-  } catch (e) { toast(t("连接 Dropbox 失败：{msg}", { msg: e.message })); }
+  if (!new URL(location.href).searchParams.get("code")) return;
+  try { if (await DR.initProviders()) { saveSettings({ targets: [...new Set([...settings().targets, "dropbox"])] }); toast(t("已连接 Dropbox")); } }
+  catch (e) { toast(t("连接 Dropbox 失败：{msg}", { msg: e.message })); }
   S.tab = "sync"; UI.stale = true; refreshSettingsIfOpen();
 }
 
@@ -297,6 +190,7 @@ function syncHTML() {
       <label class="tsel"><input type="checkbox" name="target" value="${k}" ${has(k) ? "checked" : ""} ${off ? "disabled" : ""}><span class="ti" aria-hidden="true">${icon}</span><span class="tt"><b>${label}</b><small>${desc}</small></span></label>
       ${body ? `<div class="tb">${body}</div>` : ""}</div>`;
   const gd = tok("gd"), dbx = tok("dbx");
+  const pathRow = (name, label, val, ph) => `<span class="bk-row bk-path"><label class="small muted">${label}</label><input name="${name}" value="${esc(val || "")}" placeholder="${esc(ph)}" maxlength="120" autocomplete="off"></span>`;
   const notCfg = t("需要先在 js/config.js 里填好（见 README「云盘备份」）");
   const prov = PROVIDERS.find((x) => x.id === s.provider) || PROVIDERS[0];
   const provSel = `<span class="bk-row"><select name="provider" aria-label="${esc(t("云盘"))}">${PROVIDERS.map((x) => `<option value="${x.id}" ${x.id === prov.id ? "selected" : ""}>${esc(t(x.name))}</option>`).join("")}</select></span><span class="small muted">${esc(t(prov.hint))}</span>`;
@@ -310,9 +204,9 @@ function syncHTML() {
   const cards = [
     card("cloud", "☁", t("家庭云端"), fam ? t("家庭自己的 Supabase 存储，全家任何设备都能恢复；只留 {n} 天", { n: KEEP_DAYS }) : t("加入家庭后可用"), "", !fam),
     card("gdrive", "▲", "Google Drive", gdConfigured() ? t("放在你 Google 云端硬盘的「小月亮备份」文件夹里；只留 {n} 天", { n: KEEP_DAYS }) : notCfg,
-      !gdConfigured() ? "" : gd ? `<span class="small muted">${t("已连接")}${gd.email ? ` ${esc(gd.email)}` : ""}</span> <button class="chip" data-act="bk-gd-off">${t("断开")}</button>` : `<button class="chip" data-act="bk-gd-on">${t("连接 Google Drive")}</button>`, !gdConfigured() || !gd),
+      !gdConfigured() ? "" : pathRow("gdPath", t("Drive 里的文件夹路径"), s.gdPath, "小月亮备份") + (gd ? `<span class="small muted">${t("已连接")}${gd.email ? ` ${esc(gd.email)}` : ""} · ${esc(DR.gdPathText())}</span> <button class="chip" data-act="bk-gd-off">${t("断开")}</button>` : `<button class="chip" data-act="bk-gd-on">${t("连接 Google Drive")}</button>`), !gdConfigured() || !gd),
     card("dropbox", "◆", "Dropbox", dbxConfigured() ? t("放在 Dropbox 的「应用 / 小月亮」文件夹里；只留 {n} 天", { n: KEEP_DAYS }) : notCfg,
-      !dbxConfigured() ? "" : dbx ? `<span class="small muted">${t("已连接")}${dbx.email ? ` ${esc(dbx.email)}` : ""}</span> <button class="chip" data-act="bk-dbx-off">${t("断开")}</button>` : `<button class="chip" data-act="bk-dbx-on">${t("连接 Dropbox")}</button>`, !dbxConfigured() || !dbx),
+      !dbxConfigured() ? "" : pathRow("dbxPath", t("应用文件夹里的子路径"), s.dbxPath, t("留空 = 直接放应用文件夹")) + (dbx ? `<span class="small muted">${t("已连接")}${dbx.email ? ` ${esc(dbx.email)}` : ""}</span> <button class="chip" data-act="bk-dbx-off">${t("断开")}</button>` : `<button class="chip" data-act="bk-dbx-on">${t("连接 Dropbox")}</button>`), !dbxConfigured() || !dbx),
     card("folder", "▭", t("这台电脑的文件夹"), t("桌面 Chrome / Edge。选 iCloud Drive、OneDrive 或 Dropbox 同步的文件夹，就等于也上了云；自动清掉 {n} 天前的", { n: KEEP_DAYS }), folderFull, !folder.supported),
     card("download", "⤓", t("下载"), t("每次备份弹出下载。iPhone 上可以分享到「文件」存进 iCloud Drive；下载的文件不会自动清理")),
   ].join("");
@@ -394,9 +288,10 @@ async function bkChange(ev) {
   const el = ev.target;
   if (el.closest && el.closest("#backupForm")) {
     const f = el.closest("#backupForm"), targets = [...f.querySelectorAll('input[name="target"]:checked')].map((x) => x.value);
-    saveSettings({ every: f.elements.every.value, days: Math.max(1, +f.elements.days.value || 14), targets, provider: f.elements.provider?.value || "any" });
+    saveSettings({ every: f.elements.every.value, days: Math.max(1, +f.elements.days.value || 14), targets, provider: f.elements.provider?.value || "any", gdPath: (f.elements.gdPath?.value || "").trim(), dbxPath: (f.elements.dbxPath?.value || "").trim() });
     const box = f.querySelector("[data-bk-days]"); if (box) box.hidden = f.elements.every.value !== "custom";
     if (el.name === "every" || el.name === "provider") refreshSettingsIfOpen();
+    if (el.name === "gdPath" || el.name === "dbxPath") { UI.stale = true; refreshSettingsIfOpen(); }   // 路径改了：列表换到新文件夹
     return true;
   }
   if (el.id === "backupFile") {
