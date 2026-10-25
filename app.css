@@ -350,6 +350,17 @@ a{color:var(--slate)}
 }
 .hdr-tools{display:inline-flex;align-items:center;gap:2px;margin:-4px -6px -2px 0}   /* language + app switcher: two 44px touch targets side by side, header stays compact */
 /* sub-page "‹ hub" chip stays pinned under the notch while the page scrolls, so the way back is always there */
+/* breadcrumb path on sub-pages (same design as home-pantry): ‹ 我的 / 家庭 / 家庭协作; sticky under the header */
+.crumb{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;display:flex;align-items:center;flex-wrap:wrap;gap:2px 0;margin:0 -16px 8px;padding:6px 16px;background:var(--bg);border-bottom:1px solid var(--line);font-size:14px;line-height:1.5}
+.crumb button{all:unset;box-sizing:border-box;cursor:pointer;color:var(--slate);font-weight:600;padding:4px 5px;border-radius:6px;white-space:nowrap}
+.crumb button:hover{background:var(--slate-soft);text-decoration:underline;text-underline-offset:3px}
+.crumb button:focus-visible{outline:3px solid var(--slate);outline-offset:-1px}
+.crumb > :first-child{margin-left:-5px}
+.crumb .sep{color:var(--muted);opacity:.7;font-size:12px;padding:0 1px}
+.crumb b{font-weight:700;color:var(--ink);padding:4px 5px;min-width:0;overflow-wrap:anywhere}
+.crumb.mini{position:static;margin:0;padding:0;border:0;background:none;font-size:13px;flex:1;min-width:0;overflow:hidden}
+.crumb.mini b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media print{.crumb{display:none}}
 .backbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;margin:0 -16px 8px;padding:8px 16px;background:var(--bg);border-bottom:1px solid var(--line)}
 /* routine editor: the text box sits on a white panel, so give it its own tint, a firm border and a scrollbar that is always visible */
 .routine-ed .lab{display:block;font-size:14px;color:var(--muted);margin:12px 0 6px}
@@ -566,3 +577,18 @@ details.more summary .small{font-weight:400}
 .sched label[hidden]{display:none}
 .bk-path{width:100%}.bk-path label{flex:none}.bk-path input{flex:1 1 160px;min-height:34px;min-width:0}
 .bk-hint{display:block;color:var(--muted,#6b7280);font-size:12px;line-height:1.4;margin:2px 0 4px}
+/* ---- 小Y问（js/ask.js） ---- */
+.ai-ico{vertical-align:-4px;flex:none}
+.mrow .mi .ai-ico{vertical-align:middle}
+.ask .chk{margin:8px 0 0}
+.ask .btns{margin-top:12px}
+.ai-cfg{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
+.ai-cfg .lab{font-size:14px;color:var(--muted)}
+.ai-cfg label{display:block;margin-top:10px}
+.ai-cfg input{width:100%;border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 12px;background:var(--surface);margin-top:6px}
+.ai-sites{display:flex;flex-wrap:wrap;gap:6px}
+.ai-sites .chip{text-decoration:none;color:inherit}
+.ai-answer .ai-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.ai-answer .ai-head b{flex:1}
+.ai-text p{margin:6px 0}.ai-text ul,.ai-text ol{margin:6px 0;padding-left:20px}.ai-text li{margin:3px 0}.ai-text h4{margin:10px 0 4px;font-size:15px}
+.ai-ctx{white-space:pre-wrap;font:13px/1.5 var(--f-body);margin:0;color:var(--muted);overflow-wrap:anywhere}

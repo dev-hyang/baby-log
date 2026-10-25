@@ -1,7 +1,6 @@
 import { updateMiniBar } from "./minibar.js";
 import { aboutHTML } from "./about.js";
 import { APPS, THIS_APP } from "./apps.js";
-import { ask } from "./ask.js";
 import { byTime, last, medStatus, suggestSide, within } from "./derived.js";
 import { LANGS, lang, langPref, t } from "./i18n.js";
 import { cardsHTML, faithPageHTML, familyHubHTML, heroCfgHTML, kidsPageHTML, medsPageHTML, membersPageHTML, prefsHTML, routineCfgHTML, viewMe } from "./me.js";
@@ -10,6 +9,7 @@ import { activeCards, anomalyText, clockOf, doctorListHTML, heroAnomalies, heroK
 import { APP_VERSION, CHECKUPS, S, activeKids, STAGES, routineSteps, isKidType, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
 import { SB, lapsed, loadTombs, memberName, memberNames } from "./sync.js";
 import { syncHTML } from "./backup.js";
+import { aiIcon, viewAsk } from "./ask.js";
 import { viewTrend } from "./trend.js";
 import { TYPES, flags, isVisit, summary, typeLabel } from "./types.js";
 import { fmtU, isUS, toDisp, trim, unitOf } from "./units.js";
@@ -69,12 +69,23 @@ const mrow = (attr, title, desc, icon) => `<button class="mrow" ${attr}><span cl
 const SUB = {
   family: ["me", () => familyHubHTML()], "family-members": ["family", () => membersPageHTML()], "family-kids": ["family", () => kidsPageHTML()], "family-meds": ["family", () => medsPageHTML()], "family-faith": ["family", () => faithPageHTML()],
   sync: ["me", () => syncHTML()], prefs: ["me", () => prefsHTML()], settings: ["me", () => familyHubHTML()], // settings: old links
-  cards: ["me", () => cardsHTML()], herocfg: ["today", () => heroCfgHTML()], routinecfg: ["today", () => routineCfgHTML()], learn: ["me", () => viewLearn()], about: ["me", () => aboutHTML()],
+  cards: ["me", () => cardsHTML()], herocfg: ["today", () => heroCfgHTML()], routinecfg: ["today", () => routineCfgHTML()], learn: ["me", () => viewLearn()], about: ["me", () => aboutHTML()], ask: ["me", () => viewAsk()],
   "grow-milestones": ["grow", () => growMilestones()], "grow-foods": ["grow", () => growFoods()], "grow-sleep": ["grow", () => growSleep()],
   "grow-body": ["grow", () => growBody()], "grow-checkups": ["grow", () => growCheckups()], "grow-vax": ["grow", () => growVax()],
   "mom-charts": ["mom", () => momCharts()], "mom-signs": ["mom", () => momSigns()]
 };
-const TAB_LABEL = { today: "今天", me: "我的", grow: "成长", mom: "妈妈", family: "家庭" };
+const TAB_LABEL = { today: "今天", me: "我的", grow: "成长", mom: "妈妈" };
+// titles of the sub-pages, for the breadcrumb path
+const PAGE_LABEL = { family: "家庭", "family-members": "家庭协作", "family-kids": "孩子", "family-meds": "妈妈用药间隔", "family-faith": "信仰（可选）", sync: "同步、备份与恢复", prefs: "语言、单位和显示", settings: "家庭",
+  cards: "卡片", herocfg: "顶部大计时", routinecfg: "习惯清单", learn: "问答", about: "介绍", ask: "小Y问",
+  "grow-milestones": "发育里程碑", "grow-foods": "新食物与反应", "grow-sleep": "睡眠", "grow-body": "体重 / 身高", "grow-checkups": "儿科体检与就诊", "grow-vax": "疫苗接种记录", "mom-charts": "体重、疼痛与心情", "mom-signs": "需要立即就医的警示信号" };
+/* Breadcrumb path on a sub-page (same design as home-pantry): ‹ 我的 / 家庭 / 家庭协作. The bottom tab first, then every hub
+   on the way, the current page last in bold; every earlier part is a button back to that level. */
+function crumbHTML(tab, cls = ""){
+  const chain = []; let k = tab; while (SUB[k]) { chain.unshift(k); k = SUB[k][0]; } chain.unshift(k);
+  return `<nav class="crumb ${cls}" aria-label="${t("位置")}">${chain.map((key, i) => { const label = t(i === 0 ? TAB_LABEL[key] || key : PAGE_LABEL[key] || key);
+    return i === chain.length - 1 ? `<b aria-current="page">${label}</b>` : `<button type="button" data-tab="${key}">${i === 0 ? "‹ " : ""}${label}</button>`; }).join(`<span class="sep">/</span>`)}</nav>`;
+}
 function render(){
   renderStatus();
   // the postpartum tab matters in the newborn stage, or while mother records are still being written
@@ -84,9 +95,8 @@ function render(){
   if (cur === "mom" && !showMom) S.tab = "today";
   document.querySelectorAll("nav.tabs button").forEach(b => { if (b.dataset.tab === cur) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
   const v = sub ? sub[1] : ({ today: viewToday, log: viewLog, mom: viewMom, grow: viewGrow, me: viewMe }[S.tab] || viewToday);
-  const back = sub ? `<div class="backbar"><button class="chip" data-tab="${sub[0]}">‹ ${t(TAB_LABEL[sub[0]])}</button></div>` : "";
-  $("#main").innerHTML = back + v();
-  updateMiniBar($("#bname").textContent, sub ? `<button class="chip" data-tab="${sub[0]}">‹ ${t(TAB_LABEL[sub[0]])}</button>` : "", t("回到顶部"));
+  $("#main").innerHTML = (sub ? crumbHTML(S.tab) : "") + v();
+  updateMiniBar($("#bname").textContent, sub ? crumbHTML(S.tab, "mini") : "", t("回到顶部"));
   heroRestore();
   if (S.tab === "log") { const s = $("#q"); if (s && document.activeElement !== s && S.logFocus) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); S.logFocus = false; } }
 }
@@ -167,7 +177,7 @@ function viewToday(){
   ${heroAnomalies().map(a => `<div class="alert red" role="alert"><b>${t("需要留意")}</b> · ⚠️ ${esc(t(clockOf(a.k).label))}：${t("已 {d}", { d: dur(a.gap) })}，${esc(anomalyText(a))}</div>`).join("")}
   ${nc ? `<div class="alert info">${checkup}<button class="chip" data-tab="grow-checkups" style="margin-left:6px">${t("查看全部")}</button></div>` : ""}
   <div class="quick" role="group" aria-label="${t("快速记录")}">${quickHTML()}</div>
-  <div style="text-align:right"><button class="chip" data-tab="cards">${t("⚙ 管理卡片")}</button></div>
+  <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><button class="chip" data-tab="ask">${aiIcon(16)} ${t("小Y问")}</button><button class="chip" data-tab="cards">${t("⚙ 管理卡片")}</button></div>
   ${stats ? `<h2>${t("最近 24 小时")}</h2><div class="stats">${stats}</div>${S.mode === "family" && SB.vis && memberNames().length > 1 ? `<p class="small muted" style="margin:6px 0 0">${t("统计只包含你能看到的记录。")}</p>` : ""}` : ""}
   ${routineHTML()}
 
@@ -467,13 +477,8 @@ function viewLearn(){
   <div class="panel">${doctorListHTML()}<p class="small muted">${t("整理自美国儿科学会家长网站 HealthyChildren.org 的常见建议，按当前阶段显示。不确定时，打电话问医生总是对的。")}</p></div>
 
   <h2>${t("问一个问题")}</h2>
-  <div class="panel ask">${S.sample ? `
-    <label for="askq" class="small muted">${t("比如：{eg}", { eg })}</label>
-    <textarea id="askq" placeholder="${t("输入你的问题…")}"></textarea>
-    <div class="btns"><button class="btn primary" data-act="ask">${t("提问")}</button></div>
-    <div class="answer" id="answer" aria-live="polite"></div>
-    <p class="small muted" style="margin-top:8px">${t("回答由 AI 生成，只作一般信息参考，不能代替医生诊断。")}</p>`
-    : `<p class="muted">${t("在线问答在当前打开方式下不可用。可以先查看下方的权威网站。")}</p>`}</div>
+  <div class="panel"><p class="small muted" style="margin-top:0">${t("「小Y问」会把你的问题连同孩子最近记录的统计摘要一起交给 AI：喂奶、睡眠、辅食、情绪、陪伴、发育都能问。")}</p>
+    <div class="btns" style="margin-top:8px"><button class="btn primary" data-tab="ask">${aiIcon(18)} ${t("去小Y问")}</button></div></div>
 
   <h2>${t("权威资料")}</h2>
   <div class="panel"><ul class="plain">

@@ -8,6 +8,7 @@ import { isUS, unitPref } from "./units.js";
 import { $, esc } from "./util.js";
 import { mrow, render } from "./views.js";
 import { backupSummary } from "./backup.js";
+import { aiIcon } from "./ask.js";
 
 /* ============ 我的: the hub for everything that is not daily logging ============
    Six entries, each a page of its own: 家庭 (itself a small hub: 家庭协作 / 孩子 / 妈妈用药间隔 / 信仰), 同步、备份与恢复,
@@ -31,6 +32,7 @@ function viewMe(){
   return `
   <h2>${t("我的")} <span class="small muted" style="font-weight:400">${esc(childName())} · ${esc(ageText())}</span></h2>
   <div class="panel mlist">
+    ${row('data-tab="ask"', t("小Y问"), t("问下次喂奶、睡眠作息、辅食、情绪、陪伴、发育……带着孩子最近的记录摘要"), aiIcon(20))}
     ${row('data-tab="family"', t("家庭"), famDesc, "⌂")}
     ${row('data-tab="sync"', t("同步、备份与恢复"), esc(syncSummary()), "⟳")}
     ${row('data-tab="prefs"', t("语言、单位和显示"), esc(prefsSummary()), "Aa")}
@@ -213,7 +215,7 @@ function readSettingsInputs(){
   const fs = $("#faithStatement"); if (fs) S.settings.faith.statement = fs.value.trim();
 }
 // re-render a 我的 page after cloud state changed (login, members, invite code, backup lists), unless a form is open on top
-const ME_PAGES = new Set(["me", "settings", "family", "family-members", "family-kids", "family-meds", "family-faith", "sync", "prefs"]);
+const ME_PAGES = new Set(["me", "settings", "family", "family-members", "family-kids", "family-meds", "family-faith", "sync", "prefs", "ask"]);
 function refreshSettingsIfOpen(){ if (ME_PAGES.has(S.tab) && !$("#sheet").open) render(); }
 
 export { viewMe, familyHubHTML, membersPageHTML, kidsPageHTML, medsPageHTML, faithPageHTML, prefsHTML, cardsHTML, heroCfgHTML, routineCfgHTML, faithHTML, FAITH_TEMPLATE, readSettingsInputs, refreshSettingsIfOpen };

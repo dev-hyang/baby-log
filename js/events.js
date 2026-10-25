@@ -1,6 +1,8 @@
 import { initSwipeRows } from "./swipe-rows.js";
-import { ask } from "./ask.js";
+// backup.js must be entered before anything that reaches sync.js (ask.js → views.js → me.js → sync.js): sync ↔ backup import each
+// other and backup.js uses sync's loadJSON at top level, so backup has to be the one that finishes last in that cycle
 import { bkAct, bkChange } from "./backup.js";
+import { askAct } from "./ask.js";
 import { last } from "./derived.js";
 import { setLang, t } from "./i18n.js";
 import { FAITH_TEMPLATE, readSettingsInputs } from "./me.js";
@@ -126,6 +128,7 @@ document.addEventListener("click", async ev => {
   if (t0.dataset.langSet) { readSettingsInputs(); setLang(t0.dataset.langSet); render(); return; }
   if (t0.dataset.themeSet !== undefined) { const v = t0.dataset.themeSet; if (v) document.documentElement.dataset.theme = v; else delete document.documentElement.dataset.theme; try { localStorage.setItem(LS_KEY + ".theme", v); } catch (e) {} readSettingsInputs(); render(); return; }
   if (t0.dataset.act && t0.dataset.act.startsWith("bk-")) { await bkAct(t0.dataset.act, t0); return; }   // 备份与恢复（js/backup.js）
+  if (t0.dataset.act && t0.dataset.act.startsWith("ask-")) { await askAct(t0.dataset.act, t0); return; }  // 小Y问（js/ask.js）
   switch (t0.dataset.act) {
     case "close": closeSheet(); break;
     case "save": { readDraftInputs(); const e = { ...draft }; const isNewRecord = !S.entries.some(x => x.id === e.id);
@@ -200,7 +203,6 @@ document.addEventListener("click", async ev => {
     case "demo": closeSheet(); await loadDemo(); S.tab = "today"; render(); window.scrollTo(0, 0); break;
     case "cleardemo": { const n = await removeWhere(e => e.demo); toast(t("已清除 {n} 条演示记录", { n })); break; }
     case "clearall": if (confirm(t("确定清空全部记录（所有孩子和妈妈的记录）？建议先导出备份。此操作无法撤销。"))) { closeSheet(); const n = await removeWhere(() => true); toast(t("已清空 {n} 条", { n })); } break;
-    case "ask": ask(); break;
     case "sb-login": await sbAuth("login"); break;
     case "sb-signup": await sbAuth("signup"); break;
     case "sb-create": await sbCreate(); break;
