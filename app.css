@@ -580,8 +580,12 @@ details.more summary .small{font-weight:400}
 .sched label[hidden]{display:none}
 .bk-path{width:100%}.bk-path label{flex:none}.bk-path input{flex:1 1 160px;min-height:34px;min-width:0}
 .bk-hint{display:block;color:var(--muted,#6b7280);font-size:12px;line-height:1.4;margin:2px 0 4px}
-/* ---- 小Y问（js/ask.js） ---- */
+/* ---- 咩咩咩（js/ask.js） ---- */
 .ai-ico{vertical-align:-4px;flex:none}
+/* 今天页的咩咩咩入口：整行可点，小羊 + 标题 + 一句说明 */
+.askentry{display:flex;align-items:center;gap:12px;width:100%;text-align:left;margin-top:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);cursor:pointer;font:inherit;color:inherit}
+.askentry .at{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px} .askentry b{font-size:15px} .askentry small{color:var(--muted);font-size:12.5px;line-height:1.35}
+.askentry .chev{color:var(--muted);font-size:22px;line-height:1}
 .mrow .mi .ai-ico{vertical-align:middle}
 .ask .chk{margin:8px 0 0}
 .ask .btns{margin-top:12px}

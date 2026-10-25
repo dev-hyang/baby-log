@@ -77,7 +77,7 @@ const SUB = {
 const TAB_LABEL = { today: "今天", me: "我的", grow: "成长", mom: "妈妈" };
 // titles of the sub-pages, for the breadcrumb path
 const PAGE_LABEL = { family: "家庭", "family-members": "家庭协作", "family-kids": "孩子", "family-meds": "妈妈用药间隔", "family-faith": "信仰（可选）", sync: "同步、备份与恢复", prefs: "语言、单位和显示", settings: "家庭",
-  cards: "卡片", herocfg: "顶部大计时", routinecfg: "习惯清单", learn: "问答", about: "介绍", ask: "小Y问",
+  cards: "卡片", herocfg: "顶部大计时", routinecfg: "习惯清单", learn: "问答", about: "介绍", ask: "咩咩咩",
   "grow-milestones": "发育里程碑", "grow-foods": "新食物与反应", "grow-sleep": "睡眠", "grow-body": "体重 / 身高", "grow-checkups": "儿科体检与就诊", "grow-vax": "疫苗接种记录", "mom-charts": "体重、疼痛与心情", "mom-signs": "需要立即就医的警示信号" };
 /* Breadcrumb path on a sub-page (same design as home-pantry): ‹ 我的 / 家庭 / 家庭协作. The bottom tab first, then every hub
    on the way, the current page last in bold; every earlier part is a button back to that level. */
@@ -177,7 +177,8 @@ function viewToday(){
   ${heroAnomalies().map(a => `<div class="alert red" role="alert"><b>${t("需要留意")}</b> · ⚠️ ${esc(t(clockOf(a.k).label))}：${t("已 {d}", { d: dur(a.gap) })}，${esc(anomalyText(a))}</div>`).join("")}
   ${nc ? `<div class="alert info">${checkup}<button class="chip" data-tab="grow-checkups" style="margin-left:6px">${t("查看全部")}</button></div>` : ""}
   <div class="quick" role="group" aria-label="${t("快速记录")}">${quickHTML()}</div>
-  <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><button class="chip" data-tab="ask">${aiIcon(16)} ${t("小Y问")}</button><button class="chip" data-tab="cards">${t("⚙ 管理卡片")}</button></div>
+  <button class="askentry" data-tab="ask">${aiIcon(36)}<span class="at"><b>${t("咩咩咩")}</b><small>${t("问一问你的新 AI 助理吧：喂奶、睡眠、情绪、陪伴都能问")}</small></span><span class="chev" aria-hidden="true">›</span></button>
+  <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="chip" data-tab="cards">${t("⚙ 管理卡片")}</button></div>
   ${stats ? `<h2>${t("最近 24 小时")}</h2><div class="stats">${stats}</div>${S.mode === "family" && SB.vis && memberNames().length > 1 ? `<p class="small muted" style="margin:6px 0 0">${t("统计只包含你能看到的记录。")}</p>` : ""}` : ""}
   ${routineHTML()}
 
@@ -477,8 +478,8 @@ function viewLearn(){
   <div class="panel">${doctorListHTML()}<p class="small muted">${t("整理自美国儿科学会家长网站 HealthyChildren.org 的常见建议，按当前阶段显示。不确定时，打电话问医生总是对的。")}</p></div>
 
   <h2>${t("问一个问题")}</h2>
-  <div class="panel"><p class="small muted" style="margin-top:0">${t("「小Y问」会把你的问题连同孩子最近记录的统计摘要一起交给 AI：喂奶、睡眠、辅食、情绪、陪伴、发育都能问。")}</p>
-    <div class="btns" style="margin-top:8px"><button class="btn primary" data-tab="ask">${aiIcon(18)} ${t("去小Y问")}</button></div></div>
+  <div class="panel"><p class="small muted" style="margin-top:0">${t("「咩咩咩」会把你的问题连同孩子最近记录的统计摘要一起交给 AI：喂奶、睡眠、辅食、情绪、陪伴、发育都能问。")}</p>
+    <div class="btns" style="margin-top:8px"><button class="btn primary" data-tab="ask">${aiIcon(18)} ${t("去问咩咩")}</button></div></div>
 
   <h2>${t("权威资料")}</h2>
   <div class="panel"><ul class="plain">

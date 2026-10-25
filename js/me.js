@@ -32,7 +32,7 @@ function viewMe(){
   return `
   <h2>${t("我的")} <span class="small muted" style="font-weight:400">${esc(childName())} · ${esc(ageText())}</span></h2>
   <div class="panel mlist">
-    ${row('data-tab="ask"', t("小Y问"), t("问下次喂奶、睡眠作息、辅食、情绪、陪伴、发育……带着孩子最近的记录摘要"), aiIcon(20))}
+    ${row('data-tab="ask"', t("咩咩咩"), t("问下次喂奶、睡眠作息、辅食、情绪、陪伴、发育……带着孩子最近的记录摘要"), aiIcon(20))}
     ${row('data-tab="family"', t("家庭"), famDesc, "⌂")}
     ${row('data-tab="sync"', t("同步、备份与恢复"), esc(syncSummary()), "⟳")}
     ${row('data-tab="prefs"', t("语言、单位和显示"), esc(prefsSummary()), "Aa")}

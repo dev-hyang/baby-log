@@ -128,7 +128,7 @@ document.addEventListener("click", async ev => {
   if (t0.dataset.langSet) { readSettingsInputs(); setLang(t0.dataset.langSet); render(); return; }
   if (t0.dataset.themeSet !== undefined) { const v = t0.dataset.themeSet; if (v) document.documentElement.dataset.theme = v; else delete document.documentElement.dataset.theme; try { localStorage.setItem(LS_KEY + ".theme", v); } catch (e) {} readSettingsInputs(); render(); return; }
   if (t0.dataset.act && t0.dataset.act.startsWith("bk-")) { await bkAct(t0.dataset.act, t0); return; }   // 备份与恢复（js/backup.js）
-  if (t0.dataset.act && t0.dataset.act.startsWith("ask-")) { await askAct(t0.dataset.act, t0); return; }  // 小Y问（js/ask.js）
+  if (t0.dataset.act && t0.dataset.act.startsWith("ask-")) { await askAct(t0.dataset.act, t0); return; }  // 咩咩咩（js/ask.js）
   switch (t0.dataset.act) {
     case "close": closeSheet(); break;
     case "save": { readDraftInputs(); const e = { ...draft }; const isNewRecord = !S.entries.some(x => x.id === e.id);
