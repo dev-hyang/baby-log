@@ -592,3 +592,8 @@ details.more summary .small{font-weight:400}
 .ai-answer .ai-head b{flex:1}
 .ai-text p{margin:6px 0}.ai-text ul,.ai-text ol{margin:6px 0;padding-left:20px}.ai-text li{margin:3px 0}.ai-text h4{margin:10px 0 4px;font-size:15px}
 .ai-ctx{white-space:pre-wrap;font:13px/1.5 var(--f-body);margin:0;color:var(--muted);overflow-wrap:anywhere}
+
+.bk-more{margin-top:6px}.bk-more>summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--ink);padding:6px 0;list-style:none}
+.bk-more>summary::before{content:"▸ ";}.bk-more[open]>summary::before{content:"▾ ";}
+.sched label{font-weight:700;color:var(--ink)}
+.sched select,.sched input{font-weight:700}

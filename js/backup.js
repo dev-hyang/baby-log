@@ -227,10 +227,10 @@ const UI = { folder: null, lists: {}, loading: false, stale: true, preview: null
 const when = (iso) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "");
 const kb = (n) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 // where backups can be listed / restored from (the folder and plain downloads are read back through 「选文件」)
-const SOURCES = {
-  cloud: { icon: "☁", label: "家庭云端", ready: cloudReady, list: listCloud, read: readCloud, del: deleteCloud },
+const SOURCES = {   // 顺序即显示顺序：Google Drive 在前（默认选它），再 Dropbox，最后应用云端
   gdrive: { icon: "▲", label: "Google Drive", ready: gdOn, list: () => gdList(false), read: gdRead, del: gdDelete },
   dropbox: { icon: "◆", label: "Dropbox", ready: dbxOn, list: dbxList, read: dbxRead, del: dbxDelete },
+  cloud: { icon: "☁", label: "家庭云端", ready: cloudReady, list: listCloud, read: readCloud, del: deleteCloud },
 };
 const available = () => Object.keys(SOURCES).filter((k) => SOURCES[k].ready());
 function reload() {
@@ -298,9 +298,9 @@ function syncHTML() {
     UI.src = srcs.includes(UI.src) ? UI.src : srcs[0]; const list = UI.lists[UI.src] || [], S0 = SOURCES[UI.src];
     const row = (f) => `<div class="bkrow"><div class="bkname"><b>${esc(f.name)}</b><small class="muted">${esc(when(f.at))} · ${kb(f.size)}</small></div>
       <div class="bkact"><button class="chip" data-act="bk-dl" data-src="${UI.src}" data-id="${esc(f.id || f.name)}" data-name="${esc(f.name)}">${t("下载")}</button><button class="chip" data-act="bk-use" data-src="${UI.src}" data-id="${esc(f.id || f.name)}">${t("恢复")}</button><button class="chip danger" data-act="bk-rm" data-src="${UI.src}" data-id="${esc(f.id || f.name)}" data-name="${esc(f.name)}" aria-label="${t("删除")}">✕</button></div></div>`;
-    have = `<h2>${t("已有的备份")}</h2><div class="panel">
+    have = `<h2>${t("备份记录")}</h2><div class="panel">
       ${srcs.length > 1 ? `<div class="seg" role="group" aria-label="${t("备份来源")}">${srcs.map((k) => `<button type="button" data-act="bk-src" data-src="${k}" aria-pressed="${k === UI.src}">${SOURCES[k].icon} ${t(SOURCES[k].label)}</button>`).join("")}</div>` : `<div class="lab">${S0.icon} ${t(S0.label)}</div>`}
-      <div class="bklist">${UI.loading ? `<p class="small muted">${t("读取中…")}</p>` : list.length ? list.slice(0, 12).map(row).join("") : `<p class="small muted">${t("这里还没有备份。上面勾上它，再点「现在备份」。")}</p>`}</div></div>`;
+      <div class="bklist">${UI.loading ? `<p class="small muted">${t("读取中…")}</p>` : list.length ? list.slice(0, 3).map(row).join("") + (list.length > 3 ? `<details class="bk-more"><summary>${t("更早的 {n} 条", { n: Math.min(list.length, 30) - 3 })}</summary>${list.slice(3, 30).map(row).join("")}</details>` : "") : `<p class="small muted">${t("这里还没有备份。上面勾上它，再点「现在备份」。")}</p>`}</div></div>`;
   }
   // 4) 从文件恢复
   const pv = UI.preview;

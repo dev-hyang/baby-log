@@ -1495,4 +1495,6 @@ export default {
 "gpt-4o-mini 够用，读图便宜。": "gpt-4o-mini is enough.",
 "Haiku 档最便宜，读图准。": "Haiku is the cheapest tier.",
 "填接口地址（到 /v1 为止）、模型名和 key；要能读图才能拍照识字。": "Enter the endpoint (up to /v1), model name and key.",
+  "备份记录": "Backup history",
+  "更早的 {n} 条": "{n} earlier",
 };
