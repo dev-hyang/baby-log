@@ -20,7 +20,7 @@ const cutoff = () => new Date(Date.now() - KEEP_DAYS * 864e5).toISOString().slic
 const prefix = () => `family/${SB.family.id}`;
 
 /* ---- 设置（存本机） ---- */
-const DEFAULTS = { every: "off", days: 14, targets: ["download"], last: null, lastInfo: "" };
+const DEFAULTS = { every: "off", days: 14, targets: ["download"], provider: "any", last: null, lastInfo: "" };
 const settings = () => ({ ...DEFAULTS, ...loadJSON(CFG.key, {}) });
 const saveSettings = (patch) => { const s = { ...settings(), ...patch }; saveJSON(CFG.key, s); return s; };
 const intervalDays = (s = settings()) => (s.every === "week" ? 7 : s.every === "month" ? 30 : s.every === "custom" ? Math.max(1, +s.days || 14) : 0);
@@ -45,6 +45,30 @@ const IDB = `${CFG.file}-fs`;
 function idb() { return new Promise((res, rej) => { const r = indexedDB.open(IDB, 1); r.onupgradeneeded = () => r.result.createObjectStore("h"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
 async function idbGet(k) { try { const db = await idb(); return await new Promise((res, rej) => { const q = db.transaction("h").objectStore("h").get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); } catch (e) { return null; } }
 async function idbSet(k, v) { try { const db = await idb(); await new Promise((res, rej) => { const tx = db.transaction("h", "readwrite"); if (v == null) tx.objectStore("h").delete(k); else tx.objectStore("h").put(v, k); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); } catch (e) { /* 忽略 */ } }
+/** 电脑上各家云盘客户端的同步文件夹在哪（选「这台电脑的文件夹」时的提示） */
+const PROVIDERS = [
+  { id: "any", name: "任意文件夹 / 其他云盘", hint: "电脑上的任何文件夹都行；用别家云盘就选它的同步文件夹" },
+  { id: "icloud", name: "iCloud Drive", hint: "Mac 在 ~/Library/Mobile Documents/com~apple~CloudDocs（访达侧栏的 iCloud 云盘）；Windows 装 iCloud 后在 C:\\Users\\<你>\\iCloudDrive" },
+  { id: "onedrive", name: "OneDrive", hint: "Windows 一般在 C:\\Users\\<你>\\OneDrive，Mac 在 ~/OneDrive" },
+  { id: "gdrive", name: "Google Drive（桌面版）", hint: "装了 Google Drive 桌面版后，Windows 一般在「G:\\我的云端硬盘」或「Google Drive」盘，Mac 在 ~/Google Drive" },
+  { id: "dropbox", name: "Dropbox（桌面版）", hint: "Windows 一般在 C:\\Users\\<你>\\Dropbox，Mac 在 ~/Dropbox" },
+];
+/* ---- 数据库脚本：supabase/ 目录在电脑上、不进 git，备份文件里也没有；选一次它的位置，每次写文件夹时把 *.sql 一起拷进 sql/ 子目录 ---- */
+async function pickSqlFolder() { const h = await window.showDirectoryPicker({ mode: "read", id: `${CFG.file}-sql`, startIn: "documents" }); await idbSet("sqldir", h); return h; }
+const forgetSqlFolder = () => idbSet("sqldir", null);
+async function sqlStatus() { const h = await idbGet("sqldir"); return h ? { name: h.name, handle: h } : { name: "" }; }
+let lastSqlCopied = 0;
+async function copySqlInto(dst, gesture) {
+  const src = await idbGet("sqldir"); if (!src) return 0;
+  let perm = "prompt"; try { perm = await src.queryPermission({ mode: "read" }); } catch (e) { /* 旧版 */ }
+  if (perm !== "granted") { if (!gesture) return 0; if ((await src.requestPermission({ mode: "read" })) !== "granted") return 0; }
+  const out = await dst.getDirectoryHandle("sql", { create: true }); let n = 0;
+  const walk = async (dir, to) => { for await (const [name, h] of dir.entries()) {
+    if (h.kind === "directory") { if (name.startsWith(".")) continue; await walk(h, await to.getDirectoryHandle(name, { create: true })); }
+    else if (/\.(sql|md)$/i.test(name)) { const f = await h.getFile(), w = await (await to.getFileHandle(name, { create: true })).createWritable(); await w.write(await f.arrayBuffer()); await w.close(); n++; }
+  } };
+  await walk(src, out); return n;
+}
 async function pickFolder() { const h = await window.showDirectoryPicker({ mode: "readwrite", id: `${CFG.file}-backup`, startIn: "documents" }); await idbSet("dir", h); return h; }
 const forgetFolder = () => idbSet("dir", null);
 async function folderStatus() {
@@ -59,6 +83,7 @@ async function writeFolder(blob, name, gesture) {
   const fh = await st.handle.getFileHandle(name, { create: true }), w = await fh.createWritable(); await w.write(blob); await w.close();
   const cut = new Date(Date.now() - KEEP_DAYS * 864e5).toISOString().slice(0, 10);
   try { for await (const [n] of st.handle.entries()) { const m = FILE_RE.exec(n); if (m && m[1] < cut) await st.handle.removeEntry(n).catch(() => {}); } } catch (e) { /* 忽略 */ }
+  try { const n = await copySqlInto(st.handle, gesture); if (n) lastSqlCopied = n; } catch (e) { /* 拷不动 SQL 不影响备份本身 */ }
 }
 
 /* ---- 云端（家庭模式；Supabase Storage backups 桶，迁移 017） ---- */
@@ -211,8 +236,9 @@ async function runBackup(targets, gesture = false) {
       ok.push(tg);
     } catch (e) { if (e.message === "NEED_GESTURE") needGesture = true; failed.push([tg, e.message === "NO_FOLDER" ? t("还没选文件夹") : e.message === "NEED_GESTURE" ? (tg === "gdrive" ? t("需要重新登录 Google") : t("需要你点一下授权")) : e.message]); }
   }
-  if (ok.length) saveSettings({ last: new Date().toISOString(), lastInfo: `${name} · ${ok.map(targetName).join("+")} · ${rowCount(data)} ${t("条")}` });
-  return { ok, failed, needGesture, name, rows: rowCount(data) };
+  const sqlN = lastSqlCopied; lastSqlCopied = 0;
+  if (ok.length) saveSettings({ last: new Date().toISOString(), lastInfo: `${name} · ${ok.map(targetName).join("+")} · ${rowCount(data)} ${t("条")}${sqlN ? ` · ${t("SQL {n} 个", { n: sqlN })}` : ""}` });
+  return { ok, failed, needGesture, name, rows: rowCount(data), sqlN };
 }
 let checked = false;
 /** 打开应用（本机模式）或进入家庭后调一次：到期了就在后台备份 */
@@ -251,8 +277,8 @@ const available = () => Object.keys(SOURCES).filter((k) => SOURCES[k].ready());
 function reload() {
   UI.stale = false; UI.loading = true;
   const srcs = available();
-  Promise.all([folderStatus().catch(() => ({ supported: false, perm: "none", name: "" })), ...srcs.map((k) => SOURCES[k].list().catch(() => []))])
-    .then(([f, ...ls]) => { UI.folder = f; srcs.forEach((k, i) => { UI.lists[k] = ls[i]; }); UI.loading = false; refreshSettingsIfOpen(); });
+  Promise.all([folderStatus().catch(() => ({ supported: false, perm: "none", name: "" })), sqlStatus().catch(() => ({ name: "" })), ...srcs.map((k) => SOURCES[k].list().catch(() => []))])
+    .then(([f, q, ...ls]) => { UI.folder = f; UI.sql = q; srcs.forEach((k, i) => { UI.lists[k] = ls[i]; }); UI.loading = false; refreshSettingsIfOpen(); });
 }
 /** 一句话给「我的」入口行用 */
 function backupSummary() { const s = settings(); return s.last ? t("上次备份 {d}", { d: when(s.last) }) : t("还没备份过"); }
@@ -272,16 +298,22 @@ function syncHTML() {
       ${body ? `<div class="tb">${body}</div>` : ""}</div>`;
   const gd = tok("gd"), dbx = tok("dbx");
   const notCfg = t("需要先在 js/config.js 里填好（见 README「云盘备份」）");
+  const prov = PROVIDERS.find((x) => x.id === s.provider) || PROVIDERS[0];
+  const provSel = `<span class="bk-row"><select name="provider" aria-label="${esc(t("云盘"))}">${PROVIDERS.map((x) => `<option value="${x.id}" ${x.id === prov.id ? "selected" : ""}>${esc(t(x.name))}</option>`).join("")}</select></span><span class="small muted">${esc(t(prov.hint))}</span>`;
+  const sql = UI.sql || { name: "" };
   const folderBody = !folder.supported ? `<span class="small muted">${t("这个浏览器不支持直接写文件夹（手机和 Safari 没有）")}</span>`
     : folder.name ? `<span class="small muted">${t("文件夹：{n}", { n: esc(folder.name) })}</span>${folder.perm !== "granted" ? ` <button class="chip" data-act="bk-grant">${t("授权")}</button>` : ""} <button class="chip" data-act="bk-pick">${t("换文件夹")}</button> <button class="chip" data-act="bk-forget">${t("不再用")}</button>`
     : `<button class="chip" data-act="bk-pick">${t("选一个文件夹")}</button> <span class="small muted">${t("选一次就记住")}</span>`;
+  const folderFull = folder.supported ? `${provSel}<span class="bk-row" style="margin-top:6px">${folderBody}</span>` : folderBody;
+  const sqlBlock = `<div class="bk-sql"><b>⚠️ ${t("数据库脚本不在备份里")}</b><small>${t("supabase/schema.sql 和 migrations 只在你的电脑上（不进 git）。电脑没了，备份文件就导不回去。请把这个文件夹手动拷到云盘或别的位置；选了「这台电脑的文件夹」的话，可以让每次备份顺带把 .sql 一起拷进去：")}</small>
+    <span class="bk-row">${sql.name ? `<span class="bk-pill ok">📁 ${esc(sql.name)}</span><button class="chip" data-act="bk-forget-sql">${t("不再用")}</button>` : folder.supported ? `<button class="chip" data-act="bk-pick-sql">${t("选 supabase 文件夹")}</button>` : `<span class="small muted">${t("在电脑上打开这一页可以设置自动拷贝")}</span>`}</span></div>`;
   const cards = [
     card("cloud", "☁", t("家庭云端"), fam ? t("家庭自己的 Supabase 存储，全家任何设备都能恢复；只留 {n} 天", { n: KEEP_DAYS }) : t("加入家庭后可用"), "", !fam),
     card("gdrive", "▲", "Google Drive", gdConfigured() ? t("放在你 Google 云端硬盘的「小月亮备份」文件夹里；只留 {n} 天", { n: KEEP_DAYS }) : notCfg,
       !gdConfigured() ? "" : gd ? `<span class="small muted">${t("已连接")}${gd.email ? ` ${esc(gd.email)}` : ""}</span> <button class="chip" data-act="bk-gd-off">${t("断开")}</button>` : `<button class="chip" data-act="bk-gd-on">${t("连接 Google Drive")}</button>`, !gdConfigured() || !gd),
     card("dropbox", "◆", "Dropbox", dbxConfigured() ? t("放在 Dropbox 的「应用 / 小月亮」文件夹里；只留 {n} 天", { n: KEEP_DAYS }) : notCfg,
       !dbxConfigured() ? "" : dbx ? `<span class="small muted">${t("已连接")}${dbx.email ? ` ${esc(dbx.email)}` : ""}</span> <button class="chip" data-act="bk-dbx-off">${t("断开")}</button>` : `<button class="chip" data-act="bk-dbx-on">${t("连接 Dropbox")}</button>`, !dbxConfigured() || !dbx),
-    card("folder", "▭", t("这台电脑的文件夹"), t("桌面 Chrome / Edge。选 iCloud Drive、OneDrive 或 Dropbox 同步的文件夹，就等于也上了云；自动清掉 {n} 天前的", { n: KEEP_DAYS }), folderBody, !folder.supported),
+    card("folder", "▭", t("这台电脑的文件夹"), t("桌面 Chrome / Edge。选 iCloud Drive、OneDrive 或 Dropbox 同步的文件夹，就等于也上了云；自动清掉 {n} 天前的", { n: KEEP_DAYS }), folderFull, !folder.supported),
     card("download", "⤓", t("下载"), t("每次备份弹出下载。iPhone 上可以分享到「文件」存进 iCloud Drive；下载的文件不会自动清理")),
   ].join("");
   const backup = `<h2>${t("备份")}</h2>
@@ -296,6 +328,7 @@ function syncHTML() {
         <p class="small muted">${t("网页没法在关着的时候跑：到期后下次打开应用时自动备份一次")}</p>
         <div class="lab">${t("备份到哪（可多选）")}</div>
         <div class="tgrid">${cards}</div>
+        ${sqlBlock}
       </form></div>`;
   // 3) 已有的备份（按来源切换）
   const srcs = available(); let have = "";
@@ -328,9 +361,12 @@ async function bkAct(act, el) {
     case "bk-now": case "bk-download": {
       el.disabled = true;
       try { const r = await runBackup(act === "bk-download" ? ["download"] : (settings().targets.length ? settings().targets : ["download"]), true); S.backupPending = r.needGesture;
-        UI.result = r.ok.length ? { title: t("已备份到 {to}：{name}（{n} 条）", { to: r.ok.map(targetName).join("、"), name: r.name, n: r.rows }), detail: r.failed.map(([k, w]) => `${targetName(k)}：${w}`).join("；") } : { title: t("备份没成功"), detail: r.failed.map(([k, w]) => `${targetName(k)}：${w}`).join("；") }; }
+        const sqlNote = r.sqlN ? t("已顺带拷贝 {n} 个 SQL 文件。", { n: r.sqlN }) : t("提醒：数据库脚本（supabase/*.sql）不在备份里，请手动把它拷到云盘或别的位置。");
+        UI.result = r.ok.length ? { title: t("已备份到 {to}：{name}（{n} 条）", { to: r.ok.map(targetName).join("、"), name: r.name, n: r.rows }), detail: [sqlNote, ...r.failed.map(([k, w]) => `${targetName(k)}：${w}`)].join("；") } : { title: t("备份没成功"), detail: r.failed.map(([k, w]) => `${targetName(k)}：${w}`).join("；") }; }
       catch (e) { UI.result = { title: t("备份没成功"), detail: e.message }; }
       redraw(); break; }
+    case "bk-pick-sql": try { await pickSqlFolder(); toast(t("以后每次写文件夹时会把 .sql 一起拷进 sql/ 子目录")); } catch (e) { if (e.name !== "AbortError") toast(t("选文件夹失败：{msg}", { msg: e.message })); } redraw(); break;
+    case "bk-forget-sql": await forgetSqlFolder(); redraw(); break;
     case "bk-pick": try { await pickFolder(); toast(t("已记住这个文件夹")); } catch (e) { if (e.name !== "AbortError") toast(t("选文件夹失败：{msg}", { msg: e.message })); } redraw(); break;
     case "bk-forget": await forgetFolder(); redraw(); break;
     case "bk-grant": { const st = await folderStatus(); if (st.handle) { try { await st.handle.requestPermission({ mode: "readwrite" }); } catch (e) { /* 取消 */ } } redraw(); break; }
@@ -358,9 +394,9 @@ async function bkChange(ev) {
   const el = ev.target;
   if (el.closest && el.closest("#backupForm")) {
     const f = el.closest("#backupForm"), targets = [...f.querySelectorAll('input[name="target"]:checked')].map((x) => x.value);
-    saveSettings({ every: f.elements.every.value, days: Math.max(1, +f.elements.days.value || 14), targets });
+    saveSettings({ every: f.elements.every.value, days: Math.max(1, +f.elements.days.value || 14), targets, provider: f.elements.provider?.value || "any" });
     const box = f.querySelector("[data-bk-days]"); if (box) box.hidden = f.elements.every.value !== "custom";
-    if (el.name === "every") refreshSettingsIfOpen();
+    if (el.name === "every" || el.name === "provider") refreshSettingsIfOpen();
     return true;
   }
   if (el.id === "backupFile") {

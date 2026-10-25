@@ -1355,4 +1355,13 @@ export default {
   "换了手机、数据库被删、或换了 Supabase 项目：先登录并建好 / 加入家庭（新项目要先在 SQL Editor 执行 baby-log 仓库的 supabase/schema.sql），先恢复小月亮（孩子的 id 在那边），再在这里选备份文件导回来。": "New phone, deleted database or a new Supabase project: sign in and create / join the family first (a new project needs baby-log's supabase/schema.sql run in the SQL Editor), restore Little Moon first (the children's ids live there), then pick the backup file here.",
   "换了手机、数据库被删、或换了 Supabase 项目：先登录（新项目要先在 SQL Editor 执行 baby-log 仓库的 supabase/schema.sql，再注册），再在这里选备份文件导回来；家庭可见的项会挂到现在的家庭。": "New phone, deleted database or a new Supabase project: sign in first (a new project needs baby-log's supabase/schema.sql run in the SQL Editor, then sign up), then pick the backup file here; family-visible items attach to the current family.",
 "不自动备份": "Off",
+"Mac 在 ~/Library/Mobile Documents/com~apple~CloudDocs（访达侧栏的 iCloud 云盘）；Windows 装 iCloud 后在 C:\\\\Users\\\\<你>\\\\iCloudDrive": "~/Library/Mobile Documents/com~apple~CloudDocs on Mac (iCloud Drive in the Finder sidebar); C:\\\\Users\\\\<you>\\\\iCloudDrive on Windows with iCloud installed",
+"Windows 一般在 C:\\\\Users\\\\<你>\\\\OneDrive，Mac 在 ~/OneDrive": "Usually C:\\\\Users\\\\<you>\\\\OneDrive on Windows, ~/OneDrive on Mac",
+"Google Drive（桌面版）": "Google Drive (desktop app)",
+"装了 Google Drive 桌面版后，Windows 一般在「G:\\\\我的云端硬盘」或「Google Drive」盘，Mac 在 ~/Google Drive": "With Google Drive for desktop installed it's usually the “G:\\\\My Drive” / “Google Drive” drive on Windows, ~/Google Drive on Mac",
+"Dropbox（桌面版）": "Dropbox (desktop app)",
+"Windows 一般在 C:\\\\Users\\\\<你>\\\\Dropbox，Mac 在 ~/Dropbox": "Usually C:\\\\Users\\\\<you>\\\\Dropbox on Windows, ~/Dropbox on Mac",
+"supabase/schema.sql 和 migrations 只在你的电脑上（不进 git）。电脑没了，备份文件就导不回去。请把这个文件夹手动拷到云盘或别的位置；选了「这台电脑的文件夹」的话，可以让每次备份顺带把 .sql 一起拷进去：": "supabase/schema.sql and the migrations live only on your computer (not in git). Without them a backup can't be imported. Copy that folder to a cloud drive or elsewhere by hand; with “A folder on this computer” chosen, each backup can copy the .sql files along:",
+"在电脑上打开这一页可以设置自动拷贝": "Open this page on a computer to set up automatic copying",
+"以后每次写文件夹时会把 .sql 一起拷进 sql/ 子目录": "From now on each folder backup also copies the .sql files into a sql/ subfolder",
 };

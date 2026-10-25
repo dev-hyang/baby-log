@@ -2,7 +2,7 @@
 
 小月亮（baby-log）和 homeschool 共用同一个 Supabase 项目。数据库脚本统一放在这里，homeschool 仓库只引用，不另存一份。
 
-- `schema.sql` — 基线：首次部署时在 SQL Editor 里执行一次。**不要再改它**，结构变动一律写迁移文件。
+- `schema.sql` — **完整建库脚本** = 基线 + 全部迁移原样并入（2026-10-25 起）。新项目 / 重建数据库时在 SQL Editor 里执行这一个文件即可。结构变动仍先写迁移文件，再把它追加到 schema.sql 末尾。
 - `migrations/NNN_*.sql` — 增量迁移，按编号顺序执行尚未执行过的文件。每个文件可重复执行、不删数据、整体在一个事务里。
 
 | 编号 | 内容 | 状态 |
@@ -17,6 +17,12 @@
 | 009 | 家主与免注册加入：`create_family` 拒绝匿名用户；`is_owner`、`reset_invite_code`、`set_member_role`、`remove_member`；`families_guard` 触发器锁住 invite_code；`family_members` 加入 realtime。**前置：Authentication → Sign In / Providers → 打开 Allow anonymous sign-ins** | 待执行 |
 | 010 | `set_member_name`：家主改任何成员的称呼，成员改自己的 | 待执行 |
 | 011 | 经文背诵记录：`hs_scripture_progress` 加 `last_on` / `last_result` / `again_streak` / `undo_to`，状态加 `paused`（今天页任务式清单、撤销、先放一放） | 待执行 |
+| 012 | 记录可见性：`entries.visibility` / `shared_with` | 已执行 |
+| 013 | 牧羊人：`wb_profile`、`wb_practices`、`wb_logs`、`wb_prayers` | 已执行 |
+| 014 | `wb_practices.focus_kind` | 已执行 |
+| 015 | 牧羊人任务 `wb_tasks` | 已执行 |
+| 016 | 牧羊人灵修笔记 `wb_notes` | 已执行 |
+| 017 | 云端备份桶 `backups`（storage）：family/<家庭id>/… 家庭成员可读写，user/<用户id>/… 本人可读写；三个应用的「备份与恢复」用 | 待执行 |
 
 本目录不进 git（见仓库根 `.gitignore`），只在这台机器上维护。
 
