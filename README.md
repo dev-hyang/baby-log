@@ -48,7 +48,7 @@ js/
 - 一页四块：同步状态卡（家庭同步 / 待同步 / 登录失效 / 仅本机，带「立即同步」或「加入家庭」）→ 备份 → 已有的备份 → 从文件恢复；导出 CSV、演示数据、清空全部折叠在最下面的「数据工具」里。
 - 备份 = 这台设备上的 settings + entries（不含演示数据）。目的地是一格一格的卡片（手机一列，≥600px 两列），可多选：家庭云端（Supabase Storage `backups` 桶，迁移 017）、Google Drive、Dropbox、这台电脑的文件夹（File System Access，桌面 Chrome / Edge）、下载。云端 / 云盘 / 文件夹只留 60 天。定时按周 / 按月 / 自定义天数，到期后下次打开应用时在后台做一次。
 - iCloud Drive / OneDrive 没有网页接口：电脑上把「文件夹」选成它们同步的文件夹；iPhone 上用「下载」再分享到「文件」存进 iCloud Drive。
-- **云盘备份**要在 `js/config.js` 填两个公开的客户端标识（不是密钥，和 anon key 一样可以放在网页里），留空时卡片显示「需要先在 js/config.js 里填好」：
+- **云盘备份**（详细步骤见 [docs/backup-and-sync.md](docs/backup-and-sync.md)）要在 `js/config.js` 填两个公开的客户端标识（不是密钥，和 anon key 一样可以放在网页里），留空时卡片显示「需要先在 js/config.js 里填好」：
   - Google Drive：Google Cloud Console → APIs & Services → 启用 Google Drive API → OAuth 2.0 客户端（类型 Web 应用），「已获授权的 JavaScript 来源」填站点地址（如 `https://dev-hyang.github.io`，本地调试再加 `http://127.0.0.1:8765`），把客户端 ID 填进 `GOOGLE_CLIENT_ID`。权限只要 `drive.file`（只能看到应用自己建的文件），备份放在「小月亮备份」文件夹。令牌一小时过期，续期要用户点一下，所以定时备份到期时会出现「继续备份」。
   - Dropbox：Dropbox App Console → Create app → Scoped access，Access type 选 **App folder**，Permissions 勾 `files.content.write` / `files.content.read` / `account_info.read`，Redirect URIs 填站点地址（带结尾 `/`），把 App key 填进 `DROPBOX_APP_KEY`。用 OAuth 2 PKCE 拿 refresh token，定时备份可静默续期。
   - 令牌存在本机 localStorage；「断开」会吊销并清掉。
