@@ -1501,4 +1501,7 @@ export default {
 "还没同步过": "Not yet",
 "昨天 {t}": "Yesterday {t}",
   "问一问你的新 AI 助理吧：喂奶、睡眠、情绪、陪伴都能问": "Go ask your new AI helper: feeds, sleep, mood, play…",
+  "Google 登录过期了（授权只管一小时）": "Google sign-in expired (the grant lasts an hour)",
+  "读取失败": "Read failed",
+  "重新授权并刷新": "Re-authorize and refresh",
 };

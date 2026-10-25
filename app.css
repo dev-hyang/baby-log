@@ -604,3 +604,4 @@ details.more summary .small{font-weight:400}
 .bk-more>summary::before{content:"▸ ";}.bk-more[open]>summary::before{content:"▾ ";}
 .sched label{font-weight:700;color:var(--ink)}
 .sched select,.sched input{font-weight:700}
+.bk-err{margin:6px 0;color:#b4506a;font-size:13px}.bk-err .btn,.bk-err .chip{margin-left:6px}

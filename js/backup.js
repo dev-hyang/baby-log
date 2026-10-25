@@ -223,7 +223,7 @@ async function restoreBundle(d) {
 /* ---- 界面：我的 → 同步、备份与恢复（views.js 的 SUB 调 syncHTML；状态变化后 refreshSettingsIfOpen 重画） ----
    一页四块：同步状态卡 → 备份（现在 / 定时 / 备份到哪，目的地是一格一格的卡片，手机一列、宽屏两列）→ 已有的备份（按来源切换）→ 从文件恢复；
    导出 CSV、演示数据、清空全部收在最下面的「数据工具」里，默认折叠。 */
-const UI = { folder: null, lists: {}, loading: false, stale: true, preview: null, result: null, src: null };
+const UI = { folder: null, lists: {}, errs: {}, loading: false, stale: true, preview: null, result: null, src: null };
 const when = (iso) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "");
 // 「上次同步」用短格式：今天只给时间，昨天标「昨天」，更早带上日期
 const syncedLabel = (iso) => {
@@ -237,16 +237,17 @@ const syncedLabel = (iso) => {
 const kb = (n) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 // where backups can be listed / restored from (the folder and plain downloads are read back through 「选文件」)
 const SOURCES = {   // 顺序即显示顺序：Google Drive 在前（默认选它），再 Dropbox，最后应用云端
-  gdrive: { icon: "▲", label: "Google Drive", ready: gdOn, list: () => gdList(false), read: gdRead, del: gdDelete },
+  gdrive: { icon: "▲", label: "Google Drive", ready: gdOn, list: () => gdList(false), relist: () => gdList(true), read: gdRead, del: gdDelete },
   dropbox: { icon: "◆", label: "Dropbox", ready: dbxOn, list: dbxList, read: dbxRead, del: dbxDelete },
   cloud: { icon: "☁", label: "家庭云端", ready: cloudReady, list: listCloud, read: readCloud, del: deleteCloud },
 };
+const bkErr = (e) => (e && e.message === "NEED_GESTURE" ? t("Google 登录过期了（授权只管一小时）") : (e && e.message) || t("读取失败"));
 const available = () => Object.keys(SOURCES).filter((k) => SOURCES[k].ready());
 function reload() {
   UI.stale = false; UI.loading = true;
   const srcs = available();
-  Promise.all([folderStatus().catch(() => ({ supported: false, perm: "none", name: "" })), sqlStatus().catch(() => ({ name: "" })), ...srcs.map((k) => SOURCES[k].list().catch(() => []))])
-    .then(([f, q, ...ls]) => { UI.folder = f; UI.sql = q; srcs.forEach((k, i) => { UI.lists[k] = ls[i]; }); UI.loading = false; refreshSettingsIfOpen(); });
+  Promise.all([folderStatus().catch(() => ({ supported: false, perm: "none", name: "" })), sqlStatus().catch(() => ({ name: "" })), ...srcs.map((k) => SOURCES[k].list().then((r) => ({ r }), (e) => ({ e })))])
+    .then(([f, q, ...ls]) => { UI.folder = f; UI.sql = q; srcs.forEach((k, i) => { if (ls[i].e) UI.errs[k] = bkErr(ls[i].e); else { UI.lists[k] = ls[i].r; UI.errs[k] = ""; } }); /* 读失败（多半是 Google 令牌过期）：保留上次的列表，不要清空 */ UI.loading = false; refreshSettingsIfOpen(); });
 }
 /** 一句话给「我的」入口行用 */
 function backupSummary() { const s = settings(); return s.last ? t("上次备份 {d}", { d: when(s.last) }) : t("还没备份过"); }
@@ -310,7 +311,7 @@ function syncHTML() {
       <div class="bkact"><button class="chip" data-act="bk-dl" data-src="${UI.src}" data-id="${esc(f.id || f.name)}" data-name="${esc(f.name)}">${t("下载")}</button><button class="chip" data-act="bk-use" data-src="${UI.src}" data-id="${esc(f.id || f.name)}">${t("恢复")}</button><button class="chip danger" data-act="bk-rm" data-src="${UI.src}" data-id="${esc(f.id || f.name)}" data-name="${esc(f.name)}" aria-label="${t("删除")}">✕</button></div></div>`;
     have = `<h2>${t("备份记录")}</h2><div class="panel">
       ${srcs.length > 1 ? `<div class="seg" role="group" aria-label="${t("备份来源")}">${srcs.map((k) => `<button type="button" data-act="bk-src" data-src="${k}" aria-pressed="${k === UI.src}">${SOURCES[k].icon} ${t(SOURCES[k].label)}</button>`).join("")}</div>` : `<div class="lab">${S0.icon} ${t(S0.label)}</div>`}
-      <div class="bklist">${UI.loading ? `<p class="small muted">${t("读取中…")}</p>` : list.length ? list.slice(0, 3).map(row).join("") + (list.length > 3 ? `<details class="bk-more"><summary>${t("更早的 {n} 条", { n: Math.min(list.length, 30) - 3 })}</summary>${list.slice(3, 30).map(row).join("")}</details>` : "") : `<p class="small muted">${t("这里还没有备份。上面勾上它，再点「现在备份」。")}</p>`}</div></div>`;
+      <div class="bklist">${UI.errs[UI.src] ? `<p class="small bk-err">⚠️ ${esc(UI.errs[UI.src])} <button class="chip" data-act="bk-relist" data-src="${UI.src}">${t("重新授权并刷新")}</button></p>` : ""}${UI.loading && !list.length ? `<p class="small muted">${t("读取中…")}</p>` : list.length ? list.slice(0, 3).map(row).join("") + (list.length > 3 ? `<details class="bk-more"><summary>${t("更早的 {n} 条", { n: Math.min(list.length, 30) - 3 })}</summary>${list.slice(3, 30).map(row).join("")}</details>` : "") : `<p class="small muted">${t("这里还没有备份。上面勾上它，再点「现在备份」。")}</p>`}</div></div>`;
   }
   // 4) 从文件恢复
   const pv = UI.preview;
@@ -344,6 +345,7 @@ async function bkAct(act, el) {
     case "bk-pick": try { await pickFolder(); toast(t("已记住这个文件夹")); } catch (e) { if (e.name !== "AbortError") toast(t("选文件夹失败：{msg}", { msg: e.message })); } redraw(); break;
     case "bk-forget": await forgetFolder(); redraw(); break;
     case "bk-grant": { const st = await folderStatus(); if (st.handle) { try { await st.handle.requestPermission({ mode: "readwrite" }); } catch (e) { /* 取消 */ } } redraw(); break; }
+    case "bk-relist": el.disabled = true; try { const S0 = SOURCES[el.dataset.src]; UI.lists[el.dataset.src] = await (S0.relist || S0.list)(); UI.errs[el.dataset.src] = ""; } catch (e) { toast(t("读取失败：{msg}", { msg: e.message === "NEED_GESTURE" ? t("需要重新登录 Google") : e.message })); } refreshSettingsIfOpen(); break;
     case "bk-src": UI.src = el.dataset.src; refreshSettingsIfOpen(); break;
     case "bk-dl": try { const d = await SOURCES[el.dataset.src].read(el.dataset.id); download(toBlob(d), el.dataset.name); } catch (e) { toast(t("下载失败：{msg}", { msg: e.message })); } break;
     case "bk-use": try { const d = await SOURCES[el.dataset.src].read(el.dataset.id); UI.preview = { ...inspect(d), data: d }; } catch (e) { toast(t("读取失败：{msg}", { msg: e.message })); } refreshSettingsIfOpen(); break;
