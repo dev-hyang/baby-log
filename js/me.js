@@ -7,6 +7,7 @@ import { familyHTML } from "./sync.js";
 import { isUS, unitPref } from "./units.js";
 import { $, esc } from "./util.js";
 import { mrow, render } from "./views.js";
+import { backupHTML } from "./backup.js";
 
 /* ============ 我的: the hub for everything that is not daily logging ============
    Same design as homeschool: one list row per entry (icon, title, one-line description, ›), then the print
@@ -152,8 +153,9 @@ function settingsHTML(){
   <div class="panel">${familyHTML()}</div>
   <h2>${t("数据")}</h2>
   <div class="panel"><p class="small muted">${S.mode === "family" ? t("记录保存在家庭云端，每台设备都有一份离线副本；没网时照常记录，联网后自动同步。") : S.mode === "cloud" ? t("记录已同步到你的 Claude 账号，同时在本设备留有副本。") : t("记录目前只保存在这台设备的浏览器里。换手机或清理浏览器数据会丢失，建议每周导出一次备份。")}</p>
-  <div class="btns"><button class="btn" data-act="export">${t("导出备份（JSON）")}</button><button class="btn" data-act="csv">${t("导出表格（CSV）")}</button><button class="btn" data-act="import">${t("从备份恢复")}</button></div>
+  <div class="btns"><button class="btn" data-act="csv">${t("导出表格（CSV）")}</button></div>
   <div class="btns"><button class="btn" data-act="demo">${t("载入演示数据")}</button><button class="btn" data-act="cleardemo">${t("清除演示数据")}</button><button class="btn danger" data-act="clearall">${t("清空全部记录")}</button></div></div>
+  ${backupHTML()}
   <h2>${t("语言 / Language")}</h2>
   <div class="panel">${seg("data-lang-set", langPref(), LANGS.map(([v, l]) => [v, v === "auto" ? t("自动") : l]), t("语言 / Language"))}
   <p class="small muted" style="margin-top:6px">${t("只影响这台设备的显示。记录内容按统一格式保存，家人可以各看各的语言。")}</p></div>

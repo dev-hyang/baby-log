@@ -1,4 +1,5 @@
 import { SUPABASE_ANON_KEY, SUPABASE_JS, SUPABASE_URL } from "./config.js";
+import { runScheduled } from "./backup.js";
 import { last } from "./derived.js";
 import { t } from "./i18n.js";
 import { refreshSettingsIfOpen } from "./me.js";
@@ -85,6 +86,7 @@ async function enterFamily(fam){
   await syncNow();
   setupRealtime();
   render(); refreshSettingsIfOpen();
+  runScheduled();   // 定时备份到期了就在后台做一次
 }
 // This device was removed from the family (or the family is gone): drop the local copy, like logging out
 function leaveFamily(msg){

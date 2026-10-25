@@ -1,5 +1,6 @@
 import { initSwipeRows } from "./swipe-rows.js";
 import { ask } from "./ask.js";
+import { bkAct, bkChange } from "./backup.js";
 import { last } from "./derived.js";
 import { setLang, t } from "./i18n.js";
 import { FAITH_TEMPLATE, readSettingsInputs } from "./me.js";
@@ -124,6 +125,7 @@ document.addEventListener("click", async ev => {
   if (t0.dataset.unitsSet) { try { localStorage.setItem(UNIT_KEY, t0.dataset.unitsSet); } catch (e) {} readSettingsInputs(); render(); toast(t("单位已切换为{u}", { u: isUS() ? t("美制") : t("公制") })); return; }
   if (t0.dataset.langSet) { readSettingsInputs(); setLang(t0.dataset.langSet); render(); return; }
   if (t0.dataset.themeSet !== undefined) { const v = t0.dataset.themeSet; if (v) document.documentElement.dataset.theme = v; else delete document.documentElement.dataset.theme; try { localStorage.setItem(LS_KEY + ".theme", v); } catch (e) {} readSettingsInputs(); render(); return; }
+  if (t0.dataset.act && t0.dataset.act.startsWith("bk-")) { await bkAct(t0.dataset.act, t0); return; }   // 备份与恢复（js/backup.js）
   switch (t0.dataset.act) {
     case "close": closeSheet(); break;
     case "save": { readDraftInputs(); const e = { ...draft }; const isNewRecord = !S.entries.some(x => x.id === e.id);
@@ -209,6 +211,7 @@ document.addEventListener("click", async ev => {
   }
 });
 document.addEventListener("change", async ev => {
+  if (await bkChange(ev)) return;   // 备份设置 / 选了备份文件
   // drop-downs: timeline type, trend range and trend metric
   if (ev.target.dataset.logfilter !== undefined) { S.filter = ev.target.value; render(); const again = document.querySelector("[data-logfilter]"); again && again.focus(); return; }
   if (ev.target.dataset.trendrange !== undefined) { const [g, n] = ev.target.value.split(":"); S.gran = g === "week" ? "week" : "day"; S.span = +n || (S.gran === "week" ? 8 : 14); render(); const again = document.querySelector("[data-trendrange]"); again && again.focus(); return; }

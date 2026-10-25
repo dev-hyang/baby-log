@@ -82,7 +82,7 @@ function toCSV(){
 }
 async function importJSON(file){
   try {
-    const o = JSON.parse(await file.text());
+    const o = file && typeof file.text === "function" ? JSON.parse(await file.text()) : file;   // 备份与恢复页传的是已解析的对象
     if (!Array.isArray(o.entries)) throw new Error("bad");
     const valid = o.entries.filter(e => e && typeof e.id === "string" && TYPES[e.type] && typeof e.ts === "number");
     const ids = new Set(S.entries.map(e => e.id));

@@ -478,3 +478,9 @@ body.sheet-open .minibar,body.printview .minibar{display:none}
 .swipe-src:focus, .swipe-src:focus-visible { position: static !important; width: auto; height: auto; margin: 0; padding: revert; border: revert; overflow: visible; clip: auto; }
 @media (prefers-reduced-motion: reduce) { .swipe-row > *, .swipe-row::after { transition: none; } }
 @media print { .swipe-row::after { display: none; } }
+
+/* 备份与恢复（js/backup.js） */
+.bk-notice{background:var(--honey-soft,#fff6d6);border-radius:10px;padding:10px 12px;margin:8px 0;font-size:14px}
+.bk-notice p{margin:4px 0 0}
+.chk{display:flex;gap:8px;align-items:flex-start;margin:6px 0;font-size:14px;line-height:1.35}
+.chk input{margin-top:3px;flex:none}

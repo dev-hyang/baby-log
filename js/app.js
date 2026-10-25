@@ -5,6 +5,7 @@ import "./events.js"; // registers the global click / change / input handlers
 import { applyLang } from "./i18n.js";
 import { S, loadLocal } from "./state.js";
 import { initCloud } from "./store.js";
+import { runScheduled } from "./backup.js";
 import { initSupabase, syncNow } from "./sync.js";
 import { $ } from "./util.js";
 import { heroHTML, heroPage, heroRestore, heroSettle, render } from "./views.js";
@@ -24,6 +25,7 @@ document.addEventListener("pointerdown", e => { const tr = e.target.closest && e
 const heroRelease = () => document.querySelectorAll(".herotrack").forEach(tr => { if (tr._down) { tr._down = false; clearTimeout(tr._settle); tr._settle = setTimeout(() => heroSettle(tr), 140); } });
 document.addEventListener("pointerup", heroRelease, true); document.addEventListener("pointercancel", heroRelease, true);
 if (!initSupabase()) initCloud();
+setTimeout(() => { if (S.mode === "local") runScheduled(); }, 5000);   // 本机模式：打开 5 秒后检查定时备份（家庭模式在 enterFamily 里）
 setInterval(() => syncNow(), 60e3);
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") syncNow(); });
 window.addEventListener("online", () => syncNow());
