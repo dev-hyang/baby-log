@@ -11,6 +11,7 @@ const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/d
 /* ---- 云盘备份（可选）：我的 → 同步、备份与恢复 里的 Google Drive / Dropbox。留空就只显示「未配置」。怎么申请见 README「云盘备份」。
    两个都是公开的客户端标识（不是密钥），和上面的 anon key 一样可以放在网页里。 */
 const GOOGLE_CLIENT_ID = "84515417841-qgscfp9qnr11os6avv5cjqs9pjtgu3o3.apps.googleusercontent.com";   // Google Cloud Console → OAuth 2.0 客户端（Web 应用）；「已获授权的 JavaScript 来源」填站点地址
+const GOOGLE_API_KEY = "";     // Google Cloud Console → 凭据 → API 密钥（限制为 Google Picker API）；用于「在 Drive 里选文件夹」，留空就只能填路径
 const DROPBOX_APP_KEY = "";    // Dropbox App Console → App key；Access type 选 App folder；Redirect URI 填站点地址（带结尾的 /）
 
-export { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_JS, GOOGLE_CLIENT_ID, DROPBOX_APP_KEY };
+export { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_JS, GOOGLE_CLIENT_ID, GOOGLE_API_KEY, DROPBOX_APP_KEY };

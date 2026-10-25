@@ -5,8 +5,8 @@
    云端、云盘和文件夹只留 60 天。网页没法在关着时跑：到期后下次打开应用时在后台做一次。
    恢复 = 把备份里的记录合并进来（已有同 id 的不动，缺的补上；设置合并），家庭模式下会同步给全家。老版本「导出备份」的文件也能恢复。 */
 import { S, APP_VERSION } from "./state.js";
-import { SB, lapsed, loadJSON, memberNames, saveJSON } from "./sync.js";
-import { DROPBOX_APP_KEY, GOOGLE_CLIENT_ID } from "./config.js";
+import { SB, isOwner, lapsed, loadJSON, memberNames, saveJSON } from "./sync.js";
+import { DROPBOX_APP_KEY, GOOGLE_API_KEY, GOOGLE_CLIENT_ID } from "./config.js";
 import { createDrives } from "./cloud-drives.js";
 import { importJSON } from "./store.js";
 import { $, esc, toast } from "./util.js";
@@ -21,9 +21,17 @@ const cutoff = () => new Date(Date.now() - KEEP_DAYS * 864e5).toISOString().slic
 const prefix = () => `family/${SB.family.id}`;
 
 /* ---- 设置（存本机） ---- */
-const DEFAULTS = { every: "off", days: 14, targets: ["download"], provider: "any", gdPath: "", dbxPath: "", last: null, lastInfo: "" };
-const settings = () => ({ ...DEFAULTS, ...loadJSON(CFG.key, {}) });
-const saveSettings = (patch) => { const s = { ...settings(), ...patch }; saveJSON(CFG.key, s); return s; };
+const DEFAULTS = { every: "off", days: 14, targets: ["download"], provider: "any", gdPath: "", gdId: "", gdName: "", dbxPath: "", bundle: true, last: null, lastInfo: "" };
+/* 四个应用共用的部分（同一域名下 localStorage 互通）：多久备份、备份到哪、云盘；各应用自己的：路径、上次备份时间 */
+const SHARED_KEY = "homeworks.backup.shared", SHARED = ["every", "days", "targets", "provider"];
+const localPart = () => { const o = loadJSON(CFG.key, {}); SHARED.forEach((k) => delete o[k]); return o; };
+const settings = () => ({ ...DEFAULTS, ...loadJSON(SHARED_KEY, {}), ...localPart() });
+const saveSettings = (patch) => {
+  const sh = {}, loc = {}; for (const [k, v] of Object.entries(patch)) (SHARED.includes(k) ? sh : loc)[k] = v;
+  if (Object.keys(sh).length) saveJSON(SHARED_KEY, { ...loadJSON(SHARED_KEY, {}), ...sh });
+  if (Object.keys(loc).length) saveJSON(CFG.key, { ...localPart(), ...loc });
+  return settings();
+};
 const intervalDays = (s = settings()) => (s.every === "week" ? 7 : s.every === "month" ? 30 : s.every === "custom" ? Math.max(1, +s.days || 14) : 0);
 const nextDue = (s = settings()) => { const d = intervalDays(s); if (!d) return null; return s.last ? new Date(new Date(s.last).getTime() + d * 864e5) : new Date(); };
 const isDue = (s = settings()) => { const n = nextDue(s); return !!n && n.getTime() <= Date.now(); };
@@ -31,18 +39,46 @@ const isDue = (s = settings()) => { const n = nextDue(s); return !!n && n.getTim
 /* ---- 打包 ---- */
 const stamp = () => { const d = new Date(), p = (n) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; };
 const fileName = () => `${CFG.file}-${stamp()}.json`;
-function collect() {
-  const entries = S.entries.filter((e) => !e.demo).map(({ _dirty, ...e }) => e);
-  return { app: CFG.app, version: 1, format: FORMAT, app_version: APP_VERSION, exported: Date.now(), exported_at: new Date().toISOString(), mode: S.mode,
-    family: SB.family ? { id: SB.family.id, name: SB.family.name } : null, members: Object.values(SB.members || {}).map((m) => m.display_name || m), settings: JSON.parse(JSON.stringify(S.settings)), entries };
+const HS_TABLES = ["hs_family", "hs_scriptures", "hs_scripture_progress", "hs_routines", "hs_tasks", "hs_devotions", "hs_units", "hs_lessons", "hs_goals", "hs_resources"];
+const WB_TABLES = ["wb_profile", "wb_practices", "wb_logs", "wb_prayers", "wb_tasks", "wb_notes"];
+const memberList = () => Object.entries(SB.members || {}).map(([user_id, m]) => ({ user_id, display_name: m.name, role: m.role }));
+async function readAll(tb, col, val) {   // 成员：RLS 给什么拿什么（自己的 + 全家可见的）；表还没建就当空
+  const out = [];
+  for (let from = 0; ; from += 1000) {
+    let q = SB.client.from(tb).select("*").range(from, from + 999); if (col) q = q.eq(col, val);
+    const { data, error } = await q;
+    if (error) { if (/does not exist|schema cache/i.test(error.message)) return out; throw new Error(`${tb}: ${error.message}`); }
+    out.push(...(data || [])); if (!data || data.length < 1000) return out;
+  }
 }
-const rowCount = (d) => (Array.isArray(d.entries) ? d.entries.length : 0);
+/** 备份内容：小月亮的记录 + 设置；家庭模式下再带上家庭学堂、牧羊人（bundle）。
+ *  家主：服务器端一次打包全家（含家人私有的记录、每位家人的牧羊人数据，迁移 018 的 backup_family）；成员：只有自己的和全家可见的。 */
+async function collect() {
+  const entries = S.entries.filter((e) => !e.demo).map(({ _dirty, ...e }) => e);
+  const base = { app: CFG.app, version: 1, format: FORMAT, app_version: APP_VERSION, exported: Date.now(), exported_at: new Date().toISOString(), mode: S.mode, exporter: SB.user?.id || null,
+    family: SB.family ? { id: SB.family.id, name: SB.family.name } : null, members: memberList(), settings: JSON.parse(JSON.stringify(S.settings)), entries };
+  if (!cloudReady() || !settings().bundle) return base;
+  try {
+    if (isOwner()) {
+      const { data, error } = await SB.client.rpc("backup_family", { p_family: SB.family.id });
+      if (error) throw new Error(/backup_family/i.test(error.message) ? t("还没执行迁移 018（家主全家备份），先在 Supabase 里执行 supabase/migrations/018_family_backup.sql") : error.message);
+      const hs = {}, wb = {}; for (const k of Object.keys(data || {})) { if (k.startsWith("hs_")) hs[k] = data[k]; else if (k.startsWith("wb_")) wb[k] = data[k]; }
+      return { ...base, scope: "family", members: data.members || base.members, bundle: { homeschool: { tables: hs }, shepherd: { tables: wb }, entries_rows: data.entries || [] } };
+    }
+    const hs = {}, wb = {};
+    for (const tb of HS_TABLES) hs[tb] = await readAll(tb, "family_id", SB.family.id);
+    for (const tb of WB_TABLES) wb[tb] = await readAll(tb, null);
+    return { ...base, scope: "member", bundle: { homeschool: { tables: hs }, shepherd: { tables: wb } } };
+  } catch (e) { toast(t("家庭学堂 / 牧羊人的数据没带上：{msg}", { msg: e.message })); return { ...base, bundleError: e.message }; }
+}
+const bundleRows = (d) => { let n = 0; for (const sec of ["homeschool", "shepherd"]) for (const rows of Object.values(d.bundle?.[sec]?.tables || {})) n += rows?.length || 0; return n; };
+const rowCount = (d) => (Array.isArray(d.entries) ? d.entries.length : 0) + bundleRows(d);
 const toBlob = (d) => new Blob([JSON.stringify(d)], { type: "application/json" });
 function download(blob, name) { const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: name }); document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
 
 /* ---- 这台电脑的文件夹（File System Access API：桌面 Chrome / Edge；手机和 Safari 没有） ---- */
 const folderSupported = () => typeof window.showDirectoryPicker === "function";
-const IDB = `${CFG.file}-fs`;
+const IDB = "homeworks-fs";   // 四个应用共用一个文件夹（同一域名）
 function idb() { return new Promise((res, rej) => { const r = indexedDB.open(IDB, 1); r.onupgradeneeded = () => r.result.createObjectStore("h"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
 async function idbGet(k) { try { const db = await idb(); return await new Promise((res, rej) => { const q = db.transaction("h").objectStore("h").get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); } catch (e) { return null; } }
 async function idbSet(k, v) { try { const db = await idb(); await new Promise((res, rej) => { const tx = db.transaction("h", "readwrite"); if (v == null) tx.objectStore("h").delete(k); else tx.objectStore("h").put(v, k); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); } catch (e) { /* 忽略 */ } }
@@ -108,7 +144,7 @@ const deleteCloud = (name) => bucket().remove([`${prefix()}/${name}`]);
 
 /* ---- 云盘：Google Drive、Dropbox（代码在 cloud-drives.js，四个应用共用；各自要在 js/config.js 填应用 key，见 README「云盘备份」）
    备份放在你在设置里填的文件夹路径下（Drive 默认「小月亮备份」；Dropbox 相对应用文件夹），不再往根目录随便放 ---- */
-const DR = createDrives({ googleClientId: GOOGLE_CLIENT_ID, dropboxAppKey: DROPBOX_APP_KEY, tokPrefix: CFG.key, defaultFolder: "小月亮备份", fileRe: FILE_RE, keepDays: KEEP_DAYS, t, load: loadJSON, save: saveJSON, getPaths: () => ({ gd: settings().gdPath, dbx: settings().dbxPath }) });
+const DR = createDrives({ googleClientId: GOOGLE_CLIENT_ID, googleApiKey: GOOGLE_API_KEY, dropboxAppKey: DROPBOX_APP_KEY, tokPrefix: "homeworks.backup", defaultFolder: "小月亮备份", fileRe: FILE_RE, keepDays: KEEP_DAYS, t, load: loadJSON, save: saveJSON, getPaths: () => { const s = settings(); return { gd: s.gdPath, gdId: s.gdId, gdName: s.gdName, dbx: s.dbxPath }; } });   // 令牌前缀四个应用相同：连一次全连上
 const { tok, gdConfigured, dbxConfigured, gdOn, dbxOn, gdConnect, gdDisconnect, gdList, gdWrite, gdRead, gdDelete, dbxConnect, dbxDisconnect, dbxList, dbxWrite, dbxRead, dbxDelete } = DR;
 /** 打开应用时调一次：从 Dropbox 授权页跳回来（?code=…&state=dbx）就换成令牌，勾上 Dropbox 并打开「同步、备份与恢复」 */
 async function initProviders() {
@@ -121,7 +157,7 @@ async function initProviders() {
 /* ---- 跑一次备份 ---- */
 const targetName = (k) => ({ download: t("下载"), folder: t("文件夹"), cloud: t("家庭云端"), gdrive: "Google Drive", dropbox: "Dropbox" }[k] || k);
 async function runBackup(targets, gesture = false) {
-  const data = collect(), blob = toBlob(data), name = fileName(), ok = [], failed = []; let needGesture = false;
+  const data = await collect(), blob = toBlob(data), name = fileName(), ok = [], failed = []; let needGesture = false;
   for (const tg of targets) {
     try {
       if (tg === "download") download(blob, name); else if (tg === "folder") await writeFolder(blob, name, gesture); else if (tg === "cloud") await writeCloud(blob, name);
@@ -151,7 +187,37 @@ function inspect(d) {
   if (!d || d.app !== CFG.app) return { ok: false, why: t("这不是小月亮的备份文件") };
   if (!Array.isArray(d.entries)) return { ok: false, why: t("文件里没有记录") };
   const kids = (d.settings?.children || []).map((c) => c.name).filter(Boolean);
-  return { ok: true, exported_at: d.exported_at || (d.exported ? new Date(d.exported).toISOString() : ""), scope: d.family?.name || "", rows: d.entries.length, kids, same: !d.family?.id || !SB.family || d.family.id === SB.family.id };
+  return { ok: true, exported_at: d.exported_at || (d.exported ? new Date(d.exported).toISOString() : ""), scope: d.family?.name || "", rows: d.entries.length, kids, same: !d.family?.id || !SB.family || d.family.id === SB.family.id,
+    bundle: bundleRows(d), full: d.scope === "family" };
+}
+
+/** 把备份里家庭学堂 / 牧羊人（以及家主备份里家人私有的记录）导回当前家庭：只补缺的，不覆盖不删除。
+ *  family_id 一律换成现在的家庭；家人的 user_id 先按 id 对、对不上再按称呼对（换项目后账号 id 变了）。
+ *  家主：服务器端一次导入（迁移 018 的 restore_family）；成员：只导自己的牧羊人数据和家庭的家庭学堂数据。返回 { 表: 行数 } */
+async function restoreBundle(d) {
+  if (!d.bundle || !cloudReady()) return {};
+  const tables = { ...(d.bundle.homeschool?.tables || {}), ...(d.bundle.shepherd?.tables || {}) };
+  if (isOwner() && d.bundle.entries_rows) tables.entries = d.bundle.entries_rows;
+  const fam = SB.family.id, byName = {}; for (const [uid, m] of Object.entries(SB.members || {})) byName[m.name] = uid;
+  const map = {}; for (const m of d.members || []) { const to = SB.members?.[m.user_id] ? m.user_id : byName[m.display_name]; if (to) map[m.user_id] = to; }
+  if (d.exporter && !map[d.exporter]) map[d.exporter] = SB.user.id;
+  const mapU = (v) => (v && map[v]) || v;
+  const out = {};
+  for (const [tb, rows] of Object.entries(tables)) out[tb] = (rows || []).map((r) => ({ ...r, ...("family_id" in r && r.family_id ? { family_id: fam } : {}), ...("user_id" in r ? { user_id: mapU(r.user_id) } : {}), ...("created_by" in r ? { created_by: mapU(r.created_by) } : {}), ...("updated_by" in r ? { updated_by: mapU(r.updated_by) } : {}) }));
+  if (isOwner()) {
+    const { data, error } = await SB.client.rpc("restore_family", { p_family: fam, p_tables: out });
+    if (error) throw new Error(/restore_family/i.test(error.message) ? t("还没执行迁移 018（家主全家备份），先在 Supabase 里执行 supabase/migrations/018_family_backup.sql") : error.message);
+    return data || {};
+  }
+  const done = {};
+  for (const [tb, rows] of Object.entries(out)) {
+    if (tb === "entries") continue;
+    const mine = tb.startsWith("wb_") ? rows.filter((r) => r.user_id === SB.user.id) : rows; if (!mine.length) continue;
+    let n = 0;
+    for (let i = 0; i < mine.length; i += 200) { const { error } = await SB.client.from(tb).upsert(mine.slice(i, i + 200), { ignoreDuplicates: true }); if (error) { done[tb] = `${t("出错")}: ${error.message.slice(0, 60)}`; break; } n += Math.min(200, mine.length - i); }
+    if (!(tb in done)) done[tb] = n;
+  }
+  return done;
 }
 
 /* ---- 界面：我的 → 同步、备份与恢复（views.js 的 SUB 调 syncHTML；状态变化后 refreshSettingsIfOpen 重画） ----
@@ -204,7 +270,7 @@ function syncHTML() {
   const cards = [
     card("cloud", "☁", t("家庭云端"), fam ? t("家庭自己的 Supabase 存储，全家任何设备都能恢复；只留 {n} 天", { n: KEEP_DAYS }) : t("加入家庭后可用"), "", !fam),
     card("gdrive", "▲", "Google Drive", gdConfigured() ? t("放在你 Google 云端硬盘的「小月亮备份」文件夹里；只留 {n} 天", { n: KEEP_DAYS }) : notCfg,
-      !gdConfigured() ? "" : pathRow("gdPath", t("Drive 里的文件夹路径"), s.gdPath, "小月亮备份") + (gd ? `<span class="small muted">${t("已连接")}${gd.email ? ` ${esc(gd.email)}` : ""} · ${esc(DR.gdPathText())}</span> <button class="chip" data-act="bk-gd-off">${t("断开")}</button>` : `<button class="chip" data-act="bk-gd-on">${t("连接 Google Drive")}</button>`), !gdConfigured() || !gd),
+      !gdConfigured() ? "" : (s.gdId ? `<span class="bk-row"><span class="bk-pill ok">📁 ${esc(s.gdName || t("已选的文件夹"))}</span><button class="chip" data-act="bk-gd-clear">${t("改用路径")}</button></span>` : pathRow("gdPath", t("Drive 里的文件夹路径"), s.gdPath, "小月亮备份") + (gd && DR.gdPickerAvailable() ? `<span class="bk-row"><button class="chip" data-act="bk-gd-pick">${t("或在 Drive 里选一个文件夹…")}</button></span>` : "")) + `<span class="bk-row">${gd ? `<span class="small muted">${t("已连接")}${gd.email ? ` ${esc(gd.email)}` : ""} · ${esc(DR.gdPathText())}</span> <button class="chip" data-act="bk-gd-off">${t("断开")}</button>` : `<button class="chip" data-act="bk-gd-on">${t("连接 Google Drive")}</button>`}</span>`, !gdConfigured() || !gd),
     card("dropbox", "◆", "Dropbox", dbxConfigured() ? t("放在 Dropbox 的「应用 / 小月亮」文件夹里；只留 {n} 天", { n: KEEP_DAYS }) : notCfg,
       !dbxConfigured() ? "" : pathRow("dbxPath", t("应用文件夹里的子路径"), s.dbxPath, t("留空 = 直接放应用文件夹")) + (dbx ? `<span class="small muted">${t("已连接")}${dbx.email ? ` ${esc(dbx.email)}` : ""}</span> <button class="chip" data-act="bk-dbx-off">${t("断开")}</button>` : `<button class="chip" data-act="bk-dbx-on">${t("连接 Dropbox")}</button>`), !dbxConfigured() || !dbx),
     card("folder", "▭", t("这台电脑的文件夹"), t("桌面 Chrome / Edge。选 iCloud Drive、OneDrive 或 Dropbox 同步的文件夹，就等于也上了云；自动清掉 {n} 天前的", { n: KEEP_DAYS }), folderFull, !folder.supported),
@@ -217,6 +283,8 @@ function syncHTML() {
       <div class="bkhead"><div><b>${s.last ? esc(t("上次备份 {d}", { d: when(s.last) })) : t("还没备份过")}</b><small class="muted">${s.last && s.lastInfo ? esc(s.lastInfo) + " · " : ""}${!intervalDays(s) ? t("定时备份已关") : due && due.getTime() <= Date.now() ? t("已到期：下次打开应用时自动备份") : esc(t("下次 {d}", { d: when(due.toISOString()) }))}</small></div>
         <div class="btns" style="margin:0"><button class="btn primary" data-act="bk-now">${t("现在备份")}</button><button class="btn" data-act="bk-download">${t("只下载一份")}</button></div></div>
       <form id="backupForm" onsubmit="return false">
+        ${fam ? `<p class="small" style="margin:0 0 8px">${isOwner() ? t("你是家主：备份的是全家的数据（含家人私有的记录、每位家人的牧羊人数据），家人不用各自再做。") : t("你不是家主：备份只含你自己的和全家可见的记录；全家的备份由家主做。")}</p>
+        <label class="chk-inline" style="display:flex;gap:8px;align-items:center;margin:0 0 8px"><input type="checkbox" name="bundle" ${s.bundle ? "checked" : ""}> <span>${t("连同家庭学堂、牧羊人一起备份（推荐；它们的页面里不用再设）")}</span></label>` : ""}
         <div class="sched"><label>${t("多久备份一次")} <select name="every">${[["off", "不自动备份"], ["week", "每周"], ["month", "每月"], ["custom", "自定义（天）"]].map(([v, l]) => `<option value="${v}" ${s.every === v ? "selected" : ""}>${t(l)}</option>`).join("")}</select></label>
           <label ${s.every === "custom" ? "" : "hidden"} data-bk-days>${t("每隔几天")} <input name="days" type="number" min="1" max="365" inputmode="numeric" value="${s.days}"></label></div>
         <p class="small muted">${t("网页没法在关着的时候跑：到期后下次打开应用时自动备份一次")}</p>
@@ -236,7 +304,7 @@ function syncHTML() {
   }
   // 4) 从文件恢复
   const pv = UI.preview;
-  const preview = !pv ? "" : pv.ok ? `<div class="bk-notice"><b>${t("备份来自 {h}，{d}，共 {n} 条记录", { h: esc(pv.scope || t("这台设备")), d: when(pv.exported_at), n: pv.rows })}</b>${pv.kids.length ? `<p class="small muted">${t("孩子：{k}", { k: esc(pv.kids.join("、")) })}</p>` : ""}
+  const preview = !pv ? "" : pv.ok ? `<div class="bk-notice"><b>${t("备份来自 {h}，{d}，共 {n} 条记录", { h: esc(pv.scope || t("这台设备")), d: when(pv.exported_at), n: pv.rows })}</b>${pv.kids.length ? `<p class="small muted">${t("孩子：{k}", { k: esc(pv.kids.join("、")) })}</p>` : ""}${pv.bundle ? `<p class="small muted">${t("另含家庭学堂 / 牧羊人 {n} 行", { n: pv.bundle })}${pv.full ? ` · ${t("家主的全家备份")}` : ""}${!cloudReady() ? ` · ${t("（要进入家庭后才能导回这部分）")}` : !isOwner() && pv.full ? ` · ${t("（你不是家主，只会导回你自己的）")}` : ""}</p>` : ""}
       ${pv.same ? "" : `<p class="small muted">${t("这是另一个家庭的备份（换了项目或重建过家庭时正常）：会合并进现在这个家庭。")}</p>`}
       <p class="small">${t("恢复 = 把备份里的记录合并进来：已有同 id 的不动，缺的补上；设置（孩子、用药间隔等）合并。家庭模式下会同步给全家。")}</p>
       <div class="btns"><button class="btn primary" data-act="bk-restore">${t("合并进来")}</button><button class="btn" data-act="bk-cancel">${t("取消")}</button></div></div>`
@@ -259,6 +327,8 @@ async function bkAct(act, el) {
         UI.result = r.ok.length ? { title: t("已备份到 {to}：{name}（{n} 条）", { to: r.ok.map(targetName).join("、"), name: r.name, n: r.rows }), detail: [sqlNote, ...r.failed.map(([k, w]) => `${targetName(k)}：${w}`)].join("；") } : { title: t("备份没成功"), detail: r.failed.map(([k, w]) => `${targetName(k)}：${w}`).join("；") }; }
       catch (e) { UI.result = { title: t("备份没成功"), detail: e.message }; }
       redraw(); break; }
+    case "bk-gd-pick": try { const f = await DR.gdPickFolder(); if (f) { saveSettings({ gdId: f.id, gdName: f.name }); toast(t("以后备份放到「{n}」", { n: f.name })); } } catch (e) { toast(t("选文件夹失败：{msg}", { msg: e.message })); } redraw(); break;
+    case "bk-gd-clear": saveSettings({ gdId: "", gdName: "" }); redraw(); break;
     case "bk-pick-sql": try { await pickSqlFolder(); toast(t("以后每次写文件夹时会把 .sql 一起拷进 sql/ 子目录")); } catch (e) { if (e.name !== "AbortError") toast(t("选文件夹失败：{msg}", { msg: e.message })); } redraw(); break;
     case "bk-forget-sql": await forgetSqlFolder(); redraw(); break;
     case "bk-pick": try { await pickFolder(); toast(t("已记住这个文件夹")); } catch (e) { if (e.name !== "AbortError") toast(t("选文件夹失败：{msg}", { msg: e.message })); } redraw(); break;
@@ -277,7 +347,12 @@ async function bkAct(act, el) {
       const pv = UI.preview; if (!pv?.ok) break;
       if (!confirm(t("把备份（{d}，{n} 条）合并进来？已有同 id 的记录不动，缺的补上。", { d: String(pv.exported_at).slice(0, 16).replace("T", " "), n: pv.rows }))) break;
       el.disabled = true; el.textContent = t("恢复中…");
-      try { const before = S.entries.length; await importJSON(pv.data); UI.result = { title: t("已合并，补上 {n} 条记录", { n: S.entries.length - before }), detail: "" }; UI.preview = null; }
+      try {
+        const before = S.entries.length; await importJSON(pv.data);
+        let detail = "";
+        if (pv.data.bundle && cloudReady()) { el.textContent = t("恢复中… 家庭学堂 / 牧羊人"); const r = await restoreBundle(pv.data); detail = Object.entries(r).map(([k, v]) => `${k} ${v}`).join(" · "); }
+        UI.result = { title: t("已合并，补上 {n} 条记录", { n: S.entries.length - before }), detail: detail ? t("家庭学堂 / 牧羊人补上：{d}", { d: detail }) : "" }; UI.preview = null;
+      }
       catch (e) { UI.result = { title: t("恢复失败"), detail: e.message }; }
       refreshSettingsIfOpen(); break; }
     default: return false;
@@ -288,7 +363,7 @@ async function bkChange(ev) {
   const el = ev.target;
   if (el.closest && el.closest("#backupForm")) {
     const f = el.closest("#backupForm"), targets = [...f.querySelectorAll('input[name="target"]:checked')].map((x) => x.value);
-    saveSettings({ every: f.elements.every.value, days: Math.max(1, +f.elements.days.value || 14), targets, provider: f.elements.provider?.value || "any", gdPath: (f.elements.gdPath?.value || "").trim(), dbxPath: (f.elements.dbxPath?.value || "").trim() });
+    saveSettings({ every: f.elements.every.value, days: Math.max(1, +f.elements.days.value || 14), targets, provider: f.elements.provider?.value || "any", gdPath: (f.elements.gdPath?.value || "").trim(), dbxPath: (f.elements.dbxPath?.value || "").trim(), ...(f.elements.bundle ? { bundle: f.elements.bundle.checked } : {}) });
     const box = f.querySelector("[data-bk-days]"); if (box) box.hidden = f.elements.every.value !== "custom";
     if (el.name === "every" || el.name === "provider") refreshSettingsIfOpen();
     if (el.name === "gdPath" || el.name === "dbxPath") { UI.stale = true; refreshSettingsIfOpen(); }   // 路径改了：列表换到新文件夹

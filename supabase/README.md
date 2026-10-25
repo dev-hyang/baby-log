@@ -23,6 +23,7 @@
 | 015 | 牧羊人任务 `wb_tasks` | 已执行 |
 | 016 | 牧羊人灵修笔记 `wb_notes` | 已执行 |
 | 017 | 云端备份桶 `backups`（storage）：family/<家庭id>/… 家庭成员可读写，user/<用户id>/… 本人可读写；三个应用的「备份与恢复」用 | 待执行 |
+| 018 | 家主一键备份 / 恢复全家：`backup_family(family)` 返回三个应用的全部数据（含家人私有的），`restore_family(family, tables)` 只补缺不覆盖；wb_* 触发器恢复时按 `app.restoring` 放行 | 待执行 |
 
 本目录不进 git（见仓库根 `.gitignore`），只在这台机器上维护。
 
