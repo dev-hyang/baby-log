@@ -1,10 +1,12 @@
 /* ============ 备份与恢复 ============
    小月亮是本机优先：全部记录和设置都在内存 / 本机里（家庭模式下再同步到云端），所以备份 = 现在这台设备上的 settings + entries（不含演示数据）。
    手动下载；或按周 / 按月 / 自定义天数定时备份到：云端（家庭模式；Supabase Storage 的 backups 桶，路径 family/<家庭id>/…，迁移 017）、
-   这台电脑的文件夹（File System Access，桌面 Chrome / Edge）、或下载。云端和文件夹只留 60 天。网页没法在关着时跑：到期后下次打开应用时在后台做一次。
+   Google Drive / Dropbox（各自要在 js/config.js 填应用 key）、这台电脑的文件夹（File System Access，桌面 Chrome / Edge）、或下载。
+   云端、云盘和文件夹只留 60 天。网页没法在关着时跑：到期后下次打开应用时在后台做一次。
    恢复 = 把备份里的记录合并进来（已有同 id 的不动，缺的补上；设置合并），家庭模式下会同步给全家。老版本「导出备份」的文件也能恢复。 */
 import { S, APP_VERSION } from "./state.js";
-import { SB, loadJSON, saveJSON } from "./sync.js";
+import { SB, lapsed, loadJSON, memberNames, saveJSON } from "./sync.js";
+import { DROPBOX_APP_KEY, GOOGLE_CLIENT_ID } from "./config.js";
 import { importJSON } from "./store.js";
 import { $, esc, toast } from "./util.js";
 import { t } from "./i18n.js";
@@ -14,6 +16,7 @@ const CFG = { app: "xiaoyueliang", title: "小月亮", key: "xiaoyueliang.backup
 const KEEP_DAYS = 60, FORMAT = 2;
 const FILE_RE = new RegExp(`^${CFG.file}-(\\d{4}-\\d{2}-\\d{2})-\\d{4}\\.json$`);
 const cloudReady = () => S.mode === "family" && !!(SB.family && SB.client);
+const cutoff = () => new Date(Date.now() - KEEP_DAYS * 864e5).toISOString().slice(0, 10);   // 文件名里的日期早于这天的清掉
 const prefix = () => `family/${SB.family.id}`;
 
 /* ---- 设置（存本机） ---- */
@@ -77,15 +80,136 @@ async function listCloud() {
 async function readCloud(name) { const { data, error } = await bucket().download(`${prefix()}/${name}`); if (error) throw new Error(error.message); return JSON.parse(await data.text()); }
 const deleteCloud = (name) => bucket().remove([`${prefix()}/${name}`]);
 
+/* ---- 云盘：Google Drive、Dropbox（各自要在 js/config.js 填应用 key，见 README「云盘备份」） ----
+   令牌存在本机 localStorage；备份文件放在云盘里应用自己的位置（Drive：「小月亮备份」文件夹；Dropbox：应用文件夹），
+   应用只看得到自己写的文件。iCloud Drive / OneDrive 没有网页接口：电脑上选它们同步的文件夹（下面的「文件夹」），
+   iPhone 上用「下载」再分享到「文件」存进 iCloud Drive。 */
+const TOK = { gd: `${CFG.key}.gdrive`, dbx: `${CFG.key}.dropbox` };
+const tok = (k) => loadJSON(TOK[k], null), setTok = (k, v) => saveJSON(TOK[k], v);
+const gdConfigured = () => /\.apps\.googleusercontent\.com$/.test(GOOGLE_CLIENT_ID || "");
+const dbxConfigured = () => !!DROPBOX_APP_KEY && !/YOUR/.test(DROPBOX_APP_KEY);
+const gdOn = () => gdConfigured() && !!tok("gd"), dbxOn = () => dbxConfigured() && !!tok("dbx");
+
+// Google：Identity Services 的令牌流程（弹窗；令牌一小时，续期也要用户点一下，所以定时备份到期时会出现「继续备份」）
+let gis = null;
+function loadGis() { if (gis) return gis; gis = new Promise((res, rej) => { if (window.google?.accounts?.oauth2) return res(); const el = document.createElement("script"); el.src = "https://accounts.google.com/gsi/client"; el.onload = () => res(); el.onerror = () => rej(new Error(t("Google 组件加载失败"))); document.head.appendChild(el); }); return gis; }
+async function gdToken(gesture) {
+  const cur = tok("gd");
+  if (cur && cur.exp > Date.now() + 60e3) return cur.access_token;
+  if (!gesture) throw new Error("NEED_GESTURE");
+  await loadGis();
+  return new Promise((res, rej) => {
+    window.google.accounts.oauth2.initTokenClient({ client_id: GOOGLE_CLIENT_ID, scope: "https://www.googleapis.com/auth/drive.file", prompt: cur ? "" : "consent",
+      callback: (r) => { if (r.error) return rej(new Error(r.error_description || r.error)); setTok("gd", { ...(cur || {}), access_token: r.access_token, exp: Date.now() + (+r.expires_in || 3600) * 1000 }); res(r.access_token); },
+      error_callback: (e) => rej(new Error(e.message || e.type || "popup")) }).requestAccessToken();
+  });
+}
+async function gdFetch(url, init = {}, gesture = false) {
+  const at = await gdToken(gesture);
+  const r = await fetch(url, { ...init, headers: { ...(init.headers || {}), Authorization: `Bearer ${at}` } });
+  if (r.status === 401) { setTok("gd", { ...(tok("gd") || {}), exp: 0 }); throw new Error(gesture ? t("Google 登录已过期，请重新连接") : "NEED_GESTURE"); }
+  if (!r.ok) throw new Error(`Google Drive ${r.status}`);
+  return r;
+}
+const GD_FOLDER = "小月亮备份", GD_API = "https://www.googleapis.com/drive/v3/files";
+async function gdFolder(gesture) {
+  const cur = tok("gd"); if (cur?.folder) return cur.folder;
+  const q = encodeURIComponent(`name='${GD_FOLDER}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  const found = await (await gdFetch(`${GD_API}?q=${q}&fields=files(id)`, {}, gesture)).json();
+  let id = found.files?.[0]?.id;
+  if (!id) id = (await (await gdFetch(`${GD_API}?fields=id`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: GD_FOLDER, mimeType: "application/vnd.google-apps.folder" }) }, gesture)).json()).id;
+  setTok("gd", { ...tok("gd"), folder: id }); return id;
+}
+async function gdList(gesture = false) {
+  if (!gdOn()) return [];
+  const q = encodeURIComponent(`'${await gdFolder(gesture)}' in parents and trashed=false`);
+  const d = await (await gdFetch(`${GD_API}?q=${q}&fields=files(id,name,size,createdTime)&orderBy=createdTime desc&pageSize=100`, {}, gesture)).json();
+  return (d.files || []).filter((f) => FILE_RE.test(f.name)).map((f) => ({ id: f.id, name: f.name, at: f.createdTime, size: +f.size || 0 }));
+}
+async function gdWrite(blob, name, gesture) {
+  const folder = await gdFolder(gesture), body = new FormData();
+  body.append("metadata", new Blob([JSON.stringify({ name, parents: [folder], mimeType: "application/json" })], { type: "application/json" })); body.append("file", blob);
+  await gdFetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", { method: "POST", body }, gesture);
+  const cut = cutoff(); for (const f of await gdList(gesture)) if ((FILE_RE.exec(f.name) || [])[1] < cut) await gdDelete(f.id).catch(() => {});
+}
+const gdRead = async (id) => (await gdFetch(`${GD_API}/${id}?alt=media`, {}, true)).json();
+const gdDelete = (id) => gdFetch(`${GD_API}/${id}`, { method: "DELETE" }, true);
+async function gdConnect() {
+  setTok("gd", null); await gdToken(true);
+  try { const me = await (await gdFetch("https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)", {}, true)).json(); setTok("gd", { ...tok("gd"), email: me.user?.emailAddress || "" }); } catch (e) { /* 邮箱只是显示用 */ }
+}
+function gdDisconnect() { const c = tok("gd"); try { if (c?.access_token && window.google?.accounts?.oauth2) window.google.accounts.oauth2.revoke(c.access_token, () => {}); } catch (e) { /* 忽略 */ } setTok("gd", null); }
+
+// Dropbox：OAuth 2 PKCE，拿到 refresh token，定时备份可以静默续期
+const dbxRedirect = () => location.origin + location.pathname;
+const PKCE_KEY = `${CFG.key}.dbx.pkce`;
+const b64url = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+async function dbxConnect() {
+  const verifier = b64url(crypto.getRandomValues(new Uint8Array(48)));
+  const challenge = b64url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));
+  sessionStorage.setItem(PKCE_KEY, verifier);
+  const p = new URLSearchParams({ client_id: DROPBOX_APP_KEY, response_type: "code", code_challenge: challenge, code_challenge_method: "S256", token_access_type: "offline", redirect_uri: dbxRedirect(), state: "dbx" });
+  location.href = `https://www.dropbox.com/oauth2/authorize?${p}`;
+}
+async function dbxTokenCall(body) {
+  const r = await fetch("https://api.dropboxapi.com/oauth2/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ client_id: DROPBOX_APP_KEY, ...body }) });
+  if (!r.ok) throw new Error(`Dropbox ${r.status}`);
+  const d = await r.json(), cur = tok("dbx") || {};
+  setTok("dbx", { ...cur, access_token: d.access_token, refresh_token: d.refresh_token || cur.refresh_token, exp: Date.now() + (+d.expires_in || 14400) * 1000 });
+  return d.access_token;
+}
+async function dbxToken() {
+  const c = tok("dbx"); if (!c) throw new Error(t("还没连接 Dropbox"));
+  if (c.exp > Date.now() + 60e3) return c.access_token;
+  if (!c.refresh_token) throw new Error("NEED_GESTURE");
+  return dbxTokenCall({ grant_type: "refresh_token", refresh_token: c.refresh_token });
+}
+async function dbxFetch(url, init = {}) {
+  const r = await fetch(url, { ...init, headers: { ...(init.headers || {}), Authorization: `Bearer ${await dbxToken()}` } });
+  if (r.status === 401) { setTok("dbx", null); throw new Error(t("Dropbox 登录已过期，请重新连接")); }
+  if (!r.ok) throw new Error(`Dropbox ${r.status}`);
+  return r;
+}
+const dbxJSON = (o) => ({ method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(o) });
+const dbxArg = (o) => ({ "Dropbox-API-Arg": JSON.stringify(o) });
+async function dbxList() {
+  if (!dbxOn()) return [];
+  const d = await (await dbxFetch("https://api.dropboxapi.com/2/files/list_folder", dbxJSON({ path: "" }))).json();
+  return (d.entries || []).filter((f) => f[".tag"] === "file" && FILE_RE.test(f.name)).map((f) => ({ id: f.path_lower, name: f.name, at: f.server_modified, size: f.size || 0 })).sort((a, b) => (a.name < b.name ? 1 : -1));
+}
+async function dbxWrite(blob, name) {
+  await dbxFetch("https://content.dropboxapi.com/2/files/upload", { method: "POST", headers: { "Content-Type": "application/octet-stream", ...dbxArg({ path: `/${name}`, mode: "overwrite", mute: true }) }, body: blob });
+  const cut = cutoff(); for (const f of await dbxList()) if ((FILE_RE.exec(f.name) || [])[1] < cut) await dbxDelete(f.id).catch(() => {});
+}
+const dbxRead = async (path) => (await dbxFetch("https://content.dropboxapi.com/2/files/download", { method: "POST", headers: dbxArg({ path }) })).json();
+const dbxDelete = (path) => dbxFetch("https://api.dropboxapi.com/2/files/delete_v2", dbxJSON({ path }));
+async function dbxDisconnect() { try { await dbxFetch("https://api.dropboxapi.com/2/auth/token/revoke", { method: "POST" }); } catch (e) { /* 忽略 */ } setTok("dbx", null); }
+/** 打开应用时调一次：从 Dropbox 授权页跳回来（?code=…&state=dbx）就换成令牌，并打开「同步、备份与恢复」 */
+async function initProviders() {
+  const u = new URL(location.href), code = u.searchParams.get("code"), verifier = sessionStorage.getItem(PKCE_KEY);
+  if (!code || u.searchParams.get("state") !== "dbx") return;
+  u.searchParams.delete("code"); u.searchParams.delete("state"); history.replaceState(null, "", u.pathname + u.search + u.hash);
+  sessionStorage.removeItem(PKCE_KEY);
+  if (!verifier) return;
+  try {
+    await dbxTokenCall({ code, grant_type: "authorization_code", code_verifier: verifier, redirect_uri: dbxRedirect() });
+    try { const me = await (await dbxFetch("https://api.dropboxapi.com/2/users/get_current_account", dbxJSON(null))).json(); setTok("dbx", { ...tok("dbx"), email: me.email || "" }); } catch (e) { /* 邮箱只是显示用 */ }
+    saveSettings({ targets: [...new Set([...settings().targets, "dropbox"])] });
+    toast(t("已连接 Dropbox"));
+  } catch (e) { toast(t("连接 Dropbox 失败：{msg}", { msg: e.message })); }
+  S.tab = "sync"; UI.stale = true; refreshSettingsIfOpen();
+}
+
 /* ---- 跑一次备份 ---- */
-const targetName = (k) => ({ download: t("下载"), folder: t("文件夹"), cloud: t("云端") }[k] || k);
+const targetName = (k) => ({ download: t("下载"), folder: t("文件夹"), cloud: t("家庭云端"), gdrive: "Google Drive", dropbox: "Dropbox" }[k] || k);
 async function runBackup(targets, gesture = false) {
   const data = collect(), blob = toBlob(data), name = fileName(), ok = [], failed = []; let needGesture = false;
   for (const tg of targets) {
     try {
-      if (tg === "download") download(blob, name); else if (tg === "folder") await writeFolder(blob, name, gesture); else if (tg === "cloud") await writeCloud(blob, name); else continue;
+      if (tg === "download") download(blob, name); else if (tg === "folder") await writeFolder(blob, name, gesture); else if (tg === "cloud") await writeCloud(blob, name);
+      else if (tg === "gdrive") await gdWrite(blob, name, gesture); else if (tg === "dropbox") await dbxWrite(blob, name); else continue;
       ok.push(tg);
-    } catch (e) { if (e.message === "NEED_GESTURE") needGesture = true; failed.push([tg, e.message === "NO_FOLDER" ? t("还没选文件夹") : e.message === "NEED_GESTURE" ? t("需要你点一下授权") : e.message]); }
+    } catch (e) { if (e.message === "NEED_GESTURE") needGesture = true; failed.push([tg, e.message === "NO_FOLDER" ? t("还没选文件夹") : e.message === "NEED_GESTURE" ? (tg === "gdrive" ? t("需要重新登录 Google") : t("需要你点一下授权")) : e.message]); }
   }
   if (ok.length) saveSettings({ last: new Date().toISOString(), lastInfo: `${name} · ${ok.map(targetName).join("+")} · ${rowCount(data)} ${t("条")}` });
   return { ok, failed, needGesture, name, rows: rowCount(data) };
@@ -99,7 +223,7 @@ async function runScheduled() {
   try {
     const r = await runBackup(s.targets, false); S.backupPending = r.needGesture;
     if (r.ok.length) toast(t("已自动备份（{to}）", { to: r.ok.map(targetName).join("、") }));
-    if (r.needGesture) toast(t("定时备份要写进文件夹，去 我的 → 设置 → 备份与恢复 点一下「继续备份」"));
+    if (r.needGesture) toast(t("定时备份需要你点一下授权：去 我的 → 同步、备份与恢复 点「继续备份」"));
   } catch (e) { console.error(e); }
 }
 
@@ -111,41 +235,92 @@ function inspect(d) {
   return { ok: true, exported_at: d.exported_at || (d.exported ? new Date(d.exported).toISOString() : ""), scope: d.family?.name || "", rows: d.entries.length, kids, same: !d.family?.id || !SB.family || d.family.id === SB.family.id };
 }
 
-/* ---- 界面：设置页里的一块（me.js 的 settingsHTML 调 backupHTML；改动后 refreshSettingsIfOpen 重画） ---- */
-const UI = { folder: null, cloud: [], loading: false, stale: true, preview: null, result: null };
+/* ---- 界面：我的 → 同步、备份与恢复（views.js 的 SUB 调 syncHTML；状态变化后 refreshSettingsIfOpen 重画） ----
+   一页四块：同步状态卡 → 备份（现在 / 定时 / 备份到哪，目的地是一格一格的卡片，手机一列、宽屏两列）→ 已有的备份（按来源切换）→ 从文件恢复；
+   导出 CSV、演示数据、清空全部收在最下面的「数据工具」里，默认折叠。 */
+const UI = { folder: null, lists: {}, loading: false, stale: true, preview: null, result: null, src: null };
 const when = (iso) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "");
 const kb = (n) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
-function backupHTML() {
-  if (UI.stale) { UI.stale = false; UI.loading = true; Promise.all([folderStatus().catch(() => ({ supported: false, perm: "none", name: "" })), listCloud().catch(() => [])]).then(([f, c]) => { UI.folder = f; UI.cloud = c; UI.loading = false; refreshSettingsIfOpen(); }); }
+// where backups can be listed / restored from (the folder and plain downloads are read back through 「选文件」)
+const SOURCES = {
+  cloud: { icon: "☁", label: "家庭云端", ready: cloudReady, list: listCloud, read: readCloud, del: deleteCloud },
+  gdrive: { icon: "▲", label: "Google Drive", ready: gdOn, list: () => gdList(false), read: gdRead, del: gdDelete },
+  dropbox: { icon: "◆", label: "Dropbox", ready: dbxOn, list: dbxList, read: dbxRead, del: dbxDelete },
+};
+const available = () => Object.keys(SOURCES).filter((k) => SOURCES[k].ready());
+function reload() {
+  UI.stale = false; UI.loading = true;
+  const srcs = available();
+  Promise.all([folderStatus().catch(() => ({ supported: false, perm: "none", name: "" })), ...srcs.map((k) => SOURCES[k].list().catch(() => []))])
+    .then(([f, ...ls]) => { UI.folder = f; srcs.forEach((k, i) => { UI.lists[k] = ls[i]; }); UI.loading = false; refreshSettingsIfOpen(); });
+}
+/** 一句话给「我的」入口行用 */
+function backupSummary() { const s = settings(); return s.last ? t("上次备份 {d}", { d: when(s.last) }) : t("还没备份过"); }
+function syncHTML() {
+  if (UI.stale) reload();
   const s = settings(), folder = UI.folder || { supported: folderSupported(), perm: "none", name: "" }, has = (k) => s.targets.includes(k), due = nextDue(s);
-  const chk = (k, label, desc, extra = "") => `<label class="chk"><input type="checkbox" name="target" value="${k}" ${has(k) ? "checked" : ""}> <b>${label}</b> <span class="small muted">· ${desc}</span></label>${extra}`;
-  const folderLine = !folder.supported ? `<p class="small muted">${t("这个浏览器不支持直接写文件夹（手机和 Safari 没有）；用「下载」或云端")}</p>`
-    : folder.name ? `<p class="small muted">${t("文件夹：{n}", { n: esc(folder.name) })}${folder.perm !== "granted" ? ` · <b>${t("需要点一下授权")}</b> <button class="chip" data-act="bk-grant">${t("授权")}</button>` : ""} <button class="chip" data-act="bk-pick">${t("换文件夹")}</button> <button class="chip" data-act="bk-forget">${t("不再用")}</button></p>`
-    : `<p class="small muted"><button class="chip" data-act="bk-pick">${t("选一个文件夹")}</button> ${t("选一次就记住，以后自动写进去；放在 OneDrive / iCloud 同步的文件夹里就等于也上了云")}</p>`;
+  const fam = cloudReady(), pending = S.entries.filter((e) => e._dirty).length;
+  // 1) 同步状态
+  const st = fam ? (pending ? ["wait", t("{n} 条待同步", { n: pending }), t("联网后会自动上传；也可以现在点一下")] : ["ok", t("家庭同步 · {n} 人", { n: memberNames().length || 1 }), esc(SB.family.name)])
+    : lapsed() ? ["bad", t("家庭登录已失效，记录暂存本机"), t("再输一次邀请码就能回来，这期间记的内容会一并上传")]
+    : ["off", t("保存在本设备"), t("换手机或清理浏览器数据会丢失；加入家庭，或在下面设好定时备份")];
+  const status = `<div class="panel synccard ${st[0]}"><span class="sdot" aria-hidden="true"></span><div class="stext"><b>${st[1]}</b><small>${st[2]}</small></div>
+    ${fam ? `<button class="btn" data-act="sb-sync">${t("立即同步")}</button>` : `<button class="btn primary" data-tab="family-members">${lapsed() ? t("重新加入") : t("加入家庭")}</button>`}</div>`;
+  // 2) 备份：目的地卡片
+  const card = (k, icon, label, desc, body = "", off = false) => `<div class="tcard" data-on="${has(k) && !off}" ${off ? 'data-off="true"' : ""}>
+      <label class="tsel"><input type="checkbox" name="target" value="${k}" ${has(k) ? "checked" : ""} ${off ? "disabled" : ""}><span class="ti" aria-hidden="true">${icon}</span><span class="tt"><b>${label}</b><small>${desc}</small></span></label>
+      ${body ? `<div class="tb">${body}</div>` : ""}</div>`;
+  const gd = tok("gd"), dbx = tok("dbx");
+  const notCfg = t("需要先在 js/config.js 里填好（见 README「云盘备份」）");
+  const folderBody = !folder.supported ? `<span class="small muted">${t("这个浏览器不支持直接写文件夹（手机和 Safari 没有）")}</span>`
+    : folder.name ? `<span class="small muted">${t("文件夹：{n}", { n: esc(folder.name) })}</span>${folder.perm !== "granted" ? ` <button class="chip" data-act="bk-grant">${t("授权")}</button>` : ""} <button class="chip" data-act="bk-pick">${t("换文件夹")}</button> <button class="chip" data-act="bk-forget">${t("不再用")}</button>`
+    : `<button class="chip" data-act="bk-pick">${t("选一个文件夹")}</button> <span class="small muted">${t("选一次就记住")}</span>`;
+  const cards = [
+    card("cloud", "☁", t("家庭云端"), fam ? t("家庭自己的 Supabase 存储，全家任何设备都能恢复；只留 {n} 天", { n: KEEP_DAYS }) : t("加入家庭后可用"), "", !fam),
+    card("gdrive", "▲", "Google Drive", gdConfigured() ? t("放在你 Google 云端硬盘的「小月亮备份」文件夹里；只留 {n} 天", { n: KEEP_DAYS }) : notCfg,
+      !gdConfigured() ? "" : gd ? `<span class="small muted">${t("已连接")}${gd.email ? ` ${esc(gd.email)}` : ""}</span> <button class="chip" data-act="bk-gd-off">${t("断开")}</button>` : `<button class="chip" data-act="bk-gd-on">${t("连接 Google Drive")}</button>`, !gdConfigured() || !gd),
+    card("dropbox", "◆", "Dropbox", dbxConfigured() ? t("放在 Dropbox 的「应用 / 小月亮」文件夹里；只留 {n} 天", { n: KEEP_DAYS }) : notCfg,
+      !dbxConfigured() ? "" : dbx ? `<span class="small muted">${t("已连接")}${dbx.email ? ` ${esc(dbx.email)}` : ""}</span> <button class="chip" data-act="bk-dbx-off">${t("断开")}</button>` : `<button class="chip" data-act="bk-dbx-on">${t("连接 Dropbox")}</button>`, !dbxConfigured() || !dbx),
+    card("folder", "▭", t("这台电脑的文件夹"), t("桌面 Chrome / Edge。选 iCloud Drive、OneDrive 或 Dropbox 同步的文件夹，就等于也上了云；自动清掉 {n} 天前的", { n: KEEP_DAYS }), folderBody, !folder.supported),
+    card("download", "⤓", t("下载"), t("每次备份弹出下载。iPhone 上可以分享到「文件」存进 iCloud Drive；下载的文件不会自动清理")),
+  ].join("");
+  const backup = `<h2>${t("备份")}</h2>
+    ${S.backupPending ? `<div class="bk-notice"><b>${t("定时备份在等你点一下")}</b> ${t("写入文件夹或 Google Drive 需要你授权一次。")} <button class="btn" data-act="bk-now">${t("继续备份")}</button></div>` : ""}
+    ${UI.result ? `<div class="bk-notice"><b>${esc(UI.result.title)}</b>${UI.result.detail ? `<p class="small muted">${esc(UI.result.detail)}</p>` : ""}</div>` : ""}
+    <div class="panel">
+      <div class="bkhead"><div><b>${s.last ? esc(t("上次备份 {d}", { d: when(s.last) })) : t("还没备份过")}</b><small class="muted">${s.last && s.lastInfo ? esc(s.lastInfo) + " · " : ""}${!intervalDays(s) ? t("定时备份已关") : due && due.getTime() <= Date.now() ? t("已到期：下次打开应用时自动备份") : esc(t("下次 {d}", { d: when(due.toISOString()) }))}</small></div>
+        <div class="btns" style="margin:0"><button class="btn primary" data-act="bk-now">${t("现在备份")}</button><button class="btn" data-act="bk-download">${t("只下载一份")}</button></div></div>
+      <form id="backupForm" onsubmit="return false">
+        <div class="sched"><label>${t("多久备份一次")} <select name="every">${[["off", "不自动备份"], ["week", "每周"], ["month", "每月"], ["custom", "自定义（天）"]].map(([v, l]) => `<option value="${v}" ${s.every === v ? "selected" : ""}>${t(l)}</option>`).join("")}</select></label>
+          <label ${s.every === "custom" ? "" : "hidden"} data-bk-days>${t("每隔几天")} <input name="days" type="number" min="1" max="365" inputmode="numeric" value="${s.days}"></label></div>
+        <p class="small muted">${t("网页没法在关着的时候跑：到期后下次打开应用时自动备份一次")}</p>
+        <div class="lab">${t("备份到哪（可多选）")}</div>
+        <div class="tgrid">${cards}</div>
+      </form></div>`;
+  // 3) 已有的备份（按来源切换）
+  const srcs = available(); let have = "";
+  if (srcs.length) {
+    UI.src = srcs.includes(UI.src) ? UI.src : srcs[0]; const list = UI.lists[UI.src] || [], S0 = SOURCES[UI.src];
+    const row = (f) => `<div class="bkrow"><div class="bkname"><b>${esc(f.name)}</b><small class="muted">${esc(when(f.at))} · ${kb(f.size)}</small></div>
+      <div class="bkact"><button class="chip" data-act="bk-dl" data-src="${UI.src}" data-id="${esc(f.id || f.name)}" data-name="${esc(f.name)}">${t("下载")}</button><button class="chip" data-act="bk-use" data-src="${UI.src}" data-id="${esc(f.id || f.name)}">${t("恢复")}</button><button class="chip danger" data-act="bk-rm" data-src="${UI.src}" data-id="${esc(f.id || f.name)}" data-name="${esc(f.name)}" aria-label="${t("删除")}">✕</button></div></div>`;
+    have = `<h2>${t("已有的备份")}</h2><div class="panel">
+      ${srcs.length > 1 ? `<div class="seg" role="group" aria-label="${t("备份来源")}">${srcs.map((k) => `<button type="button" data-act="bk-src" data-src="${k}" aria-pressed="${k === UI.src}">${SOURCES[k].icon} ${t(SOURCES[k].label)}</button>`).join("")}</div>` : `<div class="lab">${S0.icon} ${t(S0.label)}</div>`}
+      <div class="bklist">${UI.loading ? `<p class="small muted">${t("读取中…")}</p>` : list.length ? list.slice(0, 12).map(row).join("") : `<p class="small muted">${t("这里还没有备份。上面勾上它，再点「现在备份」。")}</p>`}</div></div>`;
+  }
+  // 4) 从文件恢复
   const pv = UI.preview;
   const preview = !pv ? "" : pv.ok ? `<div class="bk-notice"><b>${t("备份来自 {h}，{d}，共 {n} 条记录", { h: esc(pv.scope || t("这台设备")), d: when(pv.exported_at), n: pv.rows })}</b>${pv.kids.length ? `<p class="small muted">${t("孩子：{k}", { k: esc(pv.kids.join("、")) })}</p>` : ""}
       ${pv.same ? "" : `<p class="small muted">${t("这是另一个家庭的备份（换了项目或重建过家庭时正常）：会合并进现在这个家庭。")}</p>`}
       <p class="small">${t("恢复 = 把备份里的记录合并进来：已有同 id 的不动，缺的补上；设置（孩子、用药间隔等）合并。家庭模式下会同步给全家。")}</p>
       <div class="btns"><button class="btn primary" data-act="bk-restore">${t("合并进来")}</button><button class="btn" data-act="bk-cancel">${t("取消")}</button></div></div>`
     : `<div class="bk-notice"><b>${t("不能恢复：{why}", { why: esc(pv.why) })}</b> <button class="chip" data-act="bk-cancel">${t("关闭")}</button></div>`;
-  return `<h2>${t("备份与恢复")}</h2>
-    ${S.backupPending ? `<div class="bk-notice"><b>${t("定时备份在等你点一下")}</b> ${t("写入这台电脑的文件夹需要你授权一次。")} <button class="btn" data-act="bk-now">${t("继续备份")}</button></div>` : ""}
-    ${UI.result ? `<div class="bk-notice"><b>${esc(UI.result.title)}</b>${UI.result.detail ? `<p class="small muted">${esc(UI.result.detail)}</p>` : ""}</div>` : ""}
-    <div class="panel"><p class="small muted">${s.last ? esc(t("上次备份 {d}（{info}）", { d: when(s.last), info: s.lastInfo || "" })) : t("还没备份过")}<br>${!intervalDays(s) ? t("定时备份已关") : due && due.getTime() <= Date.now() ? t("已到期：下次打开应用时自动备份") : esc(t("下次 {d}", { d: when(due.toISOString()) }))}</p>
-      <div class="btns" style="margin-top:8px"><button class="btn primary" data-act="bk-now">${t("现在备份")}</button><button class="btn" data-act="bk-download">${t("只下载一份")}</button></div>
-      <form id="backupForm" onsubmit="return false" style="margin-top:12px">
-        <div class="lab">${t("多久备份一次")}</div>
-        <select name="every">${[["off", "关闭"], ["week", "每周"], ["month", "每月"], ["custom", "自定义（天）"]].map(([v, l]) => `<option value="${v}" ${s.every === v ? "selected" : ""}>${t(l)}</option>`).join("")}</select>
-        <div ${s.every === "custom" ? "" : "hidden"} data-bk-days><div class="lab">${t("每隔几天")}</div><input name="days" type="number" min="1" max="365" inputmode="numeric" value="${s.days}"></div>
-        <p class="small muted">${t("网页没法在关着的时候跑：到期后下次打开应用时自动备份一次")}</p>
-        <div class="lab">${t("备份到哪（可多选）")}</div>
-        ${S.mode === "family" ? chk("cloud", t("云端"), t("家庭自己的 Supabase 存储，全家任何设备都能恢复，只留 {n} 天；需要迁移 017", { n: KEEP_DAYS })) : ""}
-        ${chk("folder", t("这台电脑的文件夹"), t("无需每次确认，自动清掉 {n} 天前的", { n: KEEP_DAYS }), folderLine)}
-        ${chk("download", t("下载"), t("每次备份弹出下载；浏览器下载的文件不会自动清理"))}
-      </form></div>
-    ${S.mode === "family" ? `<div class="panel"><div class="lab">${t("云端备份")}</div>${UI.loading ? `<p class="small muted">${t("读取中…")}</p>` : UI.cloud.length ? UI.cloud.slice(0, 12).map((f) => `<div class="medrow"><div><b>${esc(f.name)}</b><br><span class="small muted">${esc(when(f.at))} · ${kb(f.size)}</span></div><span><button class="chip" data-act="bk-cloud-dl" data-name="${esc(f.name)}">${t("下载")}</button> <button class="chip" data-act="bk-cloud-restore" data-name="${esc(f.name)}">${t("恢复")}</button> <button class="chip" data-act="bk-cloud-del" data-name="${esc(f.name)}">✕</button></span></div>`).join("") : `<p class="small muted">${t("还没有云端备份。勾上「云端」再点「现在备份」。")}</p>`}</div>` : ""}
-    <div class="panel"><div class="lab">${t("从备份恢复")}</div><p class="small muted">${t("换了手机、数据库被删、或换了 Supabase 项目：先登录并建好 / 加入家庭（新项目要先在 SQL Editor 执行 supabase/schema.sql），再选备份文件合并进来。老版本「导出备份」的文件也行。")}</p>
+  const restore = `<h2>${t("从文件恢复")}</h2><div class="panel"><p class="small muted" style="margin-top:0">${t("换了手机、数据库被删、或换了 Supabase 项目：先登录并建好 / 加入家庭（新项目要先在 SQL Editor 执行 supabase/schema.sql），再选备份文件合并进来。老版本「导出备份」的文件也行。")}</p>
       <div class="btns" style="margin-top:8px"><label class="btn">${t("选文件")}<input id="backupFile" type="file" accept="application/json,.json" hidden></label></div>${preview}</div>`;
+  // 5) 数据工具（折叠）
+  const tools = `<details class="more"><summary>${t("数据工具")}<span class="small muted">${t("导出表格、演示数据、清空")}</span></summary>
+    <div class="panel"><div class="btns" style="margin-top:0"><button class="btn" data-act="csv">${t("导出表格（CSV）")}</button></div>
+    <div class="btns"><button class="btn" data-act="demo">${t("载入演示数据")}</button><button class="btn" data-act="cleardemo">${t("清除演示数据")}</button><button class="btn danger" data-act="clearall">${t("清空全部记录")}</button></div></div></details>`;
+  return `<h2>${t("同步、备份与恢复")}</h2>${status}${backup}${have}${restore}${tools}`;
 }
 async function bkAct(act, el) {
   const redraw = () => { UI.stale = true; refreshSettingsIfOpen(); };
@@ -159,9 +334,14 @@ async function bkAct(act, el) {
     case "bk-pick": try { await pickFolder(); toast(t("已记住这个文件夹")); } catch (e) { if (e.name !== "AbortError") toast(t("选文件夹失败：{msg}", { msg: e.message })); } redraw(); break;
     case "bk-forget": await forgetFolder(); redraw(); break;
     case "bk-grant": { const st = await folderStatus(); if (st.handle) { try { await st.handle.requestPermission({ mode: "readwrite" }); } catch (e) { /* 取消 */ } } redraw(); break; }
-    case "bk-cloud-dl": try { const d = await readCloud(el.dataset.name); download(toBlob(d), el.dataset.name); } catch (e) { toast(t("下载失败：{msg}", { msg: e.message })); } break;
-    case "bk-cloud-restore": try { const d = await readCloud(el.dataset.name); UI.preview = { ...inspect(d), data: d }; } catch (e) { toast(t("读取失败：{msg}", { msg: e.message })); } refreshSettingsIfOpen(); break;
-    case "bk-cloud-del": if (!confirm(t("删除云端备份 {n}？", { n: el.dataset.name }))) break; try { await deleteCloud(el.dataset.name); } catch (e) { toast(t("删除失败：{msg}", { msg: e.message })); } redraw(); break;
+    case "bk-src": UI.src = el.dataset.src; refreshSettingsIfOpen(); break;
+    case "bk-dl": try { const d = await SOURCES[el.dataset.src].read(el.dataset.id); download(toBlob(d), el.dataset.name); } catch (e) { toast(t("下载失败：{msg}", { msg: e.message })); } break;
+    case "bk-use": try { const d = await SOURCES[el.dataset.src].read(el.dataset.id); UI.preview = { ...inspect(d), data: d }; } catch (e) { toast(t("读取失败：{msg}", { msg: e.message })); } refreshSettingsIfOpen(); break;
+    case "bk-rm": if (!confirm(t("删除备份 {n}？", { n: el.dataset.name }))) break; try { await SOURCES[el.dataset.src].del(el.dataset.id); } catch (e) { toast(t("删除失败：{msg}", { msg: e.message })); } redraw(); break;
+    case "bk-gd-on": el.disabled = true; try { await gdConnect(); saveSettings({ targets: [...new Set([...settings().targets, "gdrive"])] }); toast(t("已连接 Google Drive")); } catch (e) { toast(t("连接 Google Drive 失败：{msg}", { msg: e.message })); } redraw(); break;
+    case "bk-gd-off": gdDisconnect(); saveSettings({ targets: settings().targets.filter((x) => x !== "gdrive") }); redraw(); break;
+    case "bk-dbx-on": try { await dbxConnect(); } catch (e) { toast(t("连接 Dropbox 失败：{msg}", { msg: e.message })); } break;
+    case "bk-dbx-off": await dbxDisconnect(); saveSettings({ targets: settings().targets.filter((x) => x !== "dropbox") }); redraw(); break;
     case "bk-cancel": UI.preview = null; refreshSettingsIfOpen(); break;
     case "bk-restore": {
       const pv = UI.preview; if (!pv?.ok) break;
@@ -191,4 +371,4 @@ async function bkChange(ev) {
   return false;
 }
 
-export { backupHTML, bkAct, bkChange, runScheduled };
+export { syncHTML, backupSummary, initProviders, bkAct, bkChange, runScheduled };

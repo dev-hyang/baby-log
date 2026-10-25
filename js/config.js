@@ -8,4 +8,9 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // 国内若 jsDelivr 不稳定：把这个文件下载下来放进仓库，改成 "./supabase.js"
 const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js";
 
-export { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_JS };
+/* ---- 云盘备份（可选）：我的 → 同步、备份与恢复 里的 Google Drive / Dropbox。留空就只显示「未配置」。怎么申请见 README「云盘备份」。
+   两个都是公开的客户端标识（不是密钥），和上面的 anon key 一样可以放在网页里。 */
+const GOOGLE_CLIENT_ID = "";   // Google Cloud Console → OAuth 2.0 客户端（Web 应用）；「已获授权的 JavaScript 来源」填站点地址
+const DROPBOX_APP_KEY = "";    // Dropbox App Console → App key；Access type 选 App folder；Redirect URI 填站点地址（带结尾的 /）
+
+export { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_JS, GOOGLE_CLIENT_ID, DROPBOX_APP_KEY };

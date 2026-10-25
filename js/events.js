@@ -155,7 +155,7 @@ document.addEventListener("click", async ev => {
     case "sleepnow": { if (last(e => e.type === "sleep" && !e.end)) { toast(t("已经在记录睡眠了")); return; } await putEntry({ id: newId(), type: "sleep", ts: Date.now(), child: S.childId }); window.scrollTo(0, 0); toast(t("开始记录睡眠")); break; }
     case "wake": { const e = S.entries.find(x => x.id === t0.dataset.id); if (e) { await putEntry({ ...e, end: Date.now() }); toast(t("这一觉睡了 {d}", { d: dur(Date.now() - e.ts) })); } break; }
     case "addpick": pickType(); break;
-    case "settings": goTab("settings"); break;
+    case "settings": goTab("family-kids"); break; // 管理孩子… / 去填写生日
     case "routine-save": { // card manager: "# group" lines and one step per line; an empty list hides the routine
       const list = cleanRoutine(textToRoutine($("#routineSteps").value)) || [];
       (S.settings.routine ||= {})[S.childId] = list; await saveSettings(); toast(t("习惯清单已保存")); break; }
@@ -193,7 +193,7 @@ document.addEventListener("click", async ev => {
       }
       S.settings.children = S.settings.children.filter(x => x.id !== c.id);
       await saveSettings(); toast(n ? t("已彻底删除 {n} 条记录", { n }) : t("已删除")); break; }
-    case "savesettings": readSettingsInputs(); await saveSettings(); S.tab = "today"; render(); window.scrollTo(0, 0); toast(t("设置已保存")); break;
+    case "savesettings": readSettingsInputs(); await saveSettings(); S.tab = "family"; render(); window.scrollTo(0, 0); toast(t("设置已保存")); break;
     case "export": offerFile(`${t("母婴记录备份")}-${dayKey(Date.now())}.json`, JSON.stringify({ app: "xiaoyueliang", version: 1, exported: Date.now(), settings: S.settings, entries: S.entries }, null, 1), "application/json"); break;
     case "csv": offerFile(`${t("母婴记录")}-${dayKey(Date.now())}.csv`, toCSV(), "text/csv"); break;
     case "import": $("#importFile").click(); break;

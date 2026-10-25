@@ -5,12 +5,13 @@ import "./events.js"; // registers the global click / change / input handlers
 import { applyLang } from "./i18n.js";
 import { S, loadLocal } from "./state.js";
 import { initCloud } from "./store.js";
-import { runScheduled } from "./backup.js";
+import { initProviders, runScheduled } from "./backup.js";
 import { initSupabase, syncNow } from "./sync.js";
 import { $ } from "./util.js";
 import { heroHTML, heroPage, heroRestore, heroSettle, render } from "./views.js";
 
 applyLang(); loadLocal(); render();
+initProviders();   // 从 Dropbox 授权页跳回来时把 ?code= 换成令牌（js/backup.js）
 setInterval(() => { if (S.tab === "today" && !$("#sheet").open) { const h = document.querySelector(".herobox"); if (h) { h.outerHTML = heroHTML(); heroRestore(); } } }, 30e3);
 // remember which top card is showing (and move the dots) while swiping. A looping track holds five copies of the card list; the middle copy is the one at rest.
 

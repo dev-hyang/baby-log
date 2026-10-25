@@ -1,25 +1,39 @@
 import { APPS, THIS_APP } from "./apps.js";
-import { LANGS, langPref, t } from "./i18n.js";
+import { LANGS, lang, langPref, t } from "./i18n.js";
 import { ANOM_MATCH, HERO_BUILTIN, allCards, anomalyOff, clockLabel, faithOn, hasCardPrefs, heroCustom, heroKeys, pottyMin } from "./stages.js";
 import { TYPES, typeLabel } from "./types.js";
 import { APP_VERSION, S, activeKids, kidCount, ageText, childName, groupTone, ROUTINE_TPL, isKidType, routineGroups, routineSteps, routineToText, stageOf } from "./state.js";
-import { familyHTML } from "./sync.js";
+import { SB, familyHTML, lapsed, memberNames } from "./sync.js";
 import { isUS, unitPref } from "./units.js";
 import { $, esc } from "./util.js";
 import { mrow, render } from "./views.js";
-import { backupHTML } from "./backup.js";
+import { backupSummary } from "./backup.js";
 
 /* ============ 我的: the hub for everything that is not daily logging ============
-   Same design as homeschool: one list row per entry (icon, title, one-line description, ›), then the print
-   pages, then the sister apps. Settings / Q&A / About open as full pages with a "‹ 我的" chip on top and the
-   我的 tab stays highlighted (see SUB in views.js). */
+   Six entries, each a page of its own: 家庭 (itself a small hub: 家庭协作 / 孩子 / 妈妈用药间隔 / 信仰), 同步、备份与恢复,
+   语言、单位和显示, 卡片, 问答, 介绍; then the print pages and the sister apps. Every row carries a live one-line
+   summary so the hub doubles as an overview. Sub-pages keep the 我的 tab lit and show a "‹ parent" chip on top
+   (SUB in views.js resolves nested parents). */
+const inFamily = () => S.mode === "family" && !!SB.family;
+function syncSummary(){
+  const pending = S.entries.filter(e => e._dirty).length;
+  const mode = inFamily() ? (pending ? t("{n} 条待同步", { n: pending }) : t("家庭同步 · {n} 人", { n: memberNames().length || 1 })) : lapsed() ? t("家庭登录已失效") : t("保存在本设备");
+  return `${mode} · ${backupSummary()}`;
+}
+function prefsSummary(){
+  const code = lang(), name = (LANGS.find(([c]) => c === code) || [])[1] || code, th = document.documentElement.dataset.theme;
+  return `${name} · ${isUS() ? t("美制") : t("公制")} · ${th === "dark" ? t("深色") : th === "light" ? t("浅色") : t("跟随系统")}`;
+}
 function viewMe(){
-  const row = mrow;
+  const row = mrow, kids = activeKids();
   const link = a => `<a class="mrow" href="${a.url}"><span class="mi" aria-hidden="true">↗</span><span class="mt"><b>${esc(t(a.name))}</b><small>${esc(t(a.desc))}</small></span><span class="mch" aria-hidden="true">›</span></a>`;
+  const famDesc = inFamily() ? t("{name} · {m} 位成员 · {k} 个孩子", { name: esc(SB.family.name), m: memberNames().length || 1, k: kids.length }) : t("家庭协作、孩子、妈妈用药间隔、信仰（可选）");
   return `
   <h2>${t("我的")} <span class="small muted" style="font-weight:400">${esc(childName())} · ${esc(ageText())}</span></h2>
   <div class="panel mlist">
-    ${row('data-tab="settings"', t("设置"), t("孩子、妈妈用药间隔、家庭协作、备份、语言、单位、显示"), "⚙")}
+    ${row('data-tab="family"', t("家庭"), famDesc, "⌂")}
+    ${row('data-tab="sync"', t("同步、备份与恢复"), esc(syncSummary()), "⟳")}
+    ${row('data-tab="prefs"', t("语言、单位和显示"), esc(prefsSummary()), "Aa")}
     ${row('data-tab="cards"', t("卡片"), t("今天页的快捷按钮和统计：按孩子打开或关闭，已有记录不受影响"), "◫")}
     ${row('data-tab="learn"', t("问答"), t("什么时候联系儿科医生、向 AI 提问、权威资料"), "?")}
     ${row('data-tab="about"', t("介绍"), t("这是什么、每页怎么用、小技巧、注意事项、数据与隐私"), "✎")}
@@ -38,6 +52,68 @@ function viewMe(){
   <div class="panel mlist">${APPS.filter(a => a.key !== THIS_APP).map(link).join("")}</div>
   <p class="small muted">${t("同一个账号、同一个家庭，四个站点互通；标题旁的左右箭头也能切换。")}</p>
   <p class="small muted" style="margin-top:24px">${t("小月亮 · 母婴记录")} · ${t("版本 {v}", { v: APP_VERSION })}</p>`;
+}
+
+/* ---- 家庭: a third-level hub. One summary card, then one row per topic; each opens its own page ---- */
+function familyHubHTML(){
+  const st = S.settings, kids = activeKids(), gone = st.children.filter(c => c.archived).length, meds = (st.medIntervals || []).filter(r => r.name).length, f = st.faith;
+  const fam = inFamily();
+  const kidLine = kids.map(c => `<span class="kidtag"><b>${esc(c.name || t("宝宝"))}</b><small>${esc(ageText(c.id))}</small></span>`).join("");
+  const faithKids = f.on && kids.length > 1 ? t("给 {n} 个孩子显示", { n: kids.filter(c => !f.off.includes(c.id)).length }) : "";
+  return `<h2>${t("家庭")}</h2>
+  <div class="panel hubsum">
+    <div class="hubrow"><span class="hubk">${t("家庭")}</span><span class="hubv"><b>${fam ? esc(SB.family.name) : t("还没加入家庭")}</b>${fam ? ` <span class="small muted">· ${esc(memberNames().join("、"))}</span>` : lapsed() ? ` <span class="small" style="color:var(--rose)">· ${t("登录已失效")}</span>` : ""}</span></div>
+    <div class="hubrow"><span class="hubk">${t("孩子")}</span><span class="hubv kidtags">${kidLine || `<span class="muted">${t("还没填孩子")}</span>`}</span></div>
+  </div>
+  <div class="panel mlist">
+    ${mrow('data-tab="family-members"', t("家庭协作"), fam ? t("{n} 位成员 · 邀请码 {code}", { n: memberNames().length || 1, code: esc(SB.family.invite_code || "") }) : lapsed() ? t("登录已失效：再输一次邀请码就能回来") : t("用邀请码加入家人的家庭，或创建新家庭；加入后记录在全家设备间同步"), "👪")}
+    ${mrow('data-tab="family-kids"', t("孩子"), (kids.map(c => c.name || t("宝宝")).join("、") || t("添加孩子、填出生日期")) + (gone ? ` · ${t("已归档 {n} 个", { n: gone })}` : ""), "👶")}
+    ${mrow('data-tab="family-meds"', t("妈妈用药间隔"), meds ? t("{n} 种药已填最短间隔", { n: meds }) : t("按医嘱填最短间隔，妈妈页会算出下次可以服药的时间"), "💊")}
+    ${mrow('data-tab="family-faith"', t("信仰（可选）"), f.on ? `${t("已打开")}${faithKids ? ` · ${faithKids}` : ""}` : t("默认关闭；打开后出现家庭敬拜、祷告、读经等记录卡片"), "🕊")}
+  </div>
+  <p class="small muted">${t("孩子、用药间隔和信仰设置属于整个家庭，保存后同步到每位家人的设备；每台设备自己的语言、单位和显示在「语言、单位和显示」里。")}</p>`;
+}
+function membersPageHTML(){
+  return `<h2>${t("家庭协作")}</h2>
+  <div class="panel">${familyHTML()}</div>
+  <p class="small muted">${S.mode === "family" ? t("记录保存在家庭云端，每台设备都有一份离线副本；没网时照常记录，联网后自动同步。") : t("加入家庭后，记录保存在家庭云端，每台设备都有一份离线副本；没网时照常记录，联网后自动同步。")}</p>`;
+}
+function kidsPageHTML(){
+  const st = S.settings;
+  return `<div class="softform"><h2>${t("孩子")}</h2>
+  <div class="panel"><div class="lab">${t("孩子（小名 · 出生日期）")}</div>
+    <div id="kidRows">${st.children.map((c, i) => c.archived ? "" : `<div class="kidcard">
+      <div class="kidhead"><span class="small muted">${t("第{n}个孩子", { n: i + 1 })}${c.birth ? ` · ${esc(ageText(c.id))}` : ""}</span>${activeKids().length > 1 ? `<button class="chip" data-act="archivekid" data-i="${i}" aria-label="${t("归档{name}", { name: esc(c.name || t("这个孩子")) })}">${t("归档")}</button>` : ""}</div>
+      <div class="kidrow"><input type="text" aria-label="${t("第{n}个孩子的小名", { n: i + 1 })}" data-kr="${i}" data-kk="name" value="${esc(c.name)}" placeholder="${t("小名")}"><input type="date" aria-label="${t("第{n}个孩子的出生日期", { n: i + 1 })}" data-kr="${i}" data-kk="birth" value="${esc(c.birth)}"></div></div>`).join("")}</div>
+    <button class="chip" data-act="addkid">${t("＋ 添加孩子")}</button>
+    ${archivedKidsHTML()}
+    <p class="small muted" style="margin-top:6px">${t("每个孩子的记录分开保存，点页面顶部的名字可以切换。妈妈的记录属于整个家庭，不随孩子切换。")}</p>
+    <p class="small muted">${t("“归档”不会删除任何记录：这个孩子只是不再出现在切换和记录选择里，随时可以恢复。")}</p>
+    <div class="btns"><button class="btn primary" data-act="savesettings">${t("保存")}</button></div></div></div>`;
+}
+function medsPageHTML(){
+  const st = S.settings;
+  return `<div class="softform"><h2>${t("妈妈用药间隔")}</h2>
+  <div class="panel"><p class="small muted" style="margin-top:0">${t("按医嘱或说明书填每种药的最短间隔。妈妈页的用药计时会据此显示下次可以服药的时间；没填的只显示距上次服药多久。")}</p>
+    <div class="lab">${t("药名 · 最短间隔（小时）")}</div>
+    <div id="medRules">${(st.medIntervals || []).map((r, i) => `<div class="row2" style="margin-bottom:6px"><input type="text" aria-label="${t("药名")}" data-mr="${i}" data-mk="name" value="${esc(r.name)}" placeholder="${t("药名")}"><input type="number" inputmode="decimal" aria-label="${t("间隔小时")}" data-mr="${i}" data-mk="hours" value="${esc(r.hours)}" placeholder="${t("间隔（小时）")}"></div>`).join("")}</div>
+    <button class="chip" data-act="addrule">${t("＋ 添加一种药")}</button>
+    <div class="btns"><button class="btn primary" data-act="savesettings">${t("保存")}</button></div></div></div>`;
+}
+function faithPageHTML(){
+  return `<div class="softform"><h2>${t("信仰（可选）")}</h2><div class="panel">${faithHTML()}</div></div>`;
+}
+
+/* ---- 语言、单位和显示: per-device preferences; nothing here touches the family's data ---- */
+function prefsHTML(){
+  const seg = (attr, cur, items, label) => `<div class="seg" role="group" aria-label="${label}">${items.map(([v, l]) => `<button ${attr}="${v}" aria-pressed="${cur === v}">${l}</button>`).join("")}</div>`;
+  return `<div class="softform"><h2>${t("语言、单位和显示")}</h2>
+  <p class="small muted">${t("这三项只影响这台设备。记录按统一格式保存，家人可以各看各的语言和单位。")}</p>
+  <div class="panel"><div class="lab">${t("语言 / Language")}</div>${seg("data-lang-set", langPref(), LANGS.map(([v, l]) => [v, v === "auto" ? t("自动") : l]), t("语言 / Language"))}</div>
+  <div class="panel"><div class="lab">${t("单位")}</div>${seg("data-units-set", unitPref(), [["auto", t("自动（当前：{u}）", { u: isUS() ? t("美制") : t("公制") })], ["metric", t("公制 kg · cm · ml · ℃")], ["us", t("美制 lb · in · fl oz · ℉")]], t("单位"))}
+  <p class="small muted" style="margin:8px 0 0">${t("数据统一按公制保存，切换不会改动已有记录。“自动”按手机的语言和时区判断（北美时区默认美制）。")}</p></div>
+  <div class="panel"><div class="lab">${t("外观")}</div>${seg("data-theme-set", document.documentElement.dataset.theme || "", [["", t("跟随系统")], ["light", t("浅色")], ["dark", t("深色（夜里喂奶）")]], t("外观"))}</div>
+  </div>`;
 }
 
 /* ---- card manager: which quick buttons and stats the active child's Today page shows ---- */
@@ -127,45 +203,6 @@ function archivedKidsHTML(){
   }).join("");
 }
 
-/* ---- settings page ---- */
-function settingsHTML(){
-  const st = S.settings;
-  const seg = (attr, cur, items, label) => `<div class="seg" role="group" aria-label="${label}">${items.map(([v, l]) => `<button ${attr}="${v}" aria-pressed="${cur === v}">${l}</button>`).join("")}</div>`;
-  return `<div class="softform">
-  <h2>${t("设置")}</h2>
-  <div class="panel"><div class="lab">${t("孩子（小名 · 出生日期）")}</div>
-    <div id="kidRows">${st.children.map((c, i) => c.archived ? "" : `<div class="kidcard">
-      <div class="kidhead"><span class="small muted">${t("第{n}个孩子", { n: i + 1 })}${c.birth ? ` · ${esc(ageText(c.id))}` : ""}</span>${activeKids().length > 1 ? `<button class="chip" data-act="archivekid" data-i="${i}" aria-label="${t("归档{name}", { name: esc(c.name || t("这个孩子")) })}">${t("归档")}</button>` : ""}</div>
-      <div class="kidrow"><input type="text" aria-label="${t("第{n}个孩子的小名", { n: i + 1 })}" data-kr="${i}" data-kk="name" value="${esc(c.name)}" placeholder="${t("小名")}"><input type="date" aria-label="${t("第{n}个孩子的出生日期", { n: i + 1 })}" data-kr="${i}" data-kk="birth" value="${esc(c.birth)}"></div></div>`).join("")}</div>
-    <button class="chip" data-act="addkid">${t("＋ 添加孩子")}</button>
-    ${archivedKidsHTML()}
-    <p class="small muted" style="margin-top:6px">${t("每个孩子的记录分开保存，点页面顶部的名字可以切换。妈妈的记录属于整个家庭，不随孩子切换。")}</p>
-    <p class="small muted">${t("“归档”不会删除任何记录：这个孩子只是不再出现在切换和记录选择里，随时可以恢复。")}</p>
-    <div class="lab" style="margin-top:14px">${t("妈妈用药的最短间隔（按医嘱或说明书填写）")}</div>
-    <div id="medRules">${(st.medIntervals || []).map((r, i) => `<div class="row2" style="margin-bottom:6px"><input type="text" aria-label="${t("药名")}" data-mr="${i}" data-mk="name" value="${esc(r.name)}" placeholder="${t("药名")}"><input type="number" inputmode="decimal" aria-label="${t("间隔小时")}" data-mr="${i}" data-mk="hours" value="${esc(r.hours)}" placeholder="${t("间隔（小时）")}"></div>`).join("")}</div>
-    <button class="chip" data-act="addrule">${t("＋ 添加一种药")}</button>
-    <div class="btns"><button class="btn primary" data-act="savesettings">${t("保存设置")}</button></div></div>
-
-  <h2>${t("信仰（可选）")}</h2>
-  <div class="panel">${faithHTML()}</div>
-
-  <h2>${t("家庭协作")}</h2>
-  <div class="panel">${familyHTML()}</div>
-  <h2>${t("数据")}</h2>
-  <div class="panel"><p class="small muted">${S.mode === "family" ? t("记录保存在家庭云端，每台设备都有一份离线副本；没网时照常记录，联网后自动同步。") : S.mode === "cloud" ? t("记录已同步到你的 Claude 账号，同时在本设备留有副本。") : t("记录目前只保存在这台设备的浏览器里。换手机或清理浏览器数据会丢失，建议每周导出一次备份。")}</p>
-  <div class="btns"><button class="btn" data-act="csv">${t("导出表格（CSV）")}</button></div>
-  <div class="btns"><button class="btn" data-act="demo">${t("载入演示数据")}</button><button class="btn" data-act="cleardemo">${t("清除演示数据")}</button><button class="btn danger" data-act="clearall">${t("清空全部记录")}</button></div></div>
-  ${backupHTML()}
-  <h2>${t("语言 / Language")}</h2>
-  <div class="panel">${seg("data-lang-set", langPref(), LANGS.map(([v, l]) => [v, v === "auto" ? t("自动") : l]), t("语言 / Language"))}
-  <p class="small muted" style="margin-top:6px">${t("只影响这台设备的显示。记录内容按统一格式保存，家人可以各看各的语言。")}</p></div>
-  <h2>${t("单位")}</h2>
-  <div class="panel">${seg("data-units-set", unitPref(), [["auto", t("自动（当前：{u}）", { u: isUS() ? t("美制") : t("公制") })], ["metric", t("公制 kg · cm · ml · ℃")], ["us", t("美制 lb · in · fl oz · ℉")]], t("单位"))}
-  <p class="small muted" style="margin-top:6px">${t("只影响这台设备的显示和输入。数据统一按公制保存，切换不会改动已有记录，家人可以各用各的单位。“自动”按手机的语言和时区判断（北美时区默认美制）。")}</p></div>
-  <h2>${t("显示")}</h2>
-  <div class="panel">${seg("data-theme-set", document.documentElement.dataset.theme || "", [["", t("跟随系统")], ["light", t("浅色")], ["dark", t("深色（夜里喂奶）")]], t("外观"))}</div>
-  </div>`;
-}
 function readSettingsInputs(){
   // start from the full list so archived children (no row on screen) are never dropped
   const kids = S.settings.children.map(c => ({ ...c })); let seen = false;
@@ -175,7 +212,8 @@ function readSettingsInputs(){
   S.settings.medIntervals = rules.filter(r => r && (r.name || r.hours));
   const fs = $("#faithStatement"); if (fs) S.settings.faith.statement = fs.value.trim();
 }
-// re-render the settings page after cloud state changed (login, members, invite code), unless a form is open on top
-function refreshSettingsIfOpen(){ if (S.tab === "settings" && !$("#sheet").open) render(); }
+// re-render a 我的 page after cloud state changed (login, members, invite code, backup lists), unless a form is open on top
+const ME_PAGES = new Set(["me", "settings", "family", "family-members", "family-kids", "family-meds", "family-faith", "sync", "prefs"]);
+function refreshSettingsIfOpen(){ if (ME_PAGES.has(S.tab) && !$("#sheet").open) render(); }
 
-export { viewMe, cardsHTML, heroCfgHTML, routineCfgHTML, faithHTML, FAITH_TEMPLATE, settingsHTML, readSettingsInputs, refreshSettingsIfOpen };
+export { viewMe, familyHubHTML, membersPageHTML, kidsPageHTML, medsPageHTML, faithPageHTML, prefsHTML, cardsHTML, heroCfgHTML, routineCfgHTML, faithHTML, FAITH_TEMPLATE, readSettingsInputs, refreshSettingsIfOpen };

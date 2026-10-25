@@ -4,11 +4,12 @@ import { APPS, THIS_APP } from "./apps.js";
 import { ask } from "./ask.js";
 import { byTime, last, medStatus, suggestSide, within } from "./derived.js";
 import { LANGS, lang, langPref, t } from "./i18n.js";
-import { cardsHTML, heroCfgHTML, routineCfgHTML, settingsHTML, viewMe } from "./me.js";
+import { cardsHTML, faithPageHTML, familyHubHTML, heroCfgHTML, kidsPageHTML, medsPageHTML, membersPageHTML, prefsHTML, routineCfgHTML, viewMe } from "./me.js";
 import { dayNavHTML, viewMeal } from "./meal.js";
 import { activeCards, anomalyText, clockOf, doctorListHTML, heroAnomalies, heroKeys, milestoneRef, milestoneRefHTML, pottyMin, quickHTML, routineHTML, routineToday, stageCfg, stageTypes, statsHTML } from "./stages.js";
 import { APP_VERSION, CHECKUPS, S, activeKids, STAGES, routineSteps, isKidType, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
 import { SB, lapsed, loadTombs, memberName, memberNames } from "./sync.js";
+import { syncHTML } from "./backup.js";
 import { viewTrend } from "./trend.js";
 import { TYPES, flags, isVisit, summary, typeLabel } from "./types.js";
 import { fmtU, isUS, toDisp, trim, unitOf } from "./units.js";
@@ -66,18 +67,20 @@ function toggleKids(open = $("#kids").hidden){
 const mrow = (attr, title, desc, icon) => `<button class="mrow" ${attr}><span class="mi" aria-hidden="true">${icon}</span><span class="mt"><b>${title}</b>${desc ? `<small>${desc}</small>` : ""}</span><span class="mch" aria-hidden="true">›</span></button>`;
 // sub-pages reached from a hub: the hub's bottom tab stays highlighted and a "‹ hub" chip sits on top
 const SUB = {
-  settings: ["me", () => settingsHTML()], cards: ["me", () => cardsHTML()], herocfg: ["today", () => heroCfgHTML()], routinecfg: ["today", () => routineCfgHTML()], learn: ["me", () => viewLearn()], about: ["me", () => aboutHTML()],
+  family: ["me", () => familyHubHTML()], "family-members": ["family", () => membersPageHTML()], "family-kids": ["family", () => kidsPageHTML()], "family-meds": ["family", () => medsPageHTML()], "family-faith": ["family", () => faithPageHTML()],
+  sync: ["me", () => syncHTML()], prefs: ["me", () => prefsHTML()], settings: ["me", () => familyHubHTML()], // settings: old links
+  cards: ["me", () => cardsHTML()], herocfg: ["today", () => heroCfgHTML()], routinecfg: ["today", () => routineCfgHTML()], learn: ["me", () => viewLearn()], about: ["me", () => aboutHTML()],
   "grow-milestones": ["grow", () => growMilestones()], "grow-foods": ["grow", () => growFoods()], "grow-sleep": ["grow", () => growSleep()],
   "grow-body": ["grow", () => growBody()], "grow-checkups": ["grow", () => growCheckups()], "grow-vax": ["grow", () => growVax()],
   "mom-charts": ["mom", () => momCharts()], "mom-signs": ["mom", () => momSigns()]
 };
-const TAB_LABEL = { today: "今天", me: "我的", grow: "成长", mom: "妈妈" };
+const TAB_LABEL = { today: "今天", me: "我的", grow: "成长", mom: "妈妈", family: "家庭" };
 function render(){
   renderStatus();
   // the postpartum tab matters in the newborn stage, or while mother records are still being written
   const showMom = stageOf().key === "newborn" || S.entries.some(e => (e.type === "mmed" || e.type === "mbody") && e.ts > Date.now() - 30 * D);
   $('nav.tabs [data-tab="mom"]').hidden = !showMom;
-  const sub = SUB[S.tab], cur = sub ? sub[0] : S.tab;
+  const sub = SUB[S.tab]; let cur = S.tab; while (SUB[cur]) cur = SUB[cur][0]; // the bottom tab that owns this page, through nested hubs
   if (cur === "mom" && !showMom) S.tab = "today";
   document.querySelectorAll("nav.tabs button").forEach(b => { if (b.dataset.tab === cur) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
   const v = sub ? sub[1] : ({ today: viewToday, log: viewLog, mom: viewMom, grow: viewGrow, me: viewMe }[S.tab] || viewToday);
