@@ -1242,4 +1242,9 @@ export default {
   "上次 {d}": "Last {d}",
   "家庭学堂": "Homeschool",
 
+"家庭登录已失效，记录暂存本机": "Family login lapsed, saving here for now",
+"有 {n} 条改动云端不允许保存（别人的私密或分享记录），已恢复为云端版本": "{n} change(s) were refused by the cloud (someone else's private or shared records) and reverted to the cloud version",
+"这是 {name} 分享给你的记录，只有对方能删除": "{name} shared this record with you; only they can delete it",
+"这台设备之前加入过家庭，但登录已失效（可能是手机清理了网站数据，或登录过期）。再输一次邀请码就能回来，这期间记的内容会一并上传。": "This device was in a family before, but the login lapsed (the phone cleared site data, or the session expired). Enter the invite code again to come back; everything logged meanwhile uploads with it.",
+"家庭连接失败，记录暂存本机": "Family not reachable, saving here for now",
 };

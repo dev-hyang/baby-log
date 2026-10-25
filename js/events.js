@@ -9,7 +9,7 @@ import { closeSheet, draft, drawForm, openForm, pickType, readDraftInputs, remem
 import { heroCustom, heroKeys, resetCards, setCard } from "./stages.js";
 import { FAITH_STEPS, LS_KEY, cleanRoutine, ROUTINE_TPL, S, child, childOf, faithOn, isKidType, kidCount, matchCheckup, routineToText, setChild, textToRoutine } from "./state.js";
 import { importJSON, loadDemo, offerFile, putEntry, removeEntry, removeWhere, saveSettings, toCSV } from "./store.js";
-import { sbAuth, sbCreate, sbJoin, sbLogout, sbMember, sbResetCode, syncNow, visSupported } from "./sync.js";
+import { canEdit, memberName, sbAuth, sbCreate, sbJoin, sbLogout, sbMember, sbResetCode, syncNow, visSupported } from "./sync.js";
 import { UNIT_KEY, isUS } from "./units.js";
 import { $, D, H, dayKey, dur, fromInput, newId, startOfDay, toast } from "./util.js";
 import { openPrint } from "./print.js";
@@ -301,6 +301,8 @@ document.addEventListener("keydown", async ev => {
 // 行记录左滑删除（js/swipe-rows.js）：记录行没有自己的删除按钮，这里替它删（同样先确认）
 initSwipeRows({ kinds: ["entry"], del: () => t("删除"), release: () => t("松手删除"), onDelete: async (el) => {
   const id = el.dataset.edit; if (!id) return false;
+  const e = S.entries.find(x => x.id === id); // someone else's private / shared record: the server would refuse the delete
+  if (e && !canEdit(e)) { toast(t("这是 {name} 分享给你的记录，只有对方能删除", { name: memberName(e.cby) || t("家人") })); return false; }
   if (!confirm(t("删除这条记录？"))) return false;
   await removeEntry(id); toast(t("已删除"));
 } });

@@ -19,12 +19,17 @@ import { render, renderStatus } from "./views.js";
    only ever receives records its member may see. SB.vis says the columns exist; without the migration the app
    behaves as before and hides the control. A record keeps e.vis / e.with only when it is not family-wide, and
    e.cby is its author. */
-const SB = { configured: false, client: null, uid: undefined, user: null, family: null, members: {}, channel: null, syncing: false, again: false, busy: false, vis: false, reconciledAt: 0, forceReconcile: false };
+const SB = { configured: false, client: null, uid: undefined, user: null, family: null, members: {}, channel: null, syncing: false, syncStarted: 0, runId: 0, again: false, busy: false, vis: false, reconciledAt: 0, forceReconcile: false };
 const SYNC_KEY = LS_KEY + ".sync", TOMB_KEY = LS_KEY + ".tomb";
 const loadJSON = (k, d) => { try { return JSON.parse(localStorage.getItem(k) || "null") ?? d; } catch (e) { return d; } };
 const saveJSON = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 const loadTombs = () => loadJSON(TOMB_KEY, []), saveTombs = v => saveJSON(TOMB_KEY, v);
 const isAnon = () => !!(SB.user && (SB.user.is_anonymous || !SB.user.email));
+/* This device belonged to a family but the login is gone (the phone cleared site data, or the session expired and
+   could not be refreshed), or the family could not be looked up (no network at start). Changes made meanwhile keep
+   being marked as pending (see store.js) so they upload once the device is back in the family, and the status line
+   says what happened instead of a quiet "saved on this device". SB.uid stays undefined until auth has answered. */
+const lapsed = () => S.mode !== "family" && SB.configured && SB.uid !== undefined && !!loadJSON(SYNC_KEY, {}).familyId;
 const isOwner = () => !!(SB.user && SB.members[SB.user.id] && SB.members[SB.user.id].role === "owner");
 const memberName = uid => (SB.members[uid] || {}).name;
 // one entry per distinct name: a member who re-joined from a new device after clearing the browser shows once
@@ -140,22 +145,50 @@ async function reconcile(){
   if (gone.size) S.entries = S.entries.filter(e => !gone.has(e.id));
   SB.reconciledAt = Date.now();
 }
+/* One refused row must not stall the device. A write the server turns down (row-level security: deleting or
+   editing someone else's private / shared record) used to abort the whole sync, so the device never pushed the
+   rest nor pulled anyone else's records again. Now a failed batch is retried row by row, a refused change is
+   reverted to the server's version, and the pull runs regardless. A sync that never returns (a request lost on a
+   flaky mobile network) is treated as stale after 45 s so the next one can start. */
+const STALE_MS = 45e3;
+const rlsRefused = err => !!(err && (err.code === "42501" || /row-level security/i.test(err.message || "")));
+const connectivity = err => !(err && (err.code || err.details)); // a PostgREST error carries a code; a lost request does not
+async function pushRows(rows){
+  const refused = [];
+  for (let i = 0; i < rows.length; i += 200) {
+    const slice = rows.slice(i, i + 200);
+    const { error } = await SB.client.from("entries").upsert(slice, { onConflict: "family_id,id" });
+    if (!error) continue;
+    if (connectivity(error)) throw error;
+    for (const row of slice) { // find the refused row(s); the rest still go through
+      const r = await SB.client.from("entries").upsert([row], { onConflict: "family_id,id" });
+      if (r.error) { if (rlsRefused(r.error)) refused.push(row.id); else throw r.error; }
+    }
+  }
+  return refused;
+}
+// a refused change: the server's copy wins. Still visible there → take it back; not visible → this member has no business keeping it
+async function revert(ids){
+  const { data, error } = await SB.client.from("entries").select("*").eq("family_id", SB.family.id).in("id", ids);
+  if (error) throw error;
+  const seen = new Set();
+  for (const r of data) { seen.add(r.id); const e = S.entries.find(x => x.id === r.id); if (e) delete e._dirty; applyRow(r); }
+  S.entries = S.entries.filter(e => !(ids.includes(e.id) && !seen.has(e.id)));
+}
 async function syncNow(force){
   if (!SB.family) return;
   if (force) SB.forceReconcile = true;
-  if (SB.syncing) { SB.again = true; return; }
-  SB.syncing = true;
+  if (SB.syncing && Date.now() - SB.syncStarted < STALE_MS) { SB.again = true; return; }
+  const run = ++SB.runId; SB.syncing = true; SB.syncStarted = Date.now();
   try {
     // 0) still a member? RLS makes a removed member's reads come back empty rather than fail, so ask explicitly
     await loadMembers(); if (!SB.family) return;
-    // 1) push local changes and deletions
+    // 1) push local changes and deletions; a row the server refuses is reverted instead of blocking everything else
     const dirty = S.entries.filter(e => e._dirty), tombs = loadTombs();
     const rows = dirty.map(toRow).concat(tombs.map(t => ({ family_id: SB.family.id, id: t.id, type: t.type || "deleted", ts: t.ts || 0, updated: Date.now(), deleted: true, data: {} })));
-    for (let i = 0; i < rows.length; i += 200) {
-      const { error } = await SB.client.from("entries").upsert(rows.slice(i, i + 200), { onConflict: "family_id,id" });
-      if (error) throw error;
-    }
-    dirty.forEach(e => { delete e._dirty; e.by = SB.user.id; }); saveTombs([]);
+    const refused = await pushRows(rows), bad = new Set(refused);
+    dirty.forEach(e => { if (!bad.has(e.id)) { delete e._dirty; e.by = SB.user.id; } }); saveTombs([]);
+    if (refused.length) { await revert(refused); toast(t("有 {n} 条改动云端不允许保存（别人的私密或分享记录），已恢复为云端版本", { n: refused.length })); }
     // 2) pull everything changed on the server since last pull (server clock, not phone clock)
     const sync = loadJSON(SYNC_KEY, {});
     let from = 0, newest = sync.lastPull;
@@ -170,13 +203,17 @@ async function syncNow(force){
     saveJSON(SYNC_KEY, { familyId: SB.family.id, lastPull: newest });
     // 3) drop cached records this member can no longer see (only when visibility exists, at most every 5 minutes)
     if (SB.vis && (SB.forceReconcile || Date.now() - SB.reconciledAt > 5 * 60e3)) { SB.forceReconcile = false; await reconcile(); }
+    // 4) realtime drops quietly while the phone sleeps; bring it back if it is no longer subscribed
+    if (SB.channel && !["joined", "joining"].includes(SB.channel.state)) setupRealtime();
     saveLocal(); render();
   } catch (err) {
     renderStatus(); // unsent records stay marked and retry on the next sync
     if (navigator.onLine && SB.family) loadMembers(); // a write refused by RLS usually means this member was removed
   } finally {
-    SB.syncing = false;
-    if (SB.again) { SB.again = false; syncNow(); }
+    if (SB.runId === run) { // a stale run that finally returns must not clear the flag of the one that replaced it
+      SB.syncing = false;
+      if (SB.again) { SB.again = false; syncNow(); }
+    }
   }
 }
 function setupRealtime(){
@@ -296,6 +333,7 @@ function familyHTML(){
     <div class="field"><label for="sb_code">${t("邀请码")}</label><input id="sb_code" type="text" autocapitalize="characters" autocomplete="off"></div>
     <div class="btns"><button class="btn primary" data-act="sb-join">${t("用邀请码加入")}</button></div>`;
   if (!SB.user) return `
+    ${lapsed() ? `<p class="small" style="color:var(--rose)">${t("这台设备之前加入过家庭，但登录已失效（可能是手机清理了网站数据，或登录过期）。再输一次邀请码就能回来，这期间记的内容会一并上传。")}</p>` : ""}
     <p class="small muted">${t("家人已经建好家庭？输入对方发给你的邀请码就能一起记录，不用注册。")}</p>
     ${joinForm}
     <details style="margin-top:14px"><summary class="small">${t("我要创建新家庭，或用邮箱登录")}</summary>
@@ -333,4 +371,4 @@ function familyHTML(){
     <div class="btns"><button class="btn" data-act="sb-sync">${t("立即同步")}</button><button class="btn" data-act="sb-logout">${t("退出登录")}</button></div>`;
 }
 
-export { SB, SYNC_KEY, TOMB_KEY, loadJSON, saveJSON, loadTombs, saveTombs, isAnon, isOwner, memberName, memberNames, visSupported, canEdit, otherMembers, reconcile, initSupabase, afterAuth, enterFamily, leaveFamily, loadMembers, toRow, applyRow, syncNow, setupRealtime, teardownRealtime, sbAuth, sbCreate, sbJoin, sbLogout, sbResetCode, sbMember, familyHTML };
+export { SB, SYNC_KEY, TOMB_KEY, loadJSON, saveJSON, loadTombs, saveTombs, isAnon, isOwner, lapsed, memberName, memberNames, visSupported, canEdit, otherMembers, reconcile, initSupabase, afterAuth, enterFamily, leaveFamily, loadMembers, toRow, applyRow, syncNow, setupRealtime, teardownRealtime, sbAuth, sbCreate, sbJoin, sbLogout, sbResetCode, sbMember, familyHTML };

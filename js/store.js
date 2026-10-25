@@ -1,6 +1,6 @@
 import { t } from "./i18n.js";
 import { S, child, childName, childOf, isKidType, normalizeSettings, saveLocal } from "./state.js";
-import { SB, loadTombs, saveTombs, syncNow } from "./sync.js";
+import { SB, lapsed, loadTombs, saveTombs, syncNow } from "./sync.js";
 import { TYPES, summary, typeLabel } from "./types.js";
 import { $, D, H, dayKey, hm, newId, startOfDay, toast } from "./util.js";
 import { render, renderStatus } from "./views.js";
@@ -38,10 +38,10 @@ function clean(e){ const o = JSON.parse(JSON.stringify(e)); delete o._dirty; del
 
 /* One place that decides where changes go: family cloud (Supabase), Claude db, or local only */
 async function persist(changed = [], deleted = []){
-  if (S.mode === "family") {
+  if (S.mode === "family" || lapsed()) { // lapsed: the family login is gone, keep the change pending until the member rejoins
     changed.forEach(e => { e._dirty = true; });
     if (deleted.length) saveTombs(loadTombs().concat(deleted.map(e => ({ id: e.id, type: e.type, ts: e.ts }))));
-    saveLocal(); render(); syncNow(); return;
+    saveLocal(); render(); if (S.mode === "family") syncNow(); return;
   }
   saveLocal(); render();
   if (S.col) { try { for (const e of changed) await S.col.doc(e.id).set(clean(e)); for (const e of deleted) await S.col.doc(e.id).delete(); } catch (err) { cloudFail(); } }

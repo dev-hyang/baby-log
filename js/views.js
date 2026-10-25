@@ -8,7 +8,7 @@ import { cardsHTML, heroCfgHTML, routineCfgHTML, settingsHTML, viewMe } from "./
 import { dayNavHTML, viewMeal } from "./meal.js";
 import { activeCards, anomalyText, clockOf, doctorListHTML, heroAnomalies, heroKeys, milestoneRef, milestoneRefHTML, pottyMin, quickHTML, routineHTML, routineToday, stageCfg, stageTypes, statsHTML } from "./stages.js";
 import { APP_VERSION, CHECKUPS, S, activeKids, STAGES, routineSteps, isKidType, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
-import { SB, loadTombs, memberName, memberNames } from "./sync.js";
+import { SB, lapsed, loadTombs, memberName, memberNames } from "./sync.js";
 import { viewTrend } from "./trend.js";
 import { TYPES, flags, isVisit, summary, typeLabel } from "./types.js";
 import { fmtU, isUS, toDisp, trim, unitOf } from "./units.js";
@@ -19,7 +19,8 @@ function renderStatus(){
   const pending = S.entries.filter(e => e._dirty).length + loadTombs().length;
   $("#status").innerHTML = S.mode === "family"
     ? (pending ? `<span class="dot"></span>${t("{n} 条待同步", { n: pending })}` : `<span class="dot ok"></span>${t("家庭同步 · {n} 人", { n: memberNames().length || 1 })}`)
-    : S.mode === "cloud" ? `<span class="dot ok"></span>${t("已同步到你的账号")}` : `<span class="dot"></span>${t("保存在本设备")}`;
+    : S.mode === "cloud" ? `<span class="dot ok"></span>${t("已同步到你的账号")}`
+    : lapsed() ? `<span class="dot"></span>${t(SB.user ? "家庭连接失败，记录暂存本机" : "家庭登录已失效，记录暂存本机")}` : `<span class="dot"></span>${t("保存在本设备")}`;
   $("#bname").innerHTML = `${esc(child().name ? t("{name}的记录", { name: child().name }) : t("小月亮"))}<span class="chev" aria-hidden="true"></span>`;
   $("#bage").textContent = ageText();
   $("#appver").textContent = "v" + APP_VERSION;
