@@ -26,6 +26,7 @@
 | 018 | 家主一键备份 / 恢复全家：`backup_family(family)` 返回三个应用的全部数据（含家人私有的），`restore_family(family, tables)` 只补缺不覆盖；wb_* 触发器恢复时按 `app.restoring` 放行 | 待执行 |
 | 019 | 家庭学堂「睡前安然」：`hs_bedtime_songs`（歌单）、`hs_bedtime_logs`（每晚完成记录）、`hs_bedtime_events`（状况记录：怎么处理、花了多久、结果）、`media` 私有音频桶（家庭成员读写，单文件 20 MB，复用 017 的 `backup_path_ok`）；流程 / 带领词 / 经文清单放 `hs_family.settings->bedtime` | 待执行 |
 | 020 | 睡前安然 / 冲突管理的记录加「孩子 / 大人状态」：`hs_bedtime_events`、`hs_bedtime_logs` 各加 `child_state`、`parent_state` 两列（没执行时应用把这两项折进备注，不丢；执行后趋势图才能统计） | 待执行 |
+| 021 | 存储用量：函数 `storage_usage()`（SECURITY DEFINER，登录用户可调，只返回数据库 / Storage / 各桶的汇总字节数），给小月亮、家庭学堂、牧羊人设置页的「存储用量」条用 | 待执行 |
 
 本目录不进 git（见仓库根 `.gitignore`），只在这台机器上维护。
 

@@ -12,6 +12,7 @@ import { importJSON } from "./store.js";
 import { $, esc, hm, toast } from "./util.js";
 import { t } from "./i18n.js";
 import { refreshSettingsIfOpen } from "./me.js";
+import { usageHTML } from "./usage.js";
 
 const CFG = { app: "xiaoyueliang", title: "小月亮", key: "xiaoyueliang.backup", file: "xiaoyueliang" };
 const KEEP_DAYS = 60, FORMAT = 2;
@@ -326,7 +327,8 @@ function syncHTML() {
   const tools = `<details class="more"><summary>${t("数据工具")}<span class="small muted">${t("导出表格、演示数据、清空")}</span></summary>
     <div class="panel"><div class="btns" style="margin-top:0"><button class="btn" data-act="csv">${t("导出表格（CSV）")}</button></div>
     <div class="btns"><button class="btn" data-act="demo">${t("载入演示数据")}</button><button class="btn" data-act="cleardemo">${t("清除演示数据")}</button><button class="btn danger" data-act="clearall">${t("清空全部记录")}</button></div></div></details>`;
-  return `<h2>${t("同步、备份与恢复")}</h2>${status}${backup}${have}${restore}${tools}`;
+  const usage = `<h2>${t("存储用量")}</h2><p class="small muted" style="margin-top:0">${t("看看数据占了 Supabase 免费空间的多少，快满之前会变黄、变红提醒你。")}</p>${usageHTML()}`;
+  return `<h2>${t("同步、备份与恢复")}</h2>${status}${backup}${have}${restore}${usage}${tools}`;
 }
 async function bkAct(act, el) {
   const redraw = () => { UI.stale = true; refreshSettingsIfOpen(); };
