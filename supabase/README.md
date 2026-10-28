@@ -27,6 +27,7 @@
 | 019 | 家庭学堂「睡前安然」：`hs_bedtime_songs`（歌单）、`hs_bedtime_logs`（每晚完成记录）、`hs_bedtime_events`（状况记录：怎么处理、花了多久、结果）、`media` 私有音频桶（家庭成员读写，单文件 20 MB，复用 017 的 `backup_path_ok`）；流程 / 带领词 / 经文清单放 `hs_family.settings->bedtime` | 待执行 |
 | 020 | 睡前安然 / 冲突管理的记录加「孩子 / 大人状态」：`hs_bedtime_events`、`hs_bedtime_logs` 各加 `child_state`、`parent_state` 两列（没执行时应用把这两项折进备注，不丢；执行后趋势图才能统计） | 待执行 |
 | 021 | 存储用量：函数 `storage_usage()`（SECURITY DEFINER，登录用户可调，只返回数据库 / Storage / 各桶的汇总字节数），给小月亮、家庭学堂、牧羊人设置页的「存储用量」条用 | 待执行 |
+| 022 | 加入家庭加固（同 home-pantry 迁移 049）：邀请码 7 天过期（家主可重新生成 / 关闭邀请）；用邀请码加入的人先「待批准」、看不到数据，家主批准后才成为成员；猜码限速（`join_attempts`）；`join_family` 改为返回 jsonb 状态；`family_members` 对客户端只读。**先部署三个应用的新页面，再执行**（页面兼容新旧两种返回） | 待执行 |
 
 本目录不进 git（见仓库根 `.gitignore`），只在这台机器上维护。
 
