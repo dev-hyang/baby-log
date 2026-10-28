@@ -72,8 +72,11 @@ function normalizeSettings(){
   // keep the single-child fields mirrored to the first child for older exports / clients
   st.babyName = live[0].name; st.birth = live[0].birth;
   let cid = S.childId; if (cid == null) { try { cid = localStorage.getItem(CHILD_KEY); } catch (e) {} }
-  S.childId = live.some(c => c.id === cid) ? cid : live[0].id;
+  // 2 岁以上的孩子在家庭学堂里记：默认不停在他们身上（菜单里点他们会直接跳去家庭学堂）；全家都 2 岁以上时才不管
+  const stay = live.filter(c => !goesToSchool(c.id)), pick = stay.length ? stay : live;
+  S.childId = pick.some(c => c.id === cid) ? cid : pick[0].id;
 }
+const goesToSchool = (cid) => { const m = ageMonths(cid); return m != null && m >= 24; };
 const activeKids = () => S.settings.children.filter(c => !c.archived);
 const child = (id = S.childId) => S.settings.children.find(c => c.id === id) || S.settings.children[0];
 const childName = (id = S.childId) => (child(id) && child(id).name) || t("宝宝");
@@ -186,4 +189,4 @@ function textToRoutine(txt){
 
 const APP_VERSION = "2026-10-28.1";
 
-export { cleanRoutine, groupTone, faithOn, FAITH_STEPS, ROUTINE_TPL, routineGroups, routineSteps, routineToText, textToRoutine, LS_KEY, S, activeKids, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, matchCheckup, nextCheckup, APP_VERSION };
+export { goesToSchool, cleanRoutine, groupTone, faithOn, FAITH_STEPS, ROUTINE_TPL, routineGroups, routineSteps, routineToText, textToRoutine, LS_KEY, S, activeKids, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, matchCheckup, nextCheckup, APP_VERSION };

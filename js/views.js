@@ -6,7 +6,7 @@ import { LANGS, lang, langPref, t } from "./i18n.js";
 import { cardsHTML, faithPageHTML, familyHubHTML, heroCfgHTML, kidsPageHTML, medsPageHTML, membersPageHTML, prefsHTML, routineCfgHTML, viewMe } from "./me.js";
 import { dayNavHTML, viewMeal } from "./meal.js";
 import { activeCards, anomalyText, clockOf, doctorListHTML, heroAnomalies, heroKeys, milestoneRef, milestoneRefHTML, pottyMin, quickHTML, routineHTML, routineToday, stageCfg, stageTypes, statsHTML } from "./stages.js";
-import { APP_VERSION, CHECKUPS, S, activeKids, STAGES, routineSteps, isKidType, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
+import { APP_VERSION, CHECKUPS, S, activeKids, goesToSchool, STAGES, routineSteps, isKidType, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
 import { SB, joinNoticeHTML, lapsed, loadTombs, memberName, memberNames } from "./sync.js";
 import { syncHTML } from "./backup.js";
 import { aiIcon, viewAsk } from "./ask.js";
@@ -25,7 +25,7 @@ function renderStatus(){
   $("#bname").innerHTML = `${esc(child().name ? t("{name}的记录", { name: child().name }) : t("小月亮"))}<span class="chev" aria-hidden="true"></span>`;
   $("#bage").textContent = ageText();
   $("#appver").textContent = "v" + APP_VERSION;
-  $("#kids").innerHTML = activeKids().map(c => `<button role="menuitemradio" aria-checked="${c.id === S.childId}" data-kidsel="${esc(c.id)}"><b>${esc(c.name || t("宝宝"))}</b><small>${esc(ageText(c.id))}</small></button>`).join("")
+  $("#kids").innerHTML = activeKids().map(c => `<button role="menuitemradio" aria-checked="${c.id === S.childId}" data-kidsel="${esc(c.id)}"><b>${esc(c.name || t("宝宝"))}</b><small>${esc(ageText(c.id))}${goesToSchool(c.id) ? ` · ${esc(t("去家庭学堂记录"))} ›` : ""}</small></button>`).join("")
     + `<button class="manage" role="menuitem" data-act="settings">${t("管理孩子…")}</button>`;
   renderAppSwitch();
   renderLangSwitch();

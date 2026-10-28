@@ -1,4 +1,5 @@
 export default {
+"去家庭学堂记录": "Open in Homeschool",
 "返回": "Back",
 "牧羊人 · 身心灵记录": "Shepherd · Body, mind & spirit",
 "牧羊人": "Shepherd",

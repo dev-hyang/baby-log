@@ -9,7 +9,8 @@ import { FAITH_TEMPLATE, readSettingsInputs } from "./me.js";
 import { mealCheck, sortMealBy } from "./meal.js";
 import { closeSheet, draft, drawForm, openForm, pickType, readDraftInputs, rememberVis } from "./sheet.js";
 import { heroCustom, heroKeys, resetCards, setCard } from "./stages.js";
-import { FAITH_STEPS, LS_KEY, cleanRoutine, ROUTINE_TPL, S, child, childOf, faithOn, isKidType, kidCount, matchCheckup, routineToText, setChild, textToRoutine } from "./state.js";
+import { FAITH_STEPS, LS_KEY, goesToSchool, cleanRoutine, ROUTINE_TPL, S, child, childOf, faithOn, isKidType, kidCount, matchCheckup, routineToText, setChild, textToRoutine } from "./state.js";
+import { APPS } from "./apps.js";
 import { importJSON, loadDemo, offerFile, putEntry, removeEntry, removeWhere, saveSettings, toCSV } from "./store.js";
 import { canEdit, memberName, sbAuth, sbCancelJoin, sbCloseInvite, sbCreate, sbJoin, sbLogout, sbMember, sbPending, sbResetCode, checkWaiting, syncNow, visSupported } from "./sync.js";
 import { UNIT_KEY, isUS } from "./units.js";
@@ -111,6 +112,7 @@ document.addEventListener("click", async ev => {
   }
   if (t0.dataset.mealcheck) { await mealCheck(t0.dataset.feed, t0.dataset.mealcheck); return; }
   if (t0.dataset.copy) { try { await navigator.clipboard.writeText(t0.dataset.copy); toast(t("已复制：{s}", { s: t0.dataset.copy })); } catch (e) { toast(t("请手动搜索：{s}", { s: t0.dataset.copy })); } return; }
+  if (t0.dataset.kidsel && goesToSchool(t0.dataset.kidsel)) { try { localStorage.setItem("homeschool.v1.child", t0.dataset.kidsel); } catch (e) {} location.href = (APPS.find(a => a.key === "homeschool") || {}).url; return; }   // 2 岁以上：直接去家庭学堂，并让它选中这个孩子
   if (t0.dataset.kidsel) { setChild(t0.dataset.kidsel); S.mealDay = null; S.heroIdx = 0; S.heroEdit = 0; render(); $("#bname").focus(); return; }
   if (t0.dataset.pending) { await sbPending(t0.dataset.pending, t0.dataset.uid); return; }
   if (t0.dataset.member) { await sbMember(t0.dataset.member, t0.dataset.uid); return; }
