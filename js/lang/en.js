@@ -1,4 +1,5 @@
 export default {
+"返回": "Back",
 "牧羊人 · 身心灵记录": "Shepherd · Body, mind & spirit",
 "牧羊人": "Shepherd",
 "大人自己的读经、祷告、锻炼、饮食、屏幕时长、用药与保健品，提醒与趋势。": "Your own Bible reading, prayer, exercise, eating, screen time, medication and supplements, with reminders and trends.",

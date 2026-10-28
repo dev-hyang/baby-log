@@ -15,7 +15,7 @@ import { canEdit, memberName, sbAuth, sbCancelJoin, sbCloseInvite, sbCreate, sbJ
 import { UNIT_KEY, isUS } from "./units.js";
 import { $, D, H, dayKey, dur, fromInput, newId, startOfDay, toast } from "./util.js";
 import { openPrint } from "./print.js";
-import { heroPage, heroSettle, render, toggleKids } from "./views.js";
+import { backTo, heroPage, heroSettle, render, toggleKids } from "./views.js";
 
 // a page reached from 我的 (settings, about …), from anywhere: the kids menu, the grow page, a form
 function goTab(tab){ closeSheet(); S.tab = tab; render(); window.scrollTo(0, 0); }
@@ -26,6 +26,7 @@ document.addEventListener("click", async ev => {
   if (!$("#kids").hidden && !ev.target.closest("#bname")) toggleKids(false);
   const t0 = ev.target.closest("button,[data-checkup]"); if (!t0) return;
   if (t0.id === "bname") { toggleKids(); return; }
+  if (t0.dataset.act === "nav-back") { goTab(backTo(t0.dataset.parent)); return; }   // 返回：上一页，没有就上一层
   if (t0.dataset.tab) { if (t0.dataset.slot !== undefined) S.heroEdit = +t0.dataset.slot; goTab(t0.dataset.tab); return; } // the card's gear opens the editor on that card
   if (t0.dataset.add) { openForm(t0.dataset.add, null, t0.dataset.preset ? JSON.parse(t0.dataset.preset) : {}); return; }
   if (t0.dataset.edit) { const e = S.entries.find(x => x.id === t0.dataset.edit); e && openForm(e.type, e); return; }

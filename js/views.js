@@ -79,18 +79,24 @@ const TAB_LABEL = { today: "今天", me: "我的", grow: "成长", mom: "妈妈"
 const PAGE_LABEL = { family: "家庭", "family-members": "家庭协作", "family-kids": "孩子", "family-meds": "妈妈用药间隔", "family-faith": "信仰（可选）", sync: "同步、备份与恢复", prefs: "语言、单位和显示", settings: "家庭",
   cards: "卡片", herocfg: "顶部大计时", routinecfg: "习惯清单", learn: "问答", about: "介绍", ask: "咩咩咩",
   "grow-milestones": "发育里程碑", "grow-foods": "新食物与反应", "grow-sleep": "睡眠", "grow-body": "体重 / 身高", "grow-checkups": "儿科体检与就诊", "grow-vax": "疫苗接种记录", "mom-charts": "体重、疼痛与心情", "mom-signs": "需要立即就医的警示信号" };
+/* 「‹ 返回」= 回到你刚才来的那一页；直接打开或刷新后没有上一页时，退到上一层。面包屑负责按层级往上跳，两者分工（和 iOS / 安卓 / 网页的常见做法一致） */
+const NAV = { last: null, stack: [], back: false };
+function trackNav(tab){ if (NAV.last && NAV.last !== tab && !NAV.back) { NAV.stack.push(NAV.last); if (NAV.stack.length > 30) NAV.stack.shift(); } NAV.back = false; NAV.last = tab; }
+function backTo(parent){ NAV.back = true; while (NAV.stack.length) { const p = NAV.stack.pop(); if (p !== S.tab) return p; } return parent; }
+const backBtn = parent => `<button type="button" class="crumb-link crumb-back" data-act="nav-back" data-parent="${parent}" aria-label="${t("返回")}">‹ ${t("返回")}</button>`;
 /* Breadcrumb path on a sub-page (same design as home-pantry): ‹ 我的 / 家庭 / 家庭协作. The bottom tab first, then every hub
    on the way, the current page last in bold; every earlier part is a button back to that level. */
 function crumbHTML(tab, cls = ""){
   const chain = []; let k = tab; while (SUB[k]) { chain.unshift(k); k = SUB[k][0]; } chain.unshift(k);
-  return `<nav class="crumb ${cls}" aria-label="${t("位置")}">${chain.map((key, i) => { const label = t(i === 0 ? TAB_LABEL[key] || key : PAGE_LABEL[key] || key);
-    return i === chain.length - 1 ? `<b aria-current="page">${label}</b>` : `<button type="button" data-tab="${key}">${i === 0 ? "‹ " : ""}${label}</button>`; }).join(`<span class="sep">/</span>`)}</nav>`;
+  return `<nav class="crumb ${cls}" aria-label="${t("位置")}">${backBtn(chain[chain.length - 2])}${chain.map((key, i) => { const label = t(i === 0 ? TAB_LABEL[key] || key : PAGE_LABEL[key] || key);
+    return i === chain.length - 1 ? `<b aria-current="page">${label}</b>` : `<button type="button" data-tab="${key}">${label}</button>`; }).join(`<span class="sep">/</span>`)}</nav>`;
 }
 function render(){
   renderStatus();
   // the postpartum tab matters in the newborn stage, or while mother records are still being written
   const showMom = stageOf().key === "newborn" || S.entries.some(e => (e.type === "mmed" || e.type === "mbody") && e.ts > Date.now() - 30 * D);
   $('nav.tabs [data-tab="mom"]').hidden = !showMom;
+  trackNav(S.tab);
   const sub = SUB[S.tab]; let cur = S.tab; while (SUB[cur]) cur = SUB[cur][0]; // the bottom tab that owns this page, through nested hubs
   if (cur === "mom" && !showMom) S.tab = "today";
   document.querySelectorAll("nav.tabs button").forEach(b => { if (b.dataset.tab === cur) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
@@ -496,4 +502,4 @@ function viewLearn(){
     ${["丁香妈妈", "崔玉涛育学园", "年糕妈妈"].map(n => `<div class="medrow"><span>${n}</span><button class="chip" data-copy="${n}">${t("复制名称")}</button></div>`).join("")}</div>`;
 }
 
-export { heroSettle, heroPage, renderStatus, render, toggleKids, mrow, SUB, heroHTML, heroRestore, bigDur, viewToday, medRow, entryRow, viewLog, viewList, lineChart, sleepBarcode, viewMom, viewGrow, milestonesHTML, foodsHTML, vaxHTML, viewLearn };
+export { backTo, heroSettle, heroPage, renderStatus, render, toggleKids, mrow, SUB, heroHTML, heroRestore, bigDur, viewToday, medRow, entryRow, viewLog, viewList, lineChart, sleepBarcode, viewMom, viewGrow, milestonesHTML, foodsHTML, vaxHTML, viewLearn };
