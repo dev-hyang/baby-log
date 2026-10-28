@@ -11,7 +11,7 @@ import { closeSheet, draft, drawForm, openForm, pickType, readDraftInputs, remem
 import { heroCustom, heroKeys, resetCards, setCard } from "./stages.js";
 import { FAITH_STEPS, LS_KEY, cleanRoutine, ROUTINE_TPL, S, child, childOf, faithOn, isKidType, kidCount, matchCheckup, routineToText, setChild, textToRoutine } from "./state.js";
 import { importJSON, loadDemo, offerFile, putEntry, removeEntry, removeWhere, saveSettings, toCSV } from "./store.js";
-import { canEdit, memberName, sbAuth, sbCreate, sbJoin, sbLogout, sbMember, sbResetCode, syncNow, visSupported } from "./sync.js";
+import { canEdit, memberName, sbAuth, sbCancelJoin, sbCloseInvite, sbCreate, sbJoin, sbLogout, sbMember, sbPending, sbResetCode, checkWaiting, syncNow, visSupported } from "./sync.js";
 import { UNIT_KEY, isUS } from "./units.js";
 import { $, D, H, dayKey, dur, fromInput, newId, startOfDay, toast } from "./util.js";
 import { openPrint } from "./print.js";
@@ -111,6 +111,7 @@ document.addEventListener("click", async ev => {
   if (t0.dataset.mealcheck) { await mealCheck(t0.dataset.feed, t0.dataset.mealcheck); return; }
   if (t0.dataset.copy) { try { await navigator.clipboard.writeText(t0.dataset.copy); toast(t("已复制：{s}", { s: t0.dataset.copy })); } catch (e) { toast(t("请手动搜索：{s}", { s: t0.dataset.copy })); } return; }
   if (t0.dataset.kidsel) { setChild(t0.dataset.kidsel); S.mealDay = null; S.heroIdx = 0; S.heroEdit = 0; render(); $("#bname").focus(); return; }
+  if (t0.dataset.pending) { await sbPending(t0.dataset.pending, t0.dataset.uid); return; }
   if (t0.dataset.member) { await sbMember(t0.dataset.member, t0.dataset.uid); return; }
   if (t0.dataset.seg) { readDraftInputs(); const k = t0.dataset.seg; draft[k] = (draft[k] === t0.dataset.v && k !== "child" && k !== "vis") ? null : t0.dataset.v; drawForm(k); return; }
   if (t0.dataset.with) { // family members a record is shared with
@@ -209,6 +210,9 @@ document.addEventListener("click", async ev => {
     case "sb-join": await sbJoin(); break;
     case "sb-logout": await sbLogout(); break;
     case "sb-reset-code": await sbResetCode(); break;
+    case "sb-close-invite": await sbCloseInvite(); break;
+    case "sb-recheck": await checkWaiting(); break;
+    case "sb-cancel-join": await sbCancelJoin(); break;
     case "sb-sync": await syncNow(true); toast(t("已同步")); break;
   }
 });

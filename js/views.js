@@ -7,7 +7,7 @@ import { cardsHTML, faithPageHTML, familyHubHTML, heroCfgHTML, kidsPageHTML, med
 import { dayNavHTML, viewMeal } from "./meal.js";
 import { activeCards, anomalyText, clockOf, doctorListHTML, heroAnomalies, heroKeys, milestoneRef, milestoneRefHTML, pottyMin, quickHTML, routineHTML, routineToday, stageCfg, stageTypes, statsHTML } from "./stages.js";
 import { APP_VERSION, CHECKUPS, S, activeKids, STAGES, routineSteps, isKidType, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
-import { SB, lapsed, loadTombs, memberName, memberNames } from "./sync.js";
+import { SB, joinNoticeHTML, lapsed, loadTombs, memberName, memberNames } from "./sync.js";
 import { syncHTML } from "./backup.js";
 import { aiIcon, viewAsk } from "./ask.js";
 import { viewTrend } from "./trend.js";
@@ -18,7 +18,7 @@ import { $, D, H, dayKey, dur, esc, hm, num, startOfDay, weekday } from "./util.
 /* ============ rendering ============ */
 function renderStatus(){
   const pending = S.entries.filter(e => e._dirty).length + loadTombs().length;
-  $("#status").innerHTML = S.mode === "family"
+  $("#status").innerHTML = SB.waiting ? `<span class="dot"></span>${t("等家主批准")}` : S.mode === "family"
     ? (pending ? `<span class="dot"></span>${t("{n} 条待同步", { n: pending })}` : `<span class="dot ok"></span>${t("家庭同步 · {n} 人", { n: memberNames().length || 1 })}`)
     : S.mode === "cloud" ? `<span class="dot ok"></span>${t("已同步到你的账号")}`
     : lapsed() ? `<span class="dot"></span>${t(SB.user ? "家庭连接失败，记录暂存本机" : "家庭登录已失效，记录暂存本机")}` : `<span class="dot"></span>${t("保存在本设备")}`;
@@ -177,6 +177,7 @@ function viewToday(){
   ${heroAnomalies().map(a => `<div class="alert red" role="alert"><b>${t("需要留意")}</b> · ⚠️ ${esc(t(clockOf(a.k).label))}：${t("已 {d}", { d: dur(a.gap) })}，${esc(anomalyText(a))}</div>`).join("")}
   ${nc ? `<div class="alert info">${checkup}<button class="chip" data-tab="grow-checkups" style="margin-left:6px">${t("查看全部")}</button></div>` : ""}
   <div class="quick" role="group" aria-label="${t("快速记录")}">${quickHTML()}</div>
+  ${joinNoticeHTML()}
   <button class="askentry" data-tab="ask">${aiIcon(36)}<span class="at"><b>${t("咩咩咩")}</b><small>${t("问一问你的新 AI 助理吧：喂奶、睡眠、情绪、陪伴都能问")}</small></span><span class="chev" aria-hidden="true">›</span></button>
   <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="chip" data-tab="cards">${t("⚙ 管理卡片")}</button></div>
   ${stats ? `<h2>${t("最近 24 小时")}</h2><div class="stats">${stats}</div>${S.mode === "family" && SB.vis && memberNames().length > 1 ? `<p class="small muted" style="margin:6px 0 0">${t("统计只包含你能看到的记录。")}</p>` : ""}` : ""}

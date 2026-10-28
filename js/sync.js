@@ -1,7 +1,7 @@
 import { SUPABASE_ANON_KEY, SUPABASE_JS, SUPABASE_URL } from "./config.js";
 import { runScheduled } from "./backup.js";
 import { last } from "./derived.js";
-import { t } from "./i18n.js";
+import { lang, t } from "./i18n.js";
 import { refreshSettingsIfOpen } from "./me.js";
 import { LS_KEY, S, child, normalizeSettings, saveLocal } from "./state.js";
 import { clean } from "./store.js";
@@ -19,7 +19,7 @@ import { render, renderStatus } from "./views.js";
    only ever receives records its member may see. SB.vis says the columns exist; without the migration the app
    behaves as before and hides the control. A record keeps e.vis / e.with only when it is not family-wide, and
    e.cby is its author. */
-const SB = { configured: false, client: null, uid: undefined, user: null, family: null, members: {}, channel: null, syncing: false, syncStarted: 0, runId: 0, again: false, busy: false, vis: false, reconciledAt: 0, forceReconcile: false };
+const SB = { configured: false, client: null, uid: undefined, user: null, family: null, members: {}, channel: null, syncing: false, syncStarted: 0, runId: 0, again: false, busy: false, vis: false, reconciledAt: 0, forceReconcile: false, pending: [], waiting: false, waitTimer: null };
 const SYNC_KEY = LS_KEY + ".sync", TOMB_KEY = LS_KEY + ".tomb";
 const loadJSON = (k, d) => { try { return JSON.parse(localStorage.getItem(k) || "null") ?? d; } catch (e) { return d; } };
 const saveJSON = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
@@ -62,13 +62,42 @@ function initSupabase(){
 }
 async function afterAuth(){
   if (SB.busy) return; // a join flow is in progress and will call enterFamily itself
-  teardownRealtime(); SB.family = null; SB.members = {};
+  stopWaiting(); teardownRealtime(); SB.family = null; SB.members = {}; SB.pending = [];
   if (!SB.user) { S.mode = "local"; render(); refreshSettingsIfOpen(); return; }
-  const { data, error } = await SB.client.from("family_members").select("family_id, families(*)").eq("user_id", SB.user.id).limit(1);
+  const { data, error } = await myFamilyRow();
   if (error) { toast(t("连接云端失败，先用本机记录")); render(); return; }
+  if (data.length && data[0].status === "pending") { startWaiting(); return; } // the family row is hidden by RLS until the owner approves
   if (data.length && data[0].families) await enterFamily(data[0].families);
   else { S.mode = "local"; render(); refreshSettingsIfOpen(); }
 }
+/* Migration 022 adds family_members.status; before it runs the column does not exist (42703), so retry without it (no status = active). */
+const noStatusCol = err => !!err && (err.code === "42703" || /status/i.test(err.message || ""));
+async function myFamilyRow(){
+  let r = await SB.client.from("family_members").select("family_id, status, families(*)").eq("user_id", SB.user.id).limit(1);
+  if (noStatusCol(r.error)) r = await SB.client.from("family_members").select("family_id, families(*)").eq("user_id", SB.user.id).limit(1);
+  return r;
+}
+/* ---- waiting for the owner's approval: no data is visible; re-check every 20 s and on any change to my member row ---- */
+function startWaiting(){
+  stopWaiting(); teardownRealtime();
+  SB.waiting = true; S.mode = "local";
+  SB.waitTimer = setInterval(checkWaiting, 20000);
+  SB.channel = SB.client.channel("wait-" + SB.user.id)
+    .on("postgres_changes", { event: "*", schema: "public", table: "family_members", filter: "user_id=eq." + SB.user.id }, () => checkWaiting())
+    .subscribe();
+  render(); refreshSettingsIfOpen();
+}
+function stopWaiting(){ SB.waiting = false; if (SB.waitTimer) { clearInterval(SB.waitTimer); SB.waitTimer = null; } }
+async function checkWaiting(){
+  if (!SB.waiting || !SB.user) return;
+  const { data, error } = await myFamilyRow();
+  if (error || !SB.waiting) return;
+  if (data.length && data[0].status === "pending") return;
+  toast(data.length ? t("家主已批准，欢迎加入") : t("你的加入申请没有通过"));
+  await afterAuth();
+}
+const redraw = () => { if (!$("#sheet").open) render(); };
+const fmtDate = ms => new Date(ms).toLocaleDateString(lang() === "en" ? "en-US" : undefined, { year: "numeric", month: "numeric", day: "numeric" });
 async function enterFamily(fam){
   const sync = loadJSON(SYNC_KEY, {});
   if (sync.familyId !== fam.id) {
@@ -106,9 +135,12 @@ function leaveFamily(msg){
   S.mode = "local"; if (msg) toast(msg); render(); refreshSettingsIfOpen();
 }
 async function loadMembers(){
-  const { data, error } = await SB.client.from("family_members").select("user_id, display_name, role").eq("family_id", SB.family.id);
+  let { data, error } = await SB.client.from("family_members").select("user_id, display_name, role, status, joined_at").eq("family_id", SB.family.id);
+  if (noStatusCol(error)) ({ data, error } = await SB.client.from("family_members").select("user_id, display_name, role").eq("family_id", SB.family.id));
   if (error) return;
-  SB.members = Object.fromEntries((data || []).map(m => [m.user_id, { name: m.display_name || t("家人"), role: m.role || "member" }]));
+  const rows = data || [], isPending = m => m.status === "pending";
+  SB.pending = rows.filter(isPending).map(m => ({ uid: m.user_id, name: m.display_name || t("家人"), at: m.joined_at ? Date.parse(m.joined_at) : 0 }));
+  SB.members = Object.fromEntries(rows.filter(m => !isPending(m)).map(m => [m.user_id, { name: m.display_name || t("家人"), role: m.role || "member" }]));
   if (SB.user && !SB.members[SB.user.id]) leaveFamily(t("你已不在这个家庭里，这台设备上的家庭记录副本已清除"));
 }
 function toRow(e){
@@ -231,11 +263,12 @@ function setupRealtime(){
     .on("postgres_changes", { event: "UPDATE", schema: "public", table: "families", filter: "id=eq." + SB.family.id }, payload => {
       if (!payload.new) return;
       if (payload.new.invite_code && SB.family) SB.family.invite_code = payload.new.invite_code; // reset by an owner on another device
+      if (SB.family && "invite_expires_at" in payload.new) SB.family.invite_expires_at = payload.new.invite_expires_at;
       if (payload.new.settings) { S.settings = { ...S.settings, ...payload.new.settings }; normalizeSettings(); saveLocal(); }
       if (!$("#sheet").open) render(); else refreshSettingsIfOpen();
     })
     .on("postgres_changes", { event: "*", schema: "public", table: "family_members", filter: "family_id=eq." + SB.family.id }, () => {
-      loadMembers().then(() => { renderStatus(); refreshSettingsIfOpen(); });
+      loadMembers().then(() => { renderStatus(); redraw(); });
     })
     .subscribe();
 }
@@ -282,14 +315,24 @@ async function sbJoin(){
       fresh = true;
     }
     const { data, error } = await SB.client.rpc("join_family", { p_code: code, p_display: display });
-    if (error || !data) {
-      toast(t("邀请码不对，请核对后再试"));
+    const res = Array.isArray(data) ? data[0] : data;
+    // before migration 022 join_family returns a families row (has id, no status) = joined; after it, jsonb { status, family_id?, retry_minutes? }
+    const status = res && res.status ? res.status : (res && res.id ? "active" : "invalid");
+    const fail = error ? t("邀请码不对，请核对后再试") : ({
+      invalid: t("邀请码不对，请核对后再试"),
+      expired: t("邀请码已过期，请家主重新生成"),
+      throttled: t("尝试太多次，请 {n} 分钟后再试", { n: res && res.retry_minutes || 15 }),
+      full: t("等待批准的人太多，请让家主先处理")
+    })[status];
+    if (fail || (status !== "active" && status !== "pending")) {
+      toast(fail || t("邀请码不对，请核对后再试"));
       if (fresh) { SB.busy = false; await SB.client.auth.signOut(); } // don't leave a dangling anonymous login behind
       return;
     }
-    toast(t("已加入家庭"));
     SB.busy = false;
-    await enterFamily(Array.isArray(data) ? data[0] : data);
+    if (status === "pending") { toast(t("申请已发出，等家主批准")); await afterAuth(); return; }
+    toast(t("已加入家庭"));
+    if (res.id) await enterFamily(res); else await afterAuth();
   } finally { SB.busy = false; }
 }
 async function sbLogout(){
@@ -300,13 +343,47 @@ async function sbLogout(){
   S.entries = []; saveTombs([]); saveJSON(SYNC_KEY, {}); saveLocal();
   toast(t("已退出")); render(); refreshSettingsIfOpen();
 }
+async function sbCancelJoin(){
+  if (!confirm(t("取消申请并退出？家主那边的申请会一直留着，直到家主拒绝。"))) return;
+  await SB.client.auth.signOut(); stopWaiting(); teardownRealtime();
+  toast(t("已取消申请"));
+}
 /* ---- owner actions ---- */
+const rpcMsg = err => /owner only/.test(err.message || "") ? t("只有家主可以这样操作") : /no pending/.test(err.message || "") ? t("这个申请已经处理过了") : t("操作失败，请稍后再试");
 async function sbResetCode(){
   if (!isOwner() || !confirm(t("重置后旧邀请码立即失效，已加入的家人不受影响。继续吗？"))) return;
-  const { data, error } = await SB.client.rpc("reset_invite_code", { p_family: SB.family.id });
-  if (error || !data) { toast(t("操作失败，请稍后再试")); return; }
+  const { data, error } = await SB.client.rpc("reset_invite_code", { p_family: SB.family.id }); // 7 days by default after migration 022
+  if (error || !data) { toast(error ? rpcMsg(error) : t("操作失败，请稍后再试")); return; }
   SB.family = { ...SB.family, ...(Array.isArray(data) ? data[0] : data) };
-  toast(t("邀请码已重置")); refreshSettingsIfOpen();
+  toast(t("邀请码已重置")); redraw();
+}
+async function sbCloseInvite(){
+  if (!isOwner() || !confirm(t("关闭邀请后，现在谁也不能用邀请码加入。已加入的家人不受影响，需要时可以重新生成。继续吗？"))) return;
+  const { error } = await SB.client.rpc("close_invite", { p_family: SB.family.id });
+  if (error) { toast(rpcMsg(error)); return; }
+  SB.family = { ...SB.family, invite_expires_at: new Date().toISOString() };
+  toast(t("已关闭邀请")); redraw();
+}
+async function sbPending(action, uid){
+  if (!isOwner()) return;
+  const p = SB.pending.find(x => x.uid === uid); if (!p) return;
+  if (action === "approve") {
+    const { error } = await SB.client.rpc("approve_member", { p_family: SB.family.id, p_user: uid });
+    if (error) { toast(rpcMsg(error)); return; }
+    toast(t("已批准，对方现在可以进入了"));
+  } else {
+    if (!confirm(t("拒绝 {name} 的加入申请？", { name: p.name }))) return;
+    const { error } = await SB.client.rpc("remove_member", { p_family: SB.family.id, p_user: uid });
+    if (error) { toast(rpcMsg(error)); return; }
+    toast(t("已拒绝这个申请"));
+  }
+  await loadMembers(); redraw();
+}
+// a short notice for the main screen: the owner has requests to review, or this device is waiting for approval
+function joinNoticeHTML(){
+  if (SB.waiting && !SB.family) return `<div class="panel" role="status"><b>${t("等家主批准")}</b><p class="small muted" style="margin:4px 0 8px">${t("家主批准后才能看到家里的记录。")}</p><button class="chip" data-tab="family-members">${t("查看")}</button></div>`;
+  if (S.mode === "family" && isOwner() && SB.pending.length) return `<div class="panel" role="status"><b>${t("{n} 人申请加入家庭", { n: SB.pending.length })}</b> <button class="chip" data-tab="family-members">${t("去批准")}</button></div>`;
+  return "";
 }
 async function sbMember(action, uid){
   const me = SB.user.id;
@@ -327,7 +404,7 @@ async function sbMember(action, uid){
     call = SB.client.rpc("set_member_role", { p_family: SB.family.id, p_user: uid, p_role: role });
   }
   const { error } = await call;
-  if (error) { toast(/last owner/.test(error.message) ? t("家庭至少要保留一位家主") : t("操作失败，请稍后再试")); return; }
+  if (error) { toast(/last owner/.test(error.message) ? t("家庭至少要保留一位家主") : rpcMsg(error)); return; }
   await loadMembers(); toast(action === "remove" ? t("已移除") : t("已更新")); refreshSettingsIfOpen();
 }
 
@@ -348,6 +425,10 @@ function familyHTML(){
       <div class="field"><label for="sb_pw">${t("密码（至少 6 位）")}</label><input id="sb_pw" type="password" autocomplete="current-password"></div>
       <div class="btns"><button class="btn" data-act="sb-login">${t("登录")}</button><button class="btn" data-act="sb-signup">${t("注册新账号")}</button></div>
     </details>`;
+  if (!SB.family && SB.waiting) return `
+    <div role="status"><p><b>${t("等家主批准")}</b></p>
+    <p class="small muted">${t("你已用邀请码申请加入，家主批准后才能看到家里的记录。这个页面每 20 秒自动检查一次。")}</p></div>
+    <div class="btns"><button class="btn" data-act="sb-recheck">${t("再查一次")}</button><button class="btn" data-act="sb-cancel-join">${t("取消申请 / 退出")}</button></div>`;
   if (!SB.family) {
     if (isAnon()) return `<p class="small muted">${t("这台设备还没有加入家庭。输入家人发给你的邀请码。")}</p>${joinForm}
       <div class="btns"><button class="btn" data-act="sb-logout">${t("退出登录")}</button></div>`;
@@ -367,14 +448,25 @@ function familyHTML(){
     return `<div class="medrow"><div><b>${esc(m.name)}</b>${uid === me ? ` <span class="small muted">${t("（你）")}</span>` : ""}${m.role === "owner" ? ` <span class="pill ok">${t("家主")}</span>` : ""}</div>
       ${btns.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${btns.join("")}</div>` : ""}</div>`;
   }).join("");
+  const exp = SB.family.invite_expires_at; // undefined before migration 022: say nothing about expiry
+  const expMs = exp ? Date.parse(exp) : 0;
+  const expLine = exp === undefined ? "" : `<p class="small muted" style="margin-top:0">${expMs > Date.now() ? t("邀请码有效至 {d}", { d: fmtDate(expMs) }) : `<b style="color:var(--rose)">${t("邀请已关闭/已过期")}</b>`}</p>`;
+  const pendingBlock = owner && SB.pending.length ? `
+    <div class="panel" style="margin-bottom:12px;border:1px solid var(--rose)"><p style="margin:0 0 2px"><b>${t("等你批准（{n}）", { n: SB.pending.length })}</b></p>
+      <p class="small muted" style="margin:0 0 4px">${t("认识这个人再批准：批准后对方能看到家里所有的记录。不认识就拒绝，并重新生成邀请码。")}</p>
+      ${SB.pending.map(p => `<div class="medrow"><div><b>${esc(p.name)}</b>${p.at ? ` <span class="small muted">${t("{d} 申请", { d: fmtDate(p.at) })}</span>` : ""}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="chip" data-pending="approve" data-uid="${esc(p.uid)}">${t("批准")}</button><button class="chip" data-pending="reject" data-uid="${esc(p.uid)}" style="color:var(--rose)">${t("拒绝")}</button></div></div>`).join("")}
+    </div>` : "";
   return `
+    ${pendingBlock}
     <p class="small muted" style="margin-bottom:0">${t("家庭成员")}</p>
     <div class="panel" style="padding:0 14px">${rows}</div>
-    <p style="margin-top:12px">${t("邀请码")} <b class="num" style="font-size:20px;letter-spacing:.12em">${esc(SB.family.invite_code)}</b> <button class="chip" data-copy="${esc(SB.family.invite_code)}">${t("复制")}</button>${owner ? ` <button class="chip" data-act="sb-reset-code">${t("重置邀请码")}</button>` : ""}</p>
+    <p style="margin-top:12px">${t("邀请码")} <b class="num" style="font-size:20px;letter-spacing:.12em">${esc(SB.family.invite_code)}</b> <button class="chip" data-copy="${esc(SB.family.invite_code)}">${t("复制")}</button>${owner ? ` <button class="chip" data-act="sb-reset-code">${exp === undefined ? t("重置邀请码") : t("重新生成（7 天）")}</button>${exp === undefined ? "" : ` <button class="chip" data-act="sb-close-invite">${t("关闭邀请")}</button>`}` : ""}</p>
+    ${expLine}
     <p class="small muted">${t("把网址和邀请码发给家人：对方打开网页，在设置里输入邀请码就能一起记录，不需要注册。邀请码相当于家门钥匙，只发给信任的人。")}</p>
     ${isAnon() ? `<p class="small muted">${t("这台设备是用邀请码加入的，没有绑定邮箱。换手机或清理浏览器数据后，再输一次邀请码即可。")}</p>` : ""}
     ${owner ? `<p class="small muted">${t("你是家主：可以重置邀请码、修改家人的称呼、把家人设为家主或移出家庭（比如有人误加入）。")}</p>` : ""}
     <div class="btns"><button class="btn" data-act="sb-sync">${t("立即同步")}</button><button class="btn" data-act="sb-logout">${t("退出登录")}</button></div>`;
 }
 
-export { SB, SYNC_KEY, TOMB_KEY, loadJSON, saveJSON, loadTombs, saveTombs, isAnon, isOwner, lapsed, memberName, memberNames, visSupported, canEdit, otherMembers, reconcile, initSupabase, afterAuth, enterFamily, leaveFamily, loadMembers, toRow, applyRow, syncNow, setupRealtime, teardownRealtime, sbAuth, sbCreate, sbJoin, sbLogout, sbResetCode, sbMember, familyHTML };
+export { SB, SYNC_KEY, TOMB_KEY, loadJSON, saveJSON, loadTombs, saveTombs, isAnon, isOwner, lapsed, memberName, memberNames, visSupported, canEdit, otherMembers, reconcile, initSupabase, afterAuth, enterFamily, leaveFamily, loadMembers, toRow, applyRow, syncNow, setupRealtime, teardownRealtime, sbAuth, sbCreate, sbJoin, sbLogout, sbResetCode, sbMember, familyHTML, sbCloseInvite, sbPending, sbCancelJoin, checkWaiting, joinNoticeHTML };
