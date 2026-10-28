@@ -6,7 +6,7 @@ import { LANGS, lang, langPref, t } from "./i18n.js";
 import { cardsHTML, faithPageHTML, familyHubHTML, heroCfgHTML, kidsPageHTML, medsPageHTML, membersPageHTML, prefsHTML, routineCfgHTML, viewMe } from "./me.js";
 import { dayNavHTML, viewMeal } from "./meal.js";
 import { activeCards, anomalyText, clockOf, doctorListHTML, heroAnomalies, heroKeys, milestoneRef, milestoneRefHTML, pottyMin, quickHTML, routineHTML, routineToday, stageCfg, stageTypes, statsHTML } from "./stages.js";
-import { APP_VERSION, CHECKUPS, S, activeKids, goesToSchool, STAGES, routineSteps, isKidType, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
+import { APP_VERSION, CHECKUPS, S, activeKids, childName, goesToSchool, STAGES, routineSteps, isKidType, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
 import { SB, joinNoticeHTML, lapsed, loadTombs, memberName, memberNames } from "./sync.js";
 import { syncHTML } from "./backup.js";
 import { aiIcon, viewAsk } from "./ask.js";
@@ -101,6 +101,11 @@ function render(){
   if (cur === "mom" && !showMom) S.tab = "today";
   document.querySelectorAll("nav.tabs button").forEach(b => { if (b.dataset.tab === cur) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
   const v = sub ? sub[1] : ({ today: viewToday, log: viewLog, mom: viewMom, grow: viewGrow, me: viewMe }[S.tab] || viewToday);
+  // 2 岁以上的孩子在家庭学堂里记：这里的今天 / 记录 / 成长 / 产后页不显示他们的内容，只放一个去家庭学堂的入口（「我的」和设置照常可用）
+  if (goesToSchool(S.childId) && ["today", "log", "grow", "mom"].includes(cur)) {
+    $("#main").innerHTML = `<section class="panel" style="margin-top:12px"><h2 style="margin:0 0 6px">${esc(childName())} · ${esc(ageText())}</h2><p class="muted" style="margin:0 0 12px">${t("2 岁以上的孩子在家庭学堂里记录（如厕、吃饭、户外、情绪等）。小月亮专注 0–2 岁。")}</p><button type="button" class="btn primary" data-kidsel="${esc(S.childId)}">${t("去家庭学堂记录")} ›</button></section>`;
+    updateMiniBar($("#bname").textContent, "", t("回到顶部")); return;
+  }
   $("#main").innerHTML = (sub ? crumbHTML(S.tab) : "") + v();
   updateMiniBar($("#bname").textContent, sub ? crumbHTML(S.tab, "mini") : "", t("回到顶部"));
   heroRestore();

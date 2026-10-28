@@ -1,4 +1,5 @@
 export default {
+"2 岁以上的孩子在家庭学堂里记录（如厕、吃饭、户外、情绪等）。小月亮专注 0–2 岁。": "Children 2 and older are logged in Homeschool (potty, meals, outdoors, mood and more). Little Moon focuses on ages 0–2.",
 "去家庭学堂记录": "Open in Homeschool",
 "返回": "Back",
 "牧羊人 · 身心灵记录": "Shepherd · Body, mind & spirit",
