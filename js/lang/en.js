@@ -1274,7 +1274,7 @@ export default {
 "加入家庭后，记录保存在家庭云端，每台设备都有一份离线副本；没网时照常记录，联网后自动同步。": "Once in a family, records live in the family cloud with an offline copy on every device; log as usual offline and it syncs when back online.",
 "按医嘱或说明书填每种药的最短间隔。妈妈页的用药计时会据此显示下次可以服药的时间；没填的只显示距上次服药多久。": "Enter each medication's minimum interval from the prescription or label. The Mom page uses it to show when the next dose is allowed; without it, only the time since the last dose is shown.",
 "药名 · 最短间隔（小时）": "Medication · minimum interval (hours)",
-"这三项只影响这台设备。记录按统一格式保存，家人可以各看各的语言和单位。": "These three affect only this device. Records are stored in one format, so each family member can use their own language and units.",
+"这些设置只影响这台设备。记录按统一格式保存，家人可以各看各的语言和单位。": "These settings affect only this device. Records are stored in one format, so each family member can use their own language and units.",
 "数据统一按公制保存，切换不会改动已有记录。“自动”按手机的语言和时区判断（北美时区默认美制）。": "Data is stored in metric; switching never changes existing records. \"Auto\" follows the phone's language and time zone (US units in North American time zones).",
 "联网后会自动上传；也可以现在点一下": "Uploads automatically when online; or tap now",
 "再输一次邀请码就能回来，这期间记的内容会一并上传": "Enter the invite code again to come back; everything logged meanwhile uploads too",
@@ -1562,4 +1562,8 @@ export default {
 "批准": "Approve",
 "重新生成（7 天）": "Regenerate (7 days)",
 "关闭邀请": "Close invites",
+"继续加载": "Load more",
+"每页显示条数": "Items per page",
+"时间线、就诊、里程碑、新食物和疫苗列表先显示这么多条，点“继续加载”再看更多。": "The timeline, visit, milestone, new-food and vaccine lists show this many at first; tap “Load more” to see more.",
+"云端记录超过 {n} 条，这次没能全部取回；本机记录不受影响": "There are more than {n} records in the cloud and not all of them could be loaded this time. Records on this device are not affected.",
 };

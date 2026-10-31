@@ -11,6 +11,21 @@ async function waitForClaude(){
   for (let i = 0; i < 30; i++) { if (window.claude && typeof window.claude.use === "function") return true; await new Promise(r => setTimeout(r, 100)); }
   return false;
 }
+/* Every record in the Claude db collection. One limit(1000) read used to stop silently at 1000 rows: page on with the
+   last document as the cursor while the store offers one, and say so if it cannot (local records are never dropped by this). */
+const CLOUD_PAGE = 1000;
+async function getAllDocs(col){
+  const docs = [], ids = new Set(); let q = col.limit(CLOUD_PAGE);
+  for (let i = 0; i < 1000; i++) {
+    const qs = await q.get(), before = ids.size;
+    for (const d of qs.docs) { const id = (d.data() || {}).id; if (!ids.has(id)) { ids.add(id); docs.push(d); } }
+    if (qs.docs.length < CLOUD_PAGE) return docs;
+    if (typeof q.startAfter !== "function" || ids.size === before) break; // no cursor, or the cursor brought nothing new
+    q = col.limit(CLOUD_PAGE).startAfter(qs.docs[qs.docs.length - 1]);
+  }
+  toast(t("云端记录超过 {n} 条，这次没能全部取回；本机记录不受影响", { n: docs.length }));
+  return docs;
+}
 async function initCloud(){
   if (!(await waitForClaude())) return;
   claude.use("sample").then(s => { S.sample = s; if (S.tab === "learn") render(); }).catch(() => {});
@@ -20,8 +35,8 @@ async function initCloud(){
     const uid = await user.id(); if (!uid) return;
     const prof = db.doc("data/users/" + uid + "/profile");
     const col = prof.collection("entries");
-    const [ps, qs] = await Promise.all([prof.get(), col.limit(1000).get()]);
-    const map = new Map(qs.docs.map(d => { const v = { ...d.data() }; return [v.id, v]; }));
+    const [ps, docs] = await Promise.all([prof.get(), getAllDocs(col)]);
+    const map = new Map(docs.map(d => { const v = { ...d.data() }; return [v.id, v]; }));
     const toUpload = [];
     for (const e of S.entries) { const c = map.get(e.id); if (!c || (e.updated || 0) > (c.updated || 0)) { map.set(e.id, e); toUpload.push(e); } }
     if (ps.exists && ps.data().settings) S.settings = { ...S.settings, ...ps.data().settings };

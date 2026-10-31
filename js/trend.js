@@ -1,13 +1,13 @@
 import { sleepMsIn } from "./derived.js";
 import { t } from "./i18n.js";
 import { stageMetrics } from "./stages.js";
-import { S, vis } from "./state.js";
+import { S, inVisPass, vis } from "./state.js";
 import { isUS, toDisp, unitOf } from "./units.js";
 import { $, D, H, dayKey, num, startOfDay } from "./util.js";
 
 /* ---------- 趋势对比：日 / 周 ---------- */
 const METRICS = {
-  sleep:   { label: "睡眠时长", unit: "小时", dec: 1, color: "var(--slate)", day: (a, b) => sleepMsIn(a, b) / H },
+  sleep:   { label: "睡眠时长", unit: "小时", dec: 1, color: "var(--slate)", day: (a, b) => sleepIn(a, b) / H },
   longest: { label: "最长一觉", unit: "小时", dec: 1, color: "var(--slate)", max: true,
              day: (a, b) => Math.max(0, ...inRange(a, b, "sleep").filter(e => e.end).map(e => (e.end - e.ts) / H)) },
   ml:      { label: "瓶喂奶量", get unit(){ return unitOf("vol"); }, get dec(){ return isUS() ? 1 : 0; }, color: "var(--honey)", day: (a, b) => toDisp("vol", inRange(a, b, "feed").reduce((s, e) => s + (+e.ml || 0), 0)) },
@@ -35,8 +35,42 @@ const METRICS = {
 };
 const mLabel = k => t(METRICS[k].label), mUnit = k => t(METRICS[k].unit);
 function actMinutes(a, b, kind){ return inRange(a, b, "activity").filter(e => e.kind === kind).reduce((s, e) => s + (+e.minutes || 0), 0); }
-function inRange(a, b, type){ return vis().filter(e => e.type === type && e.ts >= a && e.ts < b); }
-function hasData(a, b){ return vis().some(e => e.ts >= a && e.ts < b); }
+/* ~20 metrics × every bucket × every day each used to scan all records. Inside a render / print pass the visible records
+   are indexed once (per type, by time) and each range is cut out by binary search; a range comes back in the records'
+   original order, so every sum, average and maximum is exactly what the full scan gave. Outside a pass: the plain scan. */
+let IDX = null;
+const lowerBound = (arr, x) => { let lo = 0, hi = arr.length; while (lo < hi) { const m = (lo + hi) >> 1; if (arr[m].k < x) lo = m + 1; else hi = m; } return lo; };
+function index(){
+  if (!inVisPass()) return null;
+  const all = vis(); if (IDX && IDX.src === all) return IDX;
+  const byType = new Map(), any = [], now = Date.now(); let sleepMax = 0;
+  all.forEach((e, i) => {
+    const k = +e.ts; if (Number.isNaN(k)) return; // never inside a range anyway
+    const o = { k, i, e }; any.push(o);
+    let l = byType.get(e.type); if (!l) byType.set(e.type, l = []); l.push(o);
+    if (e.type === "sleep") sleepMax = Math.max(sleepMax, (e.end || now) - k);
+  });
+  const byK = (p, q) => p.k - q.k; any.sort(byK); for (const l of byType.values()) l.sort(byK);
+  return IDX = { src: all, byType, any, sleepMax };
+}
+function inRange(a, b, type){
+  const x = index(); if (!x) return vis().filter(e => e.type === type && e.ts >= a && e.ts < b);
+  const l = x.byType.get(type); if (!l) return [];
+  return l.slice(lowerBound(l, a), lowerBound(l, b)).sort((p, q) => p.i - q.i).map(o => o.e);
+}
+function hasData(a, b){
+  const x = index(); if (!x) return vis().some(e => e.ts >= a && e.ts < b);
+  const i = lowerBound(x.any, a); return i < x.any.length && x.any[i].k < b;
+}
+// sleep time inside [a, b): only sleeps that started at most the longest sleep before a (plus a minute for one still running) can reach into it
+function sleepIn(a, b){
+  const x = index(), l = x && x.byType.get("sleep"); if (!x) return sleepMsIn(a, b); if (!l) return 0;
+  let t = 0;
+  for (let j = lowerBound(l, a - x.sleepMax - 60e3), end = lowerBound(l, b); j < end; j++) {
+    const e = l[j].e, s = Math.max(e.ts, a), en = Math.min(e.end || Date.now(), b); if (en > s) t += en - s;
+  }
+  return t;
+}
 function weekStart(ts){ const d0 = startOfDay(ts); const wd = (new Date(d0).getDay() + 6) % 7; return d0 - wd * D; }
 // one bucket = a day, or a week reported as average per recorded day
 function buckets(gran, n){

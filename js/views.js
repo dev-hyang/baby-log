@@ -6,10 +6,11 @@ import { LANGS, lang, langPref, t } from "./i18n.js";
 import { cardsHTML, faithPageHTML, familyHubHTML, heroCfgHTML, kidsPageHTML, medsPageHTML, membersPageHTML, prefsHTML, routineCfgHTML, viewMe } from "./me.js";
 import { dayNavHTML, viewMeal } from "./meal.js";
 import { activeCards, anomalyText, clockOf, doctorListHTML, heroAnomalies, heroKeys, milestoneRef, milestoneRefHTML, pottyMin, quickHTML, routineHTML, routineToday, stageCfg, stageTypes, statsHTML } from "./stages.js";
-import { APP_VERSION, CHECKUPS, S, activeKids, childName, goesToSchool, STAGES, routineSteps, isKidType, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
+import { APP_VERSION, CHECKUPS, S, activeKids, withVisPass, childName, goesToSchool, STAGES, routineSteps, isKidType, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
 import { SB, joinNoticeHTML, lapsed, loadTombs, memberName, memberNames } from "./sync.js";
 import { syncHTML } from "./backup.js";
 import { aiIcon, viewAsk } from "./ask.js";
+import { moreHTML, pagerNav, shownOf } from "./pager.js";
 import { viewTrend } from "./trend.js";
 import { TYPES, flags, isVisit, summary, typeLabel } from "./types.js";
 import { fmtU, isUS, toDisp, trim, unitOf } from "./units.js";
@@ -91,7 +92,9 @@ function crumbHTML(tab, cls = ""){
   return `<nav class="crumb ${cls}" aria-label="${t("位置")}">${backBtn(chain[chain.length - 2])}${chain.map((key, i) => { const label = t(i === 0 ? TAB_LABEL[key] || key : PAGE_LABEL[key] || key);
     return i === chain.length - 1 ? `<b aria-current="page">${label}</b>` : `<button type="button" data-tab="${key}">${label}</button>`; }).join(`<span class="sep">/</span>`)}</nav>`;
 }
-function render(){
+// the whole render is one vis() pass: the visible records are filtered once, however many cards and lists ask for them
+function render(){ withVisPass(renderPass); }
+function renderPass(){
   renderStatus();
   // the postpartum tab matters in the newborn stage, or while mother records are still being written
   const showMom = stageOf().key === "newborn" || S.entries.some(e => (e.type === "mmed" || e.type === "mbody") && e.ts > Date.now() - 30 * D);
@@ -100,6 +103,7 @@ function render(){
   const sub = SUB[S.tab]; let cur = S.tab; while (SUB[cur]) cur = SUB[cur][0]; // the bottom tab that owns this page, through nested hubs
   if (cur === "mom" && !showMom) S.tab = "today";
   document.querySelectorAll("nav.tabs button").forEach(b => { if (b.dataset.tab === cur) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
+  pagerNav(`${S.tab}|${S.logView}|${S.checkupView}`); // another page: long lists start again at one page
   const v = sub ? sub[1] : ({ today: viewToday, log: viewLog, mom: viewMom, grow: viewGrow, me: viewMe }[S.tab] || viewToday);
   // 2 岁以上的孩子在家庭学堂里记：这里的今天 / 记录 / 成长 / 产后页不显示他们的内容，只放一个去家庭学堂的入口（「我的」和设置照常可用）
   if (goesToSchool(S.childId) && ["today", "log", "grow", "mom"].includes(cur)) {
@@ -218,9 +222,9 @@ function entryBits(e){
   return { T, fl: flags(e), by, vb };
 }
 // the vertical-line timeline: newest at the top, a coloured dot per record on the line, the time beside it and what happened to the right;
-// between two records the line says how long it was
-function axisHTML(es){
-  return `<div class="axis">${es.map((e, i) => {
+// between two records the line says how long it was. n: draw only the first n (the gap below the last one still counts the next, hidden record)
+function axisHTML(es, n = es.length){
+  return `<div class="axis">${es.slice(0, n).map((e, i) => {
     const { T, fl, by, vb } = entryBits(e), older = es[i + 1], gap = older && e.ts - older.ts;
     return `<button class="anode ${e.id === S.flashId ? "flash" : ""}" data-edit="${e.id}" style="--c:${T.color}" data-swipe-del="entry">
       <span class="at">${hm(e.ts)}</span><span class="adot" aria-hidden="true">${T.icon || ""}</span>
@@ -245,7 +249,7 @@ function viewLog(){
 /* timeline: one day at a time with the same ‹ date › navigation as the meal table; a search spans every day */
 function viewList(){
   const q = S.q.trim().toLowerCase(), d0 = S.mealDay ?? startOfDay(Date.now());
-  let list = vis().sort(byTime);
+  let list = vis().slice().sort(byTime);
   if (!q) list = list.filter(e => e.ts >= d0 && e.ts < d0 + D);
   if (S.filter !== "all") list = list.filter(e => S.filter === "momall" ? ["mmed", "mbody"].includes(e.type) : e.type === S.filter);
   if (q) list = list.filter(e => (typeLabel(e.type) + " " + summary(e) + " " + (e.note || "") + " " + dayKey(e.ts)).toLowerCase().includes(q));
@@ -255,11 +259,14 @@ function viewList(){
   const own = new Set(vis().map(e => e.type)), extra = Object.keys(TYPES).filter(ty => isKidType(ty) && own.has(ty) && !stageTypes().includes(ty));
   const chips = [["all", t("全部")], ...[...stageTypes(), ...extra].map(ty => [ty, typeLabel(ty)]), ["momall", t("妈妈")]];
   if (!chips.some(([k]) => k === S.filter)) { S.filter = "all"; return viewList(); } // filter from another stage / child
-  const style = S.listStyle === "axis" ? "axis" : "rows", show = es => style === "axis" ? axisHTML(es) : es.map(entryRow).join("");
+  // grouping, counts and gaps use the whole list; only the first `shown` rows are drawn (a search can span every day)
+  const shown = shownOf("timeline", [S.childId, S.filter, q, q ? "" : d0].join("|"));
+  let left = shown;
+  const style = S.listStyle === "axis" ? "axis" : "rows", show = es => { const k = Math.min(es.length, left); left -= k; return style === "axis" ? axisHTML(es, k) : es.slice(0, k).map(entryRow).join(""); };
   const body = !list.length
     ? `<div class="empty"><div class="eicon" aria-hidden="true">${q ? "🔍" : "🗓"}</div>${q ? t("没有符合条件的记录，换个关键词试试。") : S.filter !== "all" ? t("这一天没有这类记录。") : t("这一天没有记录。")}</div>`
-    : q ? Object.entries(groups).map(([d, es]) => `<div class="day">${d} ${weekday(es[0].ts)} · ${t("{n} 条", { n: es.length })}</div>${show(es)}`).join("")
-    : show(list);
+    : (q ? Object.entries(groups).map(([d, es]) => left ? `<div class="day">${d} ${weekday(es[0].ts)} · ${t("{n} 条", { n: es.length })}</div>${show(es)}` : "").join("")
+    : show(list)) + moreHTML("timeline", list.length, shown);
   return `${dayNavHTML(d0)}
   <input id="q" class="search" type="search" value="${esc(S.q)}" placeholder="${t("搜索备注、药名、日期（如 2026-10-11）")}" aria-label="${t("搜索备注、药名、日期（如 2026-10-11）")}" autocomplete="off">
   ${q ? `<p class="small muted" style="margin:6px 0 0">${t("搜索时显示所有日期的结果。")}</p>` : ""}
@@ -438,42 +445,42 @@ function checkupPlanHTML(all, done){
 }
 // every baby-health record taken at a clinic, newest first: the visit history a parent flips back through
 function checkupHistoryHTML(all){
-  const list = all.filter(isVisit).sort((a, b) => b.ts - a.ts);
+  const list = all.filter(isVisit).sort((a, b) => b.ts - a.ts), shown = shownOf("visits", S.childId);
   const meas = e => [e.temp && `${t("体温")} ${fmtU("temp", e.temp)}`, e.weight && `${t("体重")} ${fmtU("wbaby", e.weight)}`, e.length && `${t("身长")} ${fmtU("len", e.length)}`, e.head && `${t("头围")} ${fmtU("len", e.head)}`].filter(Boolean).join(" · ");
   return `<div class="panel">
     ${list.length ? `<div class="scroll-x"><table><thead><tr><th>${t("日期")}</th><th>${t("类型")}</th><th>${t("测量")}</th></tr></thead><tbody>
-      ${list.map(e => { const m = e.src === "儿科体检" ? matchCheckup(e.ts, childOf(e)) : null;
+      ${list.slice(0, shown).map(e => { const m = e.src === "儿科体检" ? matchCheckup(e.ts, childOf(e)) : null;
         return `<tr><td class="num"><button class="cellbtn" style="all:unset;cursor:pointer" data-edit="${e.id}" aria-label="${t("修改 {date} 的记录", { date: dayKey(e.ts) })}">${dayKey(e.ts)}</button><br><span class="small muted">${ageAtText(e.ts)}</span></td>
         <td>${esc(t(e.src))}${m ? `<br><span class="small muted">${t(m.label)}</span>` : ""}${e.clinic ? `<br><span class="small muted">${esc(e.clinic)}</span>` : ""}</td>
         <td>${esc(meas(e))}${e.note ? `<br><span class="small muted">${esc(e.note)}</span>` : ""}</td></tr>`; }).join("")}
-    </tbody></table></div><p class="small muted" style="margin-top:6px">${t("共 {n} 次。点日期可修改。", { n: list.length })}</p>`
+    </tbody></table></div>${moreHTML("visits", list.length, shown)}<p class="small muted" style="margin-top:6px">${t("共 {n} 次。点日期可修改。", { n: list.length })}</p>`
     : `<p class="muted">${t("还没有体检或就诊记录。记录宝宝健康时把来源选成“儿科体检”或“看病/急诊”，就会出现在这里。")}</p>`}
     <div class="btns"><button class="btn" data-add="baby" data-preset='{"src":"儿科体检"}'>${t("＋ 记录一次体检")}</button><button class="btn" data-add="baby" data-preset='{"src":"看病/急诊"}'>${t("＋ 记录一次看病")}</button></div>
   </div>`;
 }
 function milestonesHTML(all){
-  const list = all.filter(e => e.type === "milestone").sort((a, b) => a.ts - b.ts);
+  const list = all.filter(e => e.type === "milestone").sort((a, b) => a.ts - b.ts), shown = shownOf("milestones", S.childId);
   if (!list.length) return `<p class="muted">${t("还没有记录里程碑。第一次翻身、第一次叫妈妈，记下日期以后很难忘。")}</p>`;
   return `<div class="scroll-x"><table><thead><tr><th>${t("日期")}</th><th>${t("类别")}</th><th>${t("做到了")}</th></tr></thead><tbody>
-    ${list.map(e => `<tr><td class="num"><button class="cellbtn" style="all:unset;cursor:pointer" data-edit="${e.id}" aria-label="${t("修改 {date} 的里程碑", { date: dayKey(e.ts) })}">${dayKey(e.ts)}</button><br><span class="small muted">${ageAtText(e.ts)}</span></td><td>${esc(e.cat ? t(e.cat) : "")}</td><td>${esc(e.name || "")}${e.note ? `<br><span class="small muted">${esc(e.note)}</span>` : ""}</td></tr>`).join("")}
-  </tbody></table></div><p class="small muted" style="margin-top:6px">${t("共 {n} 个。点日期可修改。", { n: list.length })}</p>`;
+    ${list.slice(0, shown).map(e => `<tr><td class="num"><button class="cellbtn" style="all:unset;cursor:pointer" data-edit="${e.id}" aria-label="${t("修改 {date} 的里程碑", { date: dayKey(e.ts) })}">${dayKey(e.ts)}</button><br><span class="small muted">${ageAtText(e.ts)}</span></td><td>${esc(e.cat ? t(e.cat) : "")}</td><td>${esc(e.name || "")}${e.note ? `<br><span class="small muted">${esc(e.note)}</span>` : ""}</td></tr>`).join("")}
+  </tbody></table></div>${moreHTML("milestones", list.length, shown)}<p class="small muted" style="margin-top:6px">${t("共 {n} 个。点日期可修改。", { n: list.length })}</p>`;
 }
 // first-time foods and any reactions: the allergy log a pediatrician asks for
 function foodsHTML(all){
-  const foods = newFoods(all);
+  const foods = newFoods(all), shown = shownOf("foods", S.childId);
   if (!foods.length) return `<p class="muted">${t("还没有新食物记录。记录饮食时勾上“第一次尝试的新食物”或填写反应，就会出现在这里。")}</p>`;
   return `<div class="scroll-x"><table><thead><tr><th>${t("日期")}</th><th>${t("食物")}</th><th>${t("反应")}</th></tr></thead><tbody>
-    ${foods.map(e => `<tr><td class="num"><button class="cellbtn" style="all:unset;cursor:pointer" data-edit="${e.id}" aria-label="${t("修改 {date} 的饮食记录", { date: dayKey(e.ts) })}">${dayKey(e.ts)}</button></td><td>${esc(e.foods || "")}${e.newFood ? ` <span class="small muted">${t("新")}</span>` : ""}</td><td${e.reaction && e.reaction !== "无" && e.reaction !== "拒绝" ? ' style="color:var(--rose)"' : ""}>${esc(t(e.reaction || "无"))}</td></tr>`).join("")}
-  </tbody></table></div><p class="small muted" style="margin-top:6px">${t("只列出勾了“第一次尝试”或有反应的记录。新食物建议一次只加一种、连续观察 2–3 天，以医生建议为准。")}</p>`;
+    ${foods.slice(0, shown).map(e => `<tr><td class="num"><button class="cellbtn" style="all:unset;cursor:pointer" data-edit="${e.id}" aria-label="${t("修改 {date} 的饮食记录", { date: dayKey(e.ts) })}">${dayKey(e.ts)}</button></td><td>${esc(e.foods || "")}${e.newFood ? ` <span class="small muted">${t("新")}</span>` : ""}</td><td${e.reaction && e.reaction !== "无" && e.reaction !== "拒绝" ? ' style="color:var(--rose)"' : ""}>${esc(t(e.reaction || "无"))}</td></tr>`).join("")}
+  </tbody></table></div>${moreHTML("foods", foods.length, shown)}<p class="small muted" style="margin-top:6px">${t("只列出勾了“第一次尝试”或有反应的记录。新食物建议一次只加一种、连续观察 2–3 天，以医生建议为准。")}</p>`;
 }
 function vaxHTML(){
-  const list = vaxList(vis());
+  const list = vaxList(vis()), shown = shownOf("vax", S.childId);
   return `<h2>${t("疫苗接种记录")}</h2>
   <div class="panel">
     ${list.length ? `<div class="scroll-x"><table><thead><tr><th>${t("日期")}</th><th>${t("疫苗")}</th><th>${t("剂次")}</th><th>${t("部位")}</th><th>${t("反应")}</th></tr></thead><tbody>
-      ${list.map(e => `<tr><td class="num"><button class="cellbtn" style="all:unset;cursor:pointer" data-edit="${e.id}" aria-label="${t("修改 {date} 的接种记录", { date: dayKey(e.ts) })}">${dayKey(e.ts)}</button><br><span class="small muted">${ageAtText(e.ts)}</span></td>
+      ${list.slice(0, shown).map(e => `<tr><td class="num"><button class="cellbtn" style="all:unset;cursor:pointer" data-edit="${e.id}" aria-label="${t("修改 {date} 的接种记录", { date: dayKey(e.ts) })}">${dayKey(e.ts)}</button><br><span class="small muted">${ageAtText(e.ts)}</span></td>
         <td>${esc(e.name || (e.cat ? t(e.cat) : ""))}</td><td>${esc(e.dose ? t(e.dose) : "")}</td><td>${esc(e.site ? t(e.site) : "")}</td><td>${esc(e.reaction ? t(e.reaction) : "")}</td></tr>`).join("")}
-    </tbody></table></div><p class="small muted" style="margin-top:6px">${t("共 {n} 次。点日期可修改。", { n: list.length })}</p>`
+    </tbody></table></div>${moreHTML("vax", list.length, shown)}<p class="small muted" style="margin-top:6px">${t("共 {n} 次。点日期可修改。", { n: list.length })}</p>`
     : `<p class="muted">${t("还没有接种记录。打完疫苗后记一笔，看儿科或办入学时翻出来很方便。")}</p>`}
     <div class="btns"><button class="btn" data-add="vax">${t("＋ 记录一次接种")}</button></div>
     <p class="small muted" style="margin-top:8px">${t("这里是家庭自己的备份，正式凭证仍以接种本、医院系统或学校要求的官方记录为准。")}</p>

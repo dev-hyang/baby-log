@@ -9,6 +9,7 @@ import { $, esc } from "./util.js";
 import { mrow, render } from "./views.js";
 import { backupSummary } from "./backup.js";
 import { aiIcon } from "./ask.js";
+import { PAGE_SIZES, pageSize } from "./pager.js";
 
 /* ============ 我的: the hub for everything that is not daily logging ============
    Six entries, each a page of its own: 家庭 (itself a small hub: 家庭协作 / 孩子 / 妈妈用药间隔 / 信仰), 同步、备份与恢复,
@@ -110,11 +111,13 @@ function faithPageHTML(){
 function prefsHTML(){
   const seg = (attr, cur, items, label) => `<div class="seg" role="group" aria-label="${label}">${items.map(([v, l]) => `<button ${attr}="${v}" aria-pressed="${cur === v}">${l}</button>`).join("")}</div>`;
   return `<div class="softform"><h2>${t("语言、单位和显示")}</h2>
-  <p class="small muted">${t("这三项只影响这台设备。记录按统一格式保存，家人可以各看各的语言和单位。")}</p>
+  <p class="small muted">${t("这些设置只影响这台设备。记录按统一格式保存，家人可以各看各的语言和单位。")}</p>
   <div class="panel"><div class="lab">${t("语言 / Language")}</div>${seg("data-lang-set", langPref(), LANGS.map(([v, l]) => [v, v === "auto" ? t("自动") : l]), t("语言 / Language"))}</div>
   <div class="panel"><div class="lab">${t("单位")}</div>${seg("data-units-set", unitPref(), [["auto", t("自动（当前：{u}）", { u: isUS() ? t("美制") : t("公制") })], ["metric", t("公制 kg · cm · ml · ℃")], ["us", t("美制 lb · in · fl oz · ℉")]], t("单位"))}
   <p class="small muted" style="margin:8px 0 0">${t("数据统一按公制保存，切换不会改动已有记录。“自动”按手机的语言和时区判断（北美时区默认美制）。")}</p></div>
   <div class="panel"><div class="lab">${t("外观")}</div>${seg("data-theme-set", document.documentElement.dataset.theme || "", [["", t("跟随系统")], ["light", t("浅色")], ["dark", t("深色（夜里喂奶）")]], t("外观"))}</div>
+  <div class="panel"><div class="lab">${t("每页显示条数")}</div>${seg("data-pagesize-set", String(pageSize()), PAGE_SIZES.map(n => [String(n), String(n)]), t("每页显示条数"))}
+  <p class="small muted" style="margin:8px 0 0">${t("时间线、就诊、里程碑、新食物和疫苗列表先显示这么多条，点“继续加载”再看更多。")}</p></div>
   </div>`;
 }
 

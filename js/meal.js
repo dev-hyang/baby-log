@@ -6,15 +6,27 @@ import { isUS, toDisp, trim, unitOf } from "./units.js";
 import { $, D, H, dayKey, esc, hm, newId, num, startOfDay, toast, weekday } from "./util.js";
 
 /* ---------- 按餐表格：每次喂奶一行，固定列，尿/便可直接打勾 ---------- */
-function mealRows(){
+/* d0 (optional): only the feeds of that day. The feed before the day still gives the first row its 距上餐 and the first
+   feed after it still closes the last row's window, so the rows are exactly those of the full list for that day.
+   Diapers, sleeps and meds are dealt to their row in one pass (the last feed at or before them) instead of every row
+   scanning every record; each row's lists keep the records' original order, as the per-row filter did. */
+function mealRows(d0){
   const all = vis();
   const feeds = all.filter(e => e.type === "feed" && e.method !== "吸奶").sort((a, b) => a.ts - b.ts);
-  return feeds.map((f, i) => {
-    const from = f.ts, to = feeds[i + 1] ? feeds[i + 1].ts : Date.now() + 60e3;
-    const inWin = e => e.ts >= from && e.ts < to;
-    const diapers = all.filter(e => e.type === "diaper" && inWin(e)).sort((a, b) => a.ts - b.ts);
-    const sleeps = all.filter(e => e.type === "sleep" && inWin(e));
-    const meds = all.filter(e => (e.type === "mmed" || e.type === "bmed") && inWin(e));
+  let i0 = 0, i1 = feeds.length;
+  if (d0 != null) { i0 = feeds.findIndex(f => f.ts >= d0); if (i0 < 0) return []; i1 = feeds.findIndex(f => f.ts >= d0 + D); if (i1 < 0) i1 = feeds.length; }
+  if (i0 >= i1) return [];
+  const lo = feeds[i0].ts, hi = i1 < feeds.length ? feeds[i1].ts : Date.now() + 60e3;
+  const bins = Array.from({ length: i1 - i0 }, () => ({ diapers: [], sleeps: [], meds: [] }));
+  for (const e of all) {
+    const k = e.type === "diaper" ? "diapers" : e.type === "sleep" ? "sleeps" : (e.type === "mmed" || e.type === "bmed") ? "meds" : null;
+    if (!k || !(e.ts >= lo && e.ts < hi)) continue;
+    let a = i0, b = i1 - 1; // the last feed with ts <= e.ts (a later feed at the same time owns it, as before)
+    while (a < b) { const m = (a + b + 1) >> 1; if (feeds[m].ts <= e.ts) a = m; else b = m - 1; }
+    bins[a - i0][k].push(e);
+  }
+  return feeds.slice(i0, i1).map((f, j) => {
+    const i = i0 + j, { sleeps, meds } = bins[j], diapers = bins[j].diapers.sort((a, b) => a.ts - b.ts);
     return {
       f, gap: i ? f.ts - feeds[i - 1].ts : null,
       pee: diapers.filter(d => d.pee), poop: diapers.filter(d => d.poop), diapers,
@@ -63,7 +75,7 @@ const sortTh = (k, label, attrs = "") => {
 };
 function viewMeal(){
   const d0 = S.mealDay ?? startOfDay(Date.now());
-  const rows = sortMealRows(mealRows().filter(r => r.f.ts >= d0 && r.f.ts < d0 + D));
+  const rows = sortMealRows(mealRows(d0));
   const isToday = d0 === startOfDay(Date.now());
   const sum = (k) => rows.reduce((a, r) => a + (+r.f[k] || 0), 0);
   const newborn = (babyAgeDays(d0) ?? 999) < 91;
@@ -104,7 +116,8 @@ function viewMeal(){
 
 /* tap ○ to tick 尿/便 for this meal; tap ✓ to open that diaper record */
 async function mealCheck(feedId, kind){
-  const r = mealRows().find(x => x.f.id === feedId); if (!r) return;
+  const f = S.entries.find(x => x.id === feedId); if (!f) return;
+  const r = mealRows(startOfDay(f.ts)).find(x => x.f.id === feedId); if (!r) return;
   if (r[kind].length) { openForm("diaper", r[kind][r[kind].length - 1]); return; }
   const other = r.diapers.find(d => !d[kind]);
   if (other) await putEntry({ ...other, [kind]: true });

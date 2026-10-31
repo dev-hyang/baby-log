@@ -2,7 +2,7 @@ import { byTime } from "./derived.js";
 import { t } from "./i18n.js";
 import { mealRows } from "./meal.js";
 import { stageTypes } from "./stages.js";
-import { CHECKUPS, S, ageAtText, ageText, birthTs, checkupDate, checkupsDone, child, childName, childOf, matchCheckup, stageOf, vis } from "./state.js";
+import { CHECKUPS, S, ageAtText, ageText, birthTs, checkupDate, checkupsDone, child, childName, childOf, matchCheckup, stageOf, vis, withVisPass } from "./state.js";
 import { METRICS, buckets, fmtV, metricValue } from "./trend.js";
 import { TYPES, flags, isVisit, summary, typeLabel } from "./types.js";
 import { fmtU, isUS, toDisp, trim, unitOf } from "./units.js";
@@ -22,7 +22,7 @@ const nbsp = s => s || "";
 /* ---- one feed per row for the day shown in the log ---- */
 function mealPage(){
   const d0 = S.mealDay ?? startOfDay(Date.now());
-  const rows = mealRows().filter(r => r.f.ts >= d0 && r.f.ts < d0 + D);
+  const rows = mealRows(d0);
   const sum = k => rows.reduce((a, r) => a + (+r.f[k] || 0), 0);
   const peeN = rows.reduce((a, r) => a + r.pee.length, 0), poopN = rows.reduce((a, r) => a + r.poop.length, 0), sleepT = rows.reduce((a, r) => a + r.sleepMs, 0);
   const body = rows.map(r => { const f = r.f, colors = r.poop.map(p => p.color).filter(Boolean).map(c => t(c)).join("、");
@@ -98,7 +98,7 @@ function openPrint(kind){
   const page = PAGES[kind]; if (!page || printing) return;
   let host = document.getElementById("print");
   if (!host) { host = document.createElement("div"); host.id = "print"; document.body.appendChild(host); }
-  host.innerHTML = page();
+  host.innerHTML = withVisPass(page); // one vis() pass for the whole page, like render()
   host.lang = document.documentElement.lang;
   document.body.classList.add("printing"); printing = true;
   const done = () => { document.body.classList.remove("printing"); printing = false; };

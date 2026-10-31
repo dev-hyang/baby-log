@@ -227,16 +227,20 @@ async function syncNow(force){
     const refused = await pushRows(rows), bad = new Set(refused);
     dirty.forEach(e => { if (!bad.has(e.id)) { delete e._dirty; e.by = SB.user.id; } }); saveTombs([]);
     if (refused.length) { await revert(refused); toast(t("有 {n} 条改动云端不允许保存（别人的私密或分享记录），已恢复为云端版本", { n: refused.length })); }
-    // 2) pull everything changed on the server since last pull (server clock, not phone clock)
+    // 2) pull everything changed on the server since last pull (server clock, not phone clock).
+    //    Paged by a (server_updated, id) cursor, not by offset: one upsert batch shares a single server_updated, so with
+    //    offset paging rows tied across the 1000 boundary (or a row edited mid-pull, which moves to the end) could be skipped for good
     const sync = loadJSON(SYNC_KEY, {});
-    let from = 0, newest = sync.lastPull;
+    let newest = sync.lastPull, cur = null;
+    const lit = v => `"${String(v).replace(/[\\"]/g, "\\$&")}"`; // a quoted PostgREST value
     for (;;) {
-      let q = SB.client.from("entries").select("*").eq("family_id", SB.family.id).order("server_updated", { ascending: true }).range(from, from + 999);
-      if (sync.lastPull) q = q.gte("server_updated", sync.lastPull);
+      let q = SB.client.from("entries").select("*").eq("family_id", SB.family.id).order("server_updated", { ascending: true }).order("id", { ascending: true }).limit(1000);
+      if (cur) q = q.or(`server_updated.gt.${lit(cur.su)},and(server_updated.eq.${lit(cur.su)},id.gt.${lit(cur.id)})`);
+      else if (sync.lastPull) q = q.gte("server_updated", sync.lastPull);
       const { data, error } = await q; if (error) throw error;
       data.forEach(applyRow);
-      if (data.length) newest = data[data.length - 1].server_updated;
-      if (data.length < 1000) break; from += 1000;
+      if (data.length) { const r = data[data.length - 1]; newest = r.server_updated; cur = { su: r.server_updated, id: r.id }; }
+      if (data.length < 1000) break;
     }
     saveJSON(SYNC_KEY, { familyId: SB.family.id, lastPull: newest, syncedAt: new Date().toISOString() });
     // 3) drop cached records this member can no longer see (only when visibility exists, at most every 5 minutes)

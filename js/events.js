@@ -16,6 +16,7 @@ import { canEdit, memberName, sbAuth, sbCancelJoin, sbCloseInvite, sbCreate, sbJ
 import { UNIT_KEY, isUS } from "./units.js";
 import { $, D, H, dayKey, dur, fromInput, newId, startOfDay, toast } from "./util.js";
 import { openPrint } from "./print.js";
+import { loadMore, setPageSize } from "./pager.js";
 import { backTo, heroPage, heroSettle, render, toggleKids } from "./views.js";
 
 // a page reached from 我的 (settings, about …), from anywhere: the kids menu, the grow page, a form
@@ -32,6 +33,9 @@ document.addEventListener("click", async ev => {
   if (t0.dataset.add) { openForm(t0.dataset.add, null, t0.dataset.preset ? JSON.parse(t0.dataset.preset) : {}); return; }
   if (t0.dataset.edit) { const e = S.entries.find(x => x.id === t0.dataset.edit); e && openForm(e.type, e); return; }
   if (t0.dataset.liststyle) { S.listStyle = t0.dataset.liststyle; try { localStorage.setItem("baby.listStyle", S.listStyle); } catch (e) { /* only a convenience */ } render(); const again = document.querySelector(`[data-liststyle="${S.listStyle}"]`); again && again.focus(); return; } // timeline: list rows or vertical axis
+  if (t0.dataset.more) { // 继续加载: one more page of that list; the button moves down, keep the keyboard on it (or on the last row once all are shown)
+    const id = t0.dataset.more; loadMore(id); render(); const again = document.querySelector(`[data-more="${id}"]`); again && again.focus(); return;
+  }
   if (t0.dataset.filter) { S.filter = t0.dataset.filter; render(); return; }
   if (t0.dataset.mealsort) { sortMealBy(t0.dataset.mealsort); render(); const again = document.querySelector(`[data-mealsort="${t0.dataset.mealsort}"]`); again && again.focus(); return; } // meal table column header
   if (t0.dataset.logview) { S.logView = t0.dataset.logview; render(); return; }
@@ -129,6 +133,7 @@ document.addEventListener("click", async ev => {
     draft.also = [...also]; drawForm(); return;
   }
   if (t0.dataset.unitsSet) { try { localStorage.setItem(UNIT_KEY, t0.dataset.unitsSet); } catch (e) {} readSettingsInputs(); render(); toast(t("单位已切换为{u}", { u: isUS() ? t("美制") : t("公制") })); return; }
+  if (t0.dataset.pagesizeSet) { setPageSize(t0.dataset.pagesizeSet); readSettingsInputs(); render(); const again = document.querySelector(`[data-pagesize-set="${t0.dataset.pagesizeSet}"]`); again && again.focus(); return; }
   if (t0.dataset.langSet) { readSettingsInputs(); setLang(t0.dataset.langSet); render(); return; }
   if (t0.dataset.themeSet !== undefined) { const v = t0.dataset.themeSet; if (v) document.documentElement.dataset.theme = v; else delete document.documentElement.dataset.theme; try { localStorage.setItem(LS_KEY + ".theme", v); } catch (e) {} readSettingsInputs(); render(); return; }
   if (t0.dataset.act && t0.dataset.act.startsWith("bk-")) { await bkAct(t0.dataset.act, t0); return; }   // 备份与恢复（js/backup.js）
@@ -239,8 +244,15 @@ document.addEventListener("change", async ev => {
   if (draft && ev.target.closest("#sheetIn") && ev.target.type === "checkbox") { readDraftInputs(); drawForm(); }
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#kids").hidden) { toggleKids(false); $("#bname").focus(); } });
+// timeline search: re-render once typing pauses (~200 ms) instead of on every key. The box itself keeps the text and caret
+// meanwhile; render() puts the focus back afterwards only if it is still in the box
+let qTimer = 0;
 document.addEventListener("input", ev => {
-  if (ev.target.id === "q") { S.q = ev.target.value; S.logFocus = true; render(); return; }
+  if (ev.target.id === "q") {
+    S.q = ev.target.value; S.logFocus = true; clearTimeout(qTimer); // logFocus: a sync render inside the pause keeps the box focused too
+    qTimer = setTimeout(() => { const box = $("#q"); if (S.tab !== "log" || !box) { S.logFocus = false; return; } S.logFocus = document.activeElement === box; render(); }, 200);
+    return;
+  }
   if (ev.target.type === "range") { const o = ev.target.parentElement.querySelector("output"); if (o) o.textContent = ev.target.value; }
 });
 

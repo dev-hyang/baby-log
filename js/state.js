@@ -84,7 +84,14 @@ const childName = (id = S.childId) => (child(id) && child(id).name) || t("宝宝
 function childOf(e){ return e.child && S.settings.children.some(c => c.id === e.child) ? e.child : S.settings.legacyChild; }
 function setChild(id){ if (!activeKids().some(c => c.id === id)) return; S.childId = id; try { localStorage.setItem(CHILD_KEY, id); } catch (e) {} }
 // entries shown on this device: the active child's records plus family-level mother records
-const vis = () => S.entries.filter(e => !isKidType(e.type) || childOf(e) === S.childId);
+const visNow = () => S.entries.filter(e => !isKidType(e.type) || childOf(e) === S.childId);
+/* One render pass (render() / a print page) asks for vis() dozens of times; inside withVisPass it is worked out once
+   and the same array comes back each time, so callers must not sort or splice it in place (copy first).
+   Outside a pass every call is fresh, as before, so handlers that change S.entries never see a stale list. */
+let visPass = 0, visCache = null;
+const vis = () => visPass ? (visCache ||= visNow()) : visNow();
+const inVisPass = () => visPass > 0;
+function withVisPass(fn){ visPass++; try { return fn(); } finally { if (!--visPass) visCache = null; } }
 function kidCount(id){ return S.entries.filter(e => isKidType(e.type) && childOf(e) === id).length; }
 function saveLocal(){ try { localStorage.setItem(LS_KEY, JSON.stringify({ entries: S.entries, settings: S.settings })); } catch (e) {} }
 /* ============ baby age & stages ============ */
@@ -189,4 +196,4 @@ function textToRoutine(txt){
 
 const APP_VERSION = "2026-10-28.1";
 
-export { goesToSchool, cleanRoutine, groupTone, faithOn, FAITH_STEPS, ROUTINE_TPL, routineGroups, routineSteps, routineToText, textToRoutine, LS_KEY, S, activeKids, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, matchCheckup, nextCheckup, APP_VERSION };
+export { goesToSchool, cleanRoutine, groupTone, faithOn, FAITH_STEPS, ROUTINE_TPL, routineGroups, routineSteps, routineToText, textToRoutine, LS_KEY, S, activeKids, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, inVisPass, withVisPass, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, matchCheckup, nextCheckup, APP_VERSION };
