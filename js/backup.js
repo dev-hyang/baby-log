@@ -43,10 +43,14 @@ const fileName = () => `${CFG.file}-${stamp()}.json`;
 const HS_TABLES = ["hs_family", "hs_scriptures", "hs_scripture_progress", "hs_routines", "hs_tasks", "hs_devotions", "hs_units", "hs_lessons", "hs_goals", "hs_resources"];
 const WB_TABLES = ["wb_profile", "wb_practices", "wb_logs", "wb_prayers", "wb_tasks", "wb_notes"];
 const memberList = () => Object.entries(SB.members || {}).map(([user_id, m]) => ({ user_id, display_name: m.name, role: m.role }));
+/* 分页必须按主键排序，否则 Postgres 每页的顺序可能不同，跨页会漏行 / 重复。没列的表按 id（wb_* 是 user_id + id） */
+const PK_ORDER = { hs_family: ["family_id"], hs_scripture_progress: ["scripture_id", "child_id"], hs_devotions: ["date"], wb_profile: ["user_id"] };
+const orderCols = (tb) => PK_ORDER[tb] || (tb.startsWith("wb_") ? ["user_id", "id"] : ["id"]);
 async function readAll(tb, col, val) {   // 成员：RLS 给什么拿什么（自己的 + 全家可见的）；表还没建就当空
   const out = [];
   for (let from = 0; ; from += 1000) {
-    let q = SB.client.from(tb).select("*").range(from, from + 999); if (col) q = q.eq(col, val);
+    let q = SB.client.from(tb).select("*"); if (col) q = q.eq(col, val); for (const c of orderCols(tb)) q = q.order(c);
+    q = q.range(from, from + 999);
     const { data, error } = await q;
     if (error) { if (/does not exist|schema cache/i.test(error.message)) return out; throw new Error(`${tb}: ${error.message}`); }
     out.push(...(data || [])); if (!data || data.length < 1000) return out;
