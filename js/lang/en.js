@@ -1372,6 +1372,8 @@ export default {
 "留空 = 直接放应用文件夹": "blank = app folder root",
 "还没执行迁移 018（家主全家备份），先在 Supabase 里执行 supabase/migrations/018_family_backup.sql": "Migration 018 (owner family backup) hasn't been run; run supabase/migrations/018_family_backup.sql in Supabase first",
 "家庭学堂 / 牧羊人的数据没带上：{msg}": "Homeschool / Shepherd data wasn't included: {msg}",
+"睡前安然 / 家人健康已经备份，但家人私有的部分要先执行 {f}": "Bedtime and Family health are backed up, but family members' private records need {f} to be run first",
+"睡前安然 / 家人健康只恢复了你自己记的；先执行 {f} 再恢复一次，就能导回全家的": "Only your own Bedtime and Family health records were restored; run {f}, then restore again to bring back the whole family's",
 "出错": "error",
 "改用路径": "Use a path instead",
 "已选的文件夹": "chosen folder",

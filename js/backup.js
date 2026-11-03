@@ -40,8 +40,13 @@ const isDue = (s = settings()) => { const n = nextDue(s); return !!n && n.getTim
 /* ---- 打包 ---- */
 const stamp = () => { const d = new Date(), p = (n) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; };
 const fileName = () => `${CFG.file}-${stamp()}.json`;
-const HS_TABLES = ["hs_family", "hs_scriptures", "hs_scripture_progress", "hs_routines", "hs_tasks", "hs_devotions", "hs_units", "hs_lessons", "hs_goals", "hs_resources"];
-const WB_TABLES = ["wb_profile", "wb_practices", "wb_logs", "wb_prayers", "wb_tasks", "wb_notes"];
+/* 带上的家庭学堂 / 牧羊人表（恢复顺序：被引用的在前）。以后每加一张表，都要同时加到这里、对应应用的 js/backup.js（CFG.tables），
+   以及 supabase 的 backup_family / restore_family（最新版在迁移 029）。只加列不用改。 */
+const HS_TABLES = ["hs_family", "hs_scriptures", "hs_scripture_progress", "hs_routines", "hs_tasks", "hs_devotions", "hs_units", "hs_lessons", "hs_goals", "hs_resources",
+  "hs_bedtime_songs", "hs_bedtime_logs", "hs_bedtime_events"];   // 睡前安然（迁移 019 / 020）；media 桶里的音频文件不在备份里
+const WB_TABLES = ["wb_profile", "wb_practices", "wb_logs", "wb_prayers", "wb_tasks", "wb_notes",
+  "hl_profiles", "hl_templates", "hl_visits", "hl_labs", "hl_measures", "hl_activity"];   // 牧羊人家人健康（迁移 026 / 027）：按家庭共享，created_by + subject，没有 user_id
+const NEW_TABLES_MIGRATION = "supabase/migrations/029_backup_bedtime_health.sql";
 const memberList = () => Object.entries(SB.members || {}).map(([user_id, m]) => ({ user_id, display_name: m.name, role: m.role }));
 /* 分页必须按主键排序，否则 Postgres 每页的顺序可能不同，跨页会漏行 / 重复。没列的表按 id（wb_* 是 user_id + id） */
 const PK_ORDER = { hs_family: ["family_id"], hs_scripture_progress: ["scripture_id", "child_id"], hs_devotions: ["date"], wb_profile: ["user_id"] };
@@ -67,7 +72,11 @@ async function collect() {
     if (isOwner()) {
       const { data, error } = await SB.client.rpc("backup_family", { p_family: SB.family.id });
       if (error) throw new Error(/backup_family/i.test(error.message) ? t("还没执行迁移 018（家主全家备份），先在 Supabase 里执行 supabase/migrations/018_family_backup.sql") : error.message);
-      const hs = {}, wb = {}; for (const k of Object.keys(data || {})) { if (k.startsWith("hs_")) hs[k] = data[k]; else if (k.startsWith("wb_")) wb[k] = data[k]; }
+      const hs = {}, wb = {}; for (const k of Object.keys(data || {})) { if (k.startsWith("hs_")) hs[k] = data[k]; else if (k.startsWith("wb_") || k.startsWith("hl_")) wb[k] = data[k]; }
+      // 还没执行迁移 029 的库：服务器端打包里没有新表，用家主自己的权限补读（RLS 给家主的是全家共享的那部分），并提示执行 029
+      const miss = [...HS_TABLES.filter((tb) => !(tb in hs)), ...WB_TABLES.filter((tb) => !(tb in wb))];
+      for (const tb of miss) (tb.startsWith("hs_") ? hs : wb)[tb] = tb.startsWith("hs_") ? await readAll(tb, "family_id", SB.family.id) : await readAll(tb, null);
+      if (miss.some((tb) => (tb.startsWith("hs_") ? hs : wb)[tb].length)) toast(t("睡前安然 / 家人健康已经备份，但家人私有的部分要先执行 {f}", { f: NEW_TABLES_MIGRATION }));
       return { ...base, scope: "family", members: data.members || base.members, bundle: { homeschool: { tables: hs }, shepherd: { tables: wb }, entries_rows: data.entries || [] } };
     }
     const hs = {}, wb = {};
@@ -207,17 +216,23 @@ async function restoreBundle(d) {
   const map = {}; for (const m of d.members || []) { const to = SB.members?.[m.user_id] ? m.user_id : byName[m.display_name]; if (to) map[m.user_id] = to; }
   if (d.exporter && !map[d.exporter]) map[d.exporter] = SB.user.id;
   const mapU = (v) => (v && map[v]) || v;
+  const mapSubj = (v) => (typeof v === "string" && v.startsWith("u:") ? `u:${mapU(v.slice(2))}` : v);   // 家人健康的「这个人」：大人是 u:<账号 id>
   const out = {};
-  for (const [tb, rows] of Object.entries(tables)) out[tb] = (rows || []).map((r) => ({ ...r, ...("family_id" in r && r.family_id ? { family_id: fam } : {}), ...("user_id" in r ? { user_id: mapU(r.user_id) } : {}), ...("created_by" in r ? { created_by: mapU(r.created_by) } : {}), ...("updated_by" in r ? { updated_by: mapU(r.updated_by) } : {}) }));
+  for (const [tb, rows] of Object.entries(tables)) out[tb] = (rows || []).map((r) => ({ ...r, ...("family_id" in r && r.family_id ? { family_id: fam } : {}), ...("user_id" in r ? { user_id: mapU(r.user_id) } : {}), ...("created_by" in r ? { created_by: mapU(r.created_by) } : {}), ...("updated_by" in r ? { updated_by: mapU(r.updated_by) } : {}), ...("subject" in r ? { subject: mapSubj(r.subject) } : {}) }));
+  let done = {}, rest = out;
   if (isOwner()) {
     const { data, error } = await SB.client.rpc("restore_family", { p_family: fam, p_tables: out });
     if (error) throw new Error(/restore_family/i.test(error.message) ? t("还没执行迁移 018（家主全家备份），先在 Supabase 里执行 supabase/migrations/018_family_backup.sql") : error.message);
-    return data || {};
+    done = data || {};
+    // 还没执行迁移 029：服务器端恢复不认识新表（结果里没有它们）——按成员的方式只导自己记的，并提示执行 029
+    rest = Object.fromEntries(Object.entries(out).filter(([tb, rows]) => tb !== "entries" && !(tb in done) && rows.length));
+    if (!Object.keys(rest).length) return done;
+    toast(t("睡前安然 / 家人健康只恢复了你自己记的；先执行 {f} 再恢复一次，就能导回全家的", { f: NEW_TABLES_MIGRATION }));
   }
-  const done = {};
-  for (const [tb, rows] of Object.entries(out)) {
+  for (const [tb, rows] of Object.entries(rest)) {
     if (tb === "entries") continue;
-    const mine = tb.startsWith("wb_") ? rows.filter((r) => r.user_id === SB.user.id) : rows; if (!mine.length) continue;
+    // 牧羊人的表只能写自己的：wb_* 按 user_id，hl_* 按 created_by（守卫只许本人新增）
+    const mine = tb.startsWith("wb_") ? rows.filter((r) => r.user_id === SB.user.id) : tb.startsWith("hl_") ? rows.filter((r) => r.created_by === SB.user.id) : rows; if (!mine.length) continue;
     let n = 0;
     for (let i = 0; i < mine.length; i += 200) { const { error } = await SB.client.from(tb).upsert(mine.slice(i, i + 200), { ignoreDuplicates: true }); if (error) { done[tb] = `${t("出错")}: ${error.message.slice(0, 60)}`; break; } n += Math.min(200, mine.length - i); }
     if (!(tb in done)) done[tb] = n;
