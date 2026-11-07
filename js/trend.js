@@ -34,6 +34,8 @@ const METRICS = {
   faith:   { label: "信仰记录", unit: "次", dec: 1, color: "#8A6FB0", day: (a, b) => inRange(a, b, "faith").length }
 };
 const mLabel = k => t(METRICS[k].label), mUnit = k => t(METRICS[k].unit);
+/** 对比表、打印的指标顺序：先按这个年龄段的顺序（新生儿 / 婴儿：亲喂时长、喂奶次数、瓶喂奶量、湿尿布、大便…，见 stages.js），其余的排在后面 */
+const metricOrder = () => { const first = stageMetrics().filter(k => METRICS[k]); return [...first, ...Object.keys(METRICS).filter(k => !first.includes(k))]; };
 function actMinutes(a, b, kind){ return inRange(a, b, "activity").filter(e => e.kind === kind).reduce((s, e) => s + (+e.minutes || 0), 0); }
 /* ~20 metrics × every bucket × every day each used to scan all records. Inside a render / print pass the visible records
    are indexed once (per type, by time) and each range is cut out by binary search; a range comes back in the records'
@@ -128,7 +130,7 @@ function viewTrend(){
   const dv = delta(cur, prev);
   const daily = S.gran === "week" ? t("日均") : "";
   // comparison table across all metrics
-  const cmpRows = Object.keys(METRICS).map(k => {
+  const cmpRows = metricOrder().map(k => {
     const c = metricValue(k, bks[bks.length - 1]), p = metricValue(k, bks[bks.length - 2]);
     if (!c && !p) return ""; // hide metrics with no data in either period
     const d = delta(c, p);
@@ -156,4 +158,4 @@ function viewTrend(){
   <p class="small muted" style="margin-top:8px">${S.gran === "week" ? t("周数据按“有记录的天数”求日均（最长一觉取一周内最长），避免漏记的日子拉低平均。") : t("今天还没过完，和昨天比会偏低，看趋势更准。")}${t("箭头只表示多或少，不代表好坏：例如喂奶次数随月龄减少是正常的。点指标名可切换上方图表。上方只列出当前阶段常用的指标，下表会显示所有有数据的指标。")}</p></div>`;
 }
 
-export { METRICS, actMinutes, inRange, hasData, weekStart, buckets, metricValue, fmtV, barChart, viewTrend };
+export { METRICS, metricOrder, actMinutes, inRange, hasData, weekStart, buckets, metricValue, fmtV, barChart, viewTrend };

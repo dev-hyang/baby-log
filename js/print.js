@@ -3,7 +3,7 @@ import { t } from "./i18n.js";
 import { mealRows } from "./meal.js";
 import { stageTypes } from "./stages.js";
 import { CHECKUPS, S, ageAtText, ageText, birthTs, checkupDate, checkupsDone, child, childName, childOf, matchCheckup, stageOf, vis, withVisPass } from "./state.js";
-import { METRICS, buckets, fmtV, metricValue } from "./trend.js";
+import { METRICS, buckets, fmtV, metricOrder, metricValue } from "./trend.js";
 import { TYPES, flags, isVisit, summary, typeLabel } from "./types.js";
 import { fmtU, isUS, toDisp, trim, unitOf } from "./units.js";
 import { $, D, H, dayKey, esc, hm, startOfDay, weekday } from "./util.js";
@@ -40,7 +40,7 @@ function mealPage(){
 /* ---- metrics × days (or weeks): every metric that has data in the window ---- */
 function trendPage(){
   const gran = S.gran === "week" ? "week" : "day", bks = buckets(gran, gran === "day" ? 7 : 8);
-  const rows = Object.keys(METRICS).map(k => ({ k, vals: bks.map(bk => metricValue(k, bk)) })).filter(r => r.vals.some(v => v != null && v !== 0));
+  const rows = metricOrder().map(k => ({ k, vals: bks.map(bk => metricValue(k, bk)) })).filter(r => r.vals.some(v => v != null && v !== 0));
   const title = gran === "day" ? t("趋势对比 · 最近 7 天") : t("趋势对比 · 最近 8 周（日均）");
   return `<section class="ppage pwide">${header(title, who())}
   ${rows.length ? `<table><thead><tr><th>${t("指标")}</th>${bks.map(bk => `<th class="n">${bk.label}${bk.partial ? "*" : ""}</th>`).join("")}</tr></thead>

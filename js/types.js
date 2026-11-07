@@ -85,6 +85,14 @@ const TYPES = {
     { k: "where", label: "在哪儿", type: "seg", opts: ["小马桶", "马桶", "尿裤里", "裤子湿了"], def: "小马桶" },
     { k: "self", label: "自己提出要去", type: "check" },
     { k: "note", label: "备注", type: "text" } ] },
+  /* 夜间干爽（家庭学堂「记一笔」里记，和这里同一份）：早上记昨晚尿没尿。早上 / 中午前记的算前一晚。
+     家庭学堂按「连续干爽几晚」给出“可以试试晚上穿内裤”的提示，趋势页对照睡前喝水、入睡时间 */
+  night: { label: "夜间干爽", icon: "🩲", color: "#3F8F8B", fields: [
+    { k: "result", label: "昨晚", type: "seg", opts: ["干爽", "湿了"], def: "干爽" },
+    { k: "wear", label: "穿的", type: "seg", opts: ["拉拉裤", "内裤"], def: "拉拉裤" },
+    { k: "drink", label: "睡前 1 小时喝水", type: "seg", opts: ["没喝", "喝了几口", "一杯以上"] },
+    { k: "woke", label: "夜里自己醒来去尿", type: "check" },
+    { k: "note", label: "备注", type: "text" } ] },
   speech: { label: "语言", icon: "💬", color: "#5B8E5A", fields: [
     { k: "kind", label: "类型", type: "seg", opts: ["新词", "短句", "会指认", "听懂指令", "会问问题"], def: "新词" },
     { k: "words", label: "说了什么", type: "text", ph: "妈妈 / 要抱抱 / 这是什么…" },
@@ -172,6 +180,7 @@ function summary(e){
     case "food": p.push(v(e.meal), e.foods || "", v(e.amount), v(e.called), e.washed ? t("饭前洗手") : "", e.minutes ? t("{n}分钟", { n: e.minutes }) : "", v(e.focus), e.newFood ? t("新食物") : "", e.reaction && e.reaction !== "无" ? t("反应：{r}", { r: t(e.reaction) }) : ""); break;
     case "milestone": p.push(v(e.cat), e.name || t("里程碑")); break;
     case "potty": p.push(v(e.what), v(e.where), e.self ? t("自己说要去") : ""); break;
+    case "night": p.push(v(e.result), v(e.wear), e.woke ? t("夜里自己醒来去尿") : "", e.drink ? t("睡前喝水：{s}", { s: t(e.drink) }) : ""); break;
     case "speech": p.push(v(e.kind), e.words ? `「${e.words}」` : "", e.lang && e.lang !== "中文" ? t(e.lang) : ""); break;
     case "activity": p.push(v(e.kind) || t("活动"), e.what || "", e.minutes ? t("{n}分钟", { n: e.minutes }) : ""); break;
     case "behavior": p.push(v(e.kind), e.trigger ? t("起因：{s}", { s: e.trigger }) : "", e.minutes ? t("{n}分钟", { n: e.minutes }) : "", e.how ? t("处理：{s}", { s: e.how }) : ""); break;
