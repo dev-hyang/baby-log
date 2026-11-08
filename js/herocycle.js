@@ -10,12 +10,12 @@ export const cardSecs = () => { try { const v = localStorage.getItem(KEY); if (v
 const reduced = () => !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 /** 控制行（n 张卡、当前第 cur 张） */
-export function heroCtrlHTML(n, cur){
-  const secs = cardSecs();
+export function heroCtrlHTML(n, cur, { asleep = false } = {}){
+  const secs = cardSecs(), auto = secs && !asleep;   // 宝宝睡着时停在睡眠卡，不自动换（手动滑照样可以）
   const nav = (d, label, ch) => `<button type="button" class="heronav" data-heronav="${d}" aria-label="${esc(label)}">${ch}</button>`;
   const opt = (v) => `<button type="button" class="hg-opt" data-herosecs="${v}" aria-pressed="${secs === v}">${v ? t("{s} 秒", { s: v }) : t("关闭自动切换")}${secs === v ? " ✓" : ""}</button>`;
   return `<div class="heroctrl">${nav(-1, t("上一张"), "‹")}
-    <div class="herodashes ${secs ? "" : "is-off"}" title="${esc(secs ? t("每 {s} 秒自动换下一张；手指按着或鼠标停在卡片上时暂停", { s: secs }) : t("自动切换已关闭"))}">${Array.from({ length: n }, (_, i) => `<button type="button" class="herodash ${i === cur ? "is-run" : ""}" data-heropage="${i}" aria-label="${esc(t("第 {i} 张，共 {n} 张", { i: i + 1, n }))}" aria-current="${i === cur}"><i style="animation-duration:${secs || 10}s"></i></button>`).join("")}</div>
+    <div class="herodashes ${auto ? "" : "is-off"}" title="${esc(asleep ? t("宝宝睡着时停在睡眠卡，不自动换") : secs ? t("每 {s} 秒自动换下一张；手指按着或鼠标停在卡片上时暂停", { s: secs }) : t("自动切换已关闭"))}">${Array.from({ length: n }, (_, i) => `<button type="button" class="herodash ${i === cur ? "is-run" : ""}" data-heropage="${i}" aria-label="${esc(t("第 {i} 张，共 {n} 张", { i: i + 1, n }))}" aria-current="${i === cur}"><i style="animation-duration:${secs || 10}s"></i></button>`).join("")}</div>
     ${nav(1, t("下一张"), "›")}
     <details class="herogear"><summary aria-label="${esc(t("自动切换的时间"))}" title="${esc(t("自动切换的时间"))}">⚙</summary><div class="hg-menu">${[...SECS, 0].map(opt).join("")}</div></details></div>`;
 }
@@ -32,7 +32,7 @@ let goNext = () => {};
 /** app.js 接上：怎么换到下一张（要先把循环轨道拉回中间那份） */
 export function initHeroCycle({ next }){ goNext = next; }
 document.addEventListener("animationend", (e) => {
-  if (e.animationName !== "herprog" || !e.target.closest?.(".herodash.is-run") || document.hidden || !cardSecs() || reduced()) return;
+  if (e.animationName !== "herprog" || !e.target.closest?.(".herodash.is-run") || e.target.closest(".herodashes.is-off") || document.hidden || !cardSecs() || reduced()) return;
   const tr = e.target.closest(".herobox")?.querySelector(".herotrack"); if (!tr || tr._down) return;
   goNext(tr);
 }, true);
@@ -42,7 +42,7 @@ document.addEventListener("click", (e) => {
     try { localStorage.setItem(KEY, o.dataset.herosecs); } catch { /* 忽略 */ }
     const box = o.closest(".herobox"), v = cardSecs();
     box?.querySelectorAll(".herodash i").forEach((i) => { i.style.animationDuration = `${v || 10}s`; });
-    box?.querySelector(".herodashes")?.classList.toggle("is-off", !v);
+    box?.querySelector(".herodashes")?.classList.toggle("is-off", !v || !!box?.querySelector(".herotrack .hero.sleeping"));
     box?.querySelectorAll("[data-herosecs]").forEach((x) => { const on = +x.dataset.herosecs === v; x.setAttribute("aria-pressed", String(on)); x.textContent = (+x.dataset.herosecs ? t("{s} 秒", { s: +x.dataset.herosecs }) : t("关闭自动切换")) + (on ? " ✓" : ""); });
     o.closest("details")?.removeAttribute("open");
     const cur = [...(box?.querySelectorAll(".herodash") || [])].findIndex((b) => b.getAttribute("aria-current") === "true");

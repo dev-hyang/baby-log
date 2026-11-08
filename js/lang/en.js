@@ -1627,4 +1627,5 @@ export default {
 "每 {s} 秒自动换下一张；手指按着或鼠标停在卡片上时暂停": "Moves to the next card every {s} seconds; pauses while you touch or hover over the cards",
 "自动切换已关闭": "Auto-advance is off",
 "第 {i} 张，共 {n} 张": "Card {i} of {n}",
+"宝宝睡着时停在睡眠卡，不自动换": "Stays on the sleep card while the baby sleeps (no auto-advance)",
 };

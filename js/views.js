@@ -144,7 +144,7 @@ function heroHTML(){
   const slides = loop ? Array.from({ length: COPIES }, (_, c) => keys.map((k, j) => slide(k, j, c !== 2)).join("")).join("") : slide(keys[0], 0);
   // 卡片下面一行：‹ 进度短划线 › ⚙（js/herocycle.js，每 10 秒自动换，可调）
   return `<div class="herobox"><div class="heroview"><div class="herotrack" ${loop ? 'data-loop="1"' : ""} tabindex="0" role="region" aria-roledescription="carousel" aria-label="${t("顶部大计时")}">${slides}</div></div>
-    ${loop ? heroCtrlHTML(n, cur) : ""}</div>`;
+    ${loop ? heroCtrlHTML(n, cur, { asleep: !!sl }) : ""}</div>`;
 }
 // the cards sit side by side and snap; Today re-renders after every save, so put the track back on the card being looked at
 const HERO_GAP = 10, heroCount = tr => tr.dataset.loop ? tr.children.length / 5 : tr.children.length;
