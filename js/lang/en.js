@@ -1615,4 +1615,10 @@ export default {
 "上一个声音": "Previous sound",
 "嘘声": "Shushing",
 "暂停": "Pause",
+"手机现场合成，离线也能放": "Generated on the phone, works offline",
+"播放白噪音": "Play white noise",
+"正在播放 · 关屏也会继续": "Playing · keeps going with the screen off",
+"学堂的歌": "Homeschool songs",
+"选歌": "Choose a song",
+"棕色噪音": "Brown noise",
 };

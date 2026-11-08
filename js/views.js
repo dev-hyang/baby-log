@@ -1,5 +1,5 @@
 import { updateMiniBar } from "./minibar.js";
-import { musicSlideInner } from "./music.js";
+import { musicMiniHTML, musicSlideInner } from "./music.js";
 import { aboutHTML } from "./about.js";
 import { APPS, THIS_APP } from "./apps.js";
 import { byTime, last, medStatus, suggestSide, within } from "./derived.js";
@@ -123,8 +123,8 @@ function heroHTML(){
     <div class="lbl">${t("宝宝已经睡了")}</div>
     <div class="big num">${bigDur(Date.now() - sl.ts)}</div>
     <div class="meta"><span>${t("{time} 入睡", { time: hm(sl.ts) })}</span>${sl.where ? `<span>${esc(t(sl.where))}</span>` : ""}</div>
-    <div class="act"><button data-act="wake" data-id="${sl.id}">${t("醒了，记录结束")}</button></div></section>
-    <section class="hero musichero" aria-label="${esc(t("音乐"))}">${musicSlideInner(false)}</section></div>`;   // 睡着时：白噪音 / 嘘声就在下面
+    <div class="act"><button data-act="wake" data-id="${sl.id}">${t("醒了，记录结束")}</button></div>
+    ${musicMiniHTML()}</section></div>`;   // 睡着时：睡眠计时最显眼，白噪音只占卡里一行（js/music.js）
   if (!activeCards("stats").includes("hero")) return ""; // the child's card settings turned the clock off
   // a card that has run well past the child's usual rhythm moves to the front (worst first) and changes colour; the saved order is untouched
   const own = heroKeys(), an = heroAnomalies(), bad = new Map(an.map(a => [a.k, a]));

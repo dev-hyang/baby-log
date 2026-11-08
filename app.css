@@ -662,3 +662,60 @@ details.more summary .small{font-weight:400}
 .bm-vol{display:flex;align-items:center;gap:6px;margin-left:4px;font-size:14px}
 .bm-vol input{width:86px;accent-color:#fff}
 @media (max-width:420px){.bm-vol input{width:64px}.bm-btn{width:38px;height:38px}.bm-main{width:48px;height:48px}}
+/* ── 11-07 音乐卡重排：标题 + 来源切换 / 正在放 / 声音格子（或选歌 + 进度）/ 播放控件 / 音量 + 定时 ── */
+.hero.musichero{padding:16px 16px 14px}
+.bm-card{display:flex;flex-direction:column;gap:14px;min-width:0;color:#fff}
+.bm-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.bm-ttl{font-size:15px;font-weight:600;white-space:nowrap}
+.bm-seg{display:inline-flex;padding:3px;border-radius:999px;background:rgba(255,255,255,.12)}
+.bm-seg button{min-height:32px;padding:4px 14px;border:0;border-radius:999px;background:transparent;color:rgba(255,255,255,.85);font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+.bm-seg button[aria-pressed="true"]{background:#fff;color:#2e2f6a;font-weight:600}
+.bm-seg button:focus-visible{outline:2px solid #fff;outline-offset:1px}
+.bm-now{display:flex;align-items:center;gap:12px;min-width:0}
+.bm-art{flex:none;display:grid;place-items:center;width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.14);font-size:26px;line-height:1}
+.bm-art-song{font-size:24px;font-weight:700}
+.bm-meta{min-width:0;flex:1}
+.bm-title{font-weight:700;font-size:17px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bm-sub{font-size:12.5px;line-height:1.4;margin-top:2px;color:rgba(255,255,255,.72);opacity:1}
+.bm-sounds{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.bm-snd{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;padding:8px 2px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;font:inherit;cursor:pointer}
+.bm-snd > span:first-child{font-size:20px;line-height:1}
+.bm-snd-n{font-size:11.5px;line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:rgba(255,255,255,.85)}
+.bm-snd[aria-pressed="true"]{background:#fff;border-color:#fff}
+.bm-snd[aria-pressed="true"] .bm-snd-n{color:#2e2f6a;font-weight:600}
+.bm-snd:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.bm-songsel select{width:100%;min-height:38px;padding:6px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.12);color:#fff;font:inherit;font-size:14px}
+.bm-songsel select option{color:#1d2733;background:#fff}
+.bm-prog{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;font-size:12px;color:rgba(255,255,255,.75);opacity:1}
+.bm-bar:disabled{opacity:.45;cursor:default}
+.bm-ctrl{display:grid;grid-template-columns:42px 42px 58px 42px 42px;justify-content:center;align-items:center;gap:12px}
+.bm-gap{width:42px;height:42px}
+.bm-btn{width:42px;height:42px;border:0;border-radius:50%;padding:0;display:grid;place-items:center;background:rgba(255,255,255,.12);color:#fff;cursor:pointer}
+.bm-btn svg{display:block}
+.bm-btn:hover{background:rgba(255,255,255,.22)}
+.bm-main{width:58px;height:58px;background:#fff;color:#2e2f6a;box-shadow:0 4px 14px rgba(0,0,0,.22)}
+.bm-main svg{width:24px;height:24px}
+.bm-main:hover{background:#fff;filter:brightness(1.05)}
+.bm-loop{color:rgba(255,255,255,.6)}
+.bm-loop.is-on{color:#fff}
+.bm-bottom{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:10px;border-top:1px solid rgba(255,255,255,.14)}
+.bm-vol{display:flex;align-items:center;gap:8px;flex:1;min-width:140px;margin:0;color:rgba(255,255,255,.8)}
+.bm-vol input{-webkit-appearance:none;appearance:none;flex:1;max-width:220px;height:20px;background:transparent;--p:60%}
+.bm-vol input::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(90deg,#fff var(--p),rgba(255,255,255,.28) var(--p))}
+.bm-vol input::-moz-range-track{height:4px;border-radius:2px;background:rgba(255,255,255,.28)}
+.bm-vol input::-moz-range-progress{height:4px;border-radius:2px;background:#fff}
+.bm-vol input::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;margin-top:-4px;border-radius:50%;background:#fff;border:0}
+.bm-vol input::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:#fff;border:0}
+.bm-timer{margin-left:0;display:inline-flex;align-items:center;gap:6px;color:rgba(255,255,255,.85);font-size:13px}
+.bm-timer select{min-height:32px;padding:4px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.12);color:#fff;font:inherit;font-size:13px}
+.bm-timer select option{color:#1d2733;background:#fff}
+.bm-timer-left{font-variant-numeric:tabular-nums;font-size:12.5px}
+/* 睡着时：睡眠卡里一行白噪音 */
+.bm-mini{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid rgba(231,236,242,.18)}
+.bm-mini-sel{display:inline-flex;align-items:center;gap:6px;font-size:18px}
+.bm-mini-sel select,.hero.sleeping .bm-timer select{min-height:34px;padding:4px 10px;border-radius:999px;border:1px solid rgba(231,236,242,.3);background:rgba(231,236,242,.1);color:#E7ECF2;font:inherit;font-size:13px}
+.bm-mini-sel select option,.hero.sleeping .bm-timer select option{color:#1d2733;background:#fff}
+.bm-mini-play{width:40px;height:40px;border:0;border-radius:50%;display:grid;place-items:center;background:#E7ECF2;color:#2D3F5E;cursor:pointer;padding:0}
+.bm-mini-play:focus-visible{outline:2px solid #E7ECF2;outline-offset:2px}
+.hero.sleeping .bm-timer{color:#E7ECF2;margin-left:auto}
+@media (max-width:400px){.bm-ctrl{gap:8px;grid-template-columns:40px 40px 54px 40px 40px}.bm-btn,.bm-gap{width:40px;height:40px}.bm-main{width:54px;height:54px}.bm-snd-n{font-size:10.5px}}
