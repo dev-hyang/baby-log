@@ -1621,4 +1621,10 @@ export default {
 "学堂的歌": "Homeschool songs",
 "选歌": "Choose a song",
 "棕色噪音": "Brown noise",
+"{s} 秒": "{s} seconds",
+"关闭自动切换": "Turn off auto-advance",
+"自动切换的时间": "Auto-advance timing",
+"每 {s} 秒自动换下一张；手指按着或鼠标停在卡片上时暂停": "Moves to the next card every {s} seconds; pauses while you touch or hover over the cards",
+"自动切换已关闭": "Auto-advance is off",
+"第 {i} 张，共 {n} 张": "Card {i} of {n}",
 };

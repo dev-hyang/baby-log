@@ -719,3 +719,53 @@ details.more summary .small{font-weight:400}
 .bm-mini-play:focus-visible{outline:2px solid #E7ECF2;outline-offset:2px}
 .hero.sleeping .bm-timer{color:#E7ECF2;margin-left:auto}
 @media (max-width:400px){.bm-ctrl{gap:8px;grid-template-columns:40px 40px 54px 40px 40px}.bm-btn,.bm-gap{width:40px;height:40px}.bm-main{width:54px;height:54px}.bm-snd-n{font-size:10.5px}}
+/* ── 11-08 顶部卡片下面一行：‹ 进度短划线 › ⚙（js/herocycle.js）；箭头不再盖在卡片上 ── */
+.heroctrl{position:relative;display:flex;align-items:center;justify-content:center;gap:10px;min-height:32px;margin-top:6px}
+.heroctrl .heronav{display:grid;place-items:center;position:static;transform:none;width:32px;height:32px;padding:0 0 2px;border:1px solid var(--line);border-radius:50%;background:var(--surface,#fff);color:var(--ink);font-size:20px;line-height:1;cursor:pointer;opacity:1}
+.heroctrl .heronav:hover{background:var(--surface,#fff);border-color:var(--ink)}
+.herodashes{display:flex;align-items:center;gap:6px}
+.herodash{position:relative;width:26px;height:24px;border:0;padding:0;background:none;cursor:pointer}
+.herodash::before{content:"";position:absolute;left:0;right:0;top:10px;height:4px;border-radius:2px;background:var(--line)}
+.herodash i{position:absolute;left:0;top:10px;height:4px;width:0;border-radius:2px;background:var(--ink)}
+.herodash[aria-current="true"]{width:42px}
+.herodash[aria-current="true"] i{width:100%}
+.herodash.is-run i{width:0;animation:herprog 10s linear forwards}
+.herodashes.is-off .herodash.is-run i{animation:none;width:100%}
+@keyframes herprog{from{width:0}to{width:100%}}
+.herobox.is-hold .herodash.is-run i,.herobox:has(:focus-visible) .herodash.is-run i,.herobox:has(.herogear[open]) .herodash.is-run i{animation-play-state:paused}
+@media (hover:hover) and (pointer:fine){.heroview:hover ~ .heroctrl .herodash.is-run i{animation-play-state:paused}}
+@media (prefers-reduced-motion:reduce){.herodash.is-run i{animation:none;width:100%}}
+.herodash:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:4px}
+.herogear{position:absolute;right:0;top:50%;transform:translateY(-50%)}
+.herogear > summary{list-style:none;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--surface,#fff);color:var(--muted);font-size:14px;cursor:pointer}
+.herogear > summary::-webkit-details-marker{display:none}
+.hg-menu{position:absolute;right:0;bottom:calc(100% + 6px);z-index:20;display:grid;gap:2px;min-width:130px;padding:6px;border-radius:12px;background:var(--surface,#fff);border:1px solid var(--line);box-shadow:0 8px 24px rgba(0,0,0,.16)}
+.hg-opt{all:unset;box-sizing:border-box;display:block;padding:9px 12px;border-radius:8px;font-size:14px;cursor:pointer;color:var(--ink)}
+.hg-opt:hover,.hg-opt:focus-visible{background:rgba(0,0,0,.06)}
+.hg-opt[aria-pressed="true"]{font-weight:700}
+.herodots{display:none}
+/* ── 11-08 音乐卡收紧：和计时卡差不多高；图标、字号、按钮都小一号 ── */
+.hero.musichero{padding:14px 14px 12px}
+.bm-card{gap:10px}
+.bm-ttl{font-size:14px}
+.bm-seg button{min-height:28px;padding:3px 11px;font-size:12px}
+.bm-now{gap:10px}
+.bm-art{width:40px;height:40px;border-radius:11px;font-size:20px}
+.bm-art-song{font-size:19px}
+.bm-title{font-size:15px}
+.bm-sub{font-size:11.5px}
+.bm-sounds{gap:5px}
+.bm-snd{padding:6px 2px;border-radius:10px;gap:2px}
+.bm-snd > span:first-child{font-size:16px}
+.bm-snd-n{font-size:10.5px}
+.bm-songsel select{min-height:34px;font-size:13px;padding:4px 10px}
+.bm-ctrl{grid-template-columns:36px 36px 46px 36px 36px;gap:10px}
+.bm-btn,.bm-gap{width:36px;height:36px}
+.bm-btn svg{width:17px;height:17px}
+.bm-main{width:46px;height:46px}
+.bm-main svg{width:20px;height:20px}
+.bm-bottom{padding-top:8px;gap:10px}
+.bm-vol svg,.bm-timer svg{width:16px;height:16px}
+.bm-vol input{max-width:180px}
+.bm-timer select{min-height:28px;font-size:12px;padding:2px 8px}
+@media (max-width:400px){.bm-ctrl{gap:8px;grid-template-columns:34px 34px 44px 34px 34px}.bm-btn,.bm-gap{width:34px;height:34px}.bm-main{width:44px;height:44px}.bm-snd-n{font-size:10px}}

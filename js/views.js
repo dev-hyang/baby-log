@@ -1,4 +1,5 @@
 import { updateMiniBar } from "./minibar.js";
+import { heroCtrlHTML } from "./herocycle.js";
 import { musicMiniHTML, musicSlideInner } from "./music.js";
 import { aboutHTML } from "./about.js";
 import { APPS, THIS_APP } from "./apps.js";
@@ -119,28 +120,31 @@ function renderPass(){
 
 function heroHTML(){
   const sl = last(e => e.type === "sleep" && !e.end);
-  if (sl) return `<div class="herobox"><section class="hero sleeping" aria-live="polite"><div class="moon"></div>
+  // 睡着时：睡眠计时排第一张（刚点「开始睡」时翻到它），其他计时卡和音乐卡照样能左右滑到；白噪音在睡眠卡里只占一行（js/music.js）
+  const sleepSlide = (clone) => `<section class="hero sleeping" ${clone ? 'aria-hidden="true"' : 'aria-live="polite"'}><div class="moon"></div>
     <div class="lbl">${t("宝宝已经睡了")}</div>
     <div class="big num">${bigDur(Date.now() - sl.ts)}</div>
     <div class="meta"><span>${t("{time} 入睡", { time: hm(sl.ts) })}</span>${sl.where ? `<span>${esc(t(sl.where))}</span>` : ""}</div>
-    <div class="act"><button data-act="wake" data-id="${sl.id}">${t("醒了，记录结束")}</button></div>
-    ${musicMiniHTML()}</section></div>`;   // 睡着时：睡眠计时最显眼，白噪音只占卡里一行（js/music.js）
-  if (!activeCards("stats").includes("hero")) return ""; // the child's card settings turned the clock off
+    <div class="act"><button data-act="wake" data-id="${sl.id}" ${clone ? 'tabindex="-1"' : ""}>${t("醒了，记录结束")}</button></div>
+    ${clone ? "" : musicMiniHTML()}</section>`;
+  if (sl && S.heroSleepId !== sl.id) { S.heroSleepId = sl.id; S.heroIdx = 0; }   // 新的一觉：从睡眠卡开始
+  if (!sl) S.heroSleepId = null;
+  if (!activeCards("stats").includes("hero")) return sl ? `<div class="herobox">${sleepSlide(false)}</div>` : ""; // the child's card settings turned the clock off
   // a card that has run well past the child's usual rhythm moves to the front (worst first) and changes colour; the saved order is untouched
   const own = heroKeys(), an = heroAnomalies(), bad = new Map(an.map(a => [a.k, a]));
-  const order = [...an.map(a => own.indexOf(a.k)), ...own.map((_, i) => i).filter(i => !bad.has(own[i]))], keys = [...order.map(i => own[i]), "music"], n = keys.length;   // 最后一张是音乐卡（js/music.js）
+  const order = [...an.map(a => own.indexOf(a.k)), ...own.map((_, i) => i).filter(i => !bad.has(own[i]))], keys = [...(sl ? ["asleep"] : []), ...order.map(i => own[i]), "music"], n = keys.length;   // 睡着时第一张是睡眠计时；最后一张是音乐卡（js/music.js）
+  const slotOf = (j) => order[j - (sl ? 1 : 0)];   // 计时卡在「编辑顶部卡片」里的位置
   const sig = an.map(a => a.k).join(","); // a card newly running long: bring the track back to the front so it is seen
-  if (sig !== S.heroAnomSig) { if (an.some(a => !(S.heroAnomSig || "").split(",").includes(a.k))) S.heroIdx = 0; S.heroAnomSig = sig; }
+  if (sig !== S.heroAnomSig) { if (!sl && an.some(a => !(S.heroAnomSig || "").split(",").includes(a.k))) S.heroIdx = 0; S.heroAnomSig = sig; }
   const cur = Math.min(S.heroIdx || 0, n - 1);
-  const slide = (k, j, clone) => { if (k === "music") return `<section class="hero musichero" ${clone ? 'aria-hidden="true" inert' : `aria-label="${j + 1}/${n}"`}>${musicSlideInner(clone)}</section>`;
+  const slide = (k, j, clone) => { if (k === "asleep") return sleepSlide(clone); if (k === "music") return `<section class="hero musichero" ${clone ? 'aria-hidden="true" inert' : `aria-label="${j + 1}/${n}"`}>${musicSlideInner(clone)}</section>`;
     const a = bad.get(k); return `<section class="hero${a ? " alert " + a.level : ""}" ${clone ? 'aria-hidden="true"' : `aria-label="${j + 1}/${n}"`}><div class="moon"></div>
-    <button class="gear" data-tab="herocfg" data-slot="${order[j]}" aria-label="${t("编辑顶部卡片")}" ${clone ? 'tabindex="-1"' : ""}>⚙</button>${a ? `<div class="heroalert" ${clone ? "" : 'role="status"'}><i class="tri" aria-hidden="true">⚠️</i><span>${esc(anomalyText(a))}</span></div>` : ""}${bigClock(k)}</section>`; };
+    <button class="gear" data-tab="herocfg" data-slot="${slotOf(j)}" aria-label="${t("编辑顶部卡片")}" ${clone ? 'tabindex="-1"' : ""}>⚙</button>${a ? `<div class="heroalert" ${clone ? "" : 'role="status"'}><i class="tri" aria-hidden="true">⚠️</i><span>${esc(anomalyText(a))}</span></div>` : ""}${bigClock(k)}</section>`; };
   const loop = n > 1, COPIES = 5; // five copies of the list side by side; the middle one is the real one (see heroSettle in js/app.js)
   const slides = loop ? Array.from({ length: COPIES }, (_, c) => keys.map((k, j) => slide(k, j, c !== 2)).join("")).join("") : slide(keys[0], 0);
-  const nav = (d, label, ch) => `<button class="heronav ${d < 0 ? "prev" : "next"}" data-heronav="${d}" aria-label="${label}">${ch}</button>`;
-  return `<div class="herobox"><div class="heroview"><div class="herotrack" ${loop ? 'data-loop="1"' : ""} tabindex="0" role="region" aria-roledescription="carousel" aria-label="${t("顶部大计时")}">${slides}</div>
-    ${loop ? nav(-1, t("上一张"), "‹") + nav(1, t("下一张"), "›") : ""}</div>
-    ${loop ? `<div class="herodots">${keys.map((k, i) => `<button data-heropage="${i}" aria-label="${i + 1}/${n}" aria-current="${i === cur}"></button>`).join("")}</div>` : ""}</div>`;
+  // 卡片下面一行：‹ 进度短划线 › ⚙（js/herocycle.js，每 10 秒自动换，可调）
+  return `<div class="herobox"><div class="heroview"><div class="herotrack" ${loop ? 'data-loop="1"' : ""} tabindex="0" role="region" aria-roledescription="carousel" aria-label="${t("顶部大计时")}">${slides}</div></div>
+    ${loop ? heroCtrlHTML(n, cur) : ""}</div>`;
 }
 // the cards sit side by side and snap; Today re-renders after every save, so put the track back on the card being looked at
 const HERO_GAP = 10, heroCount = tr => tr.dataset.loop ? tr.children.length / 5 : tr.children.length;
