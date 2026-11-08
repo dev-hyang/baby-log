@@ -626,3 +626,39 @@ details.more summary .small{font-weight:400}
 .crumb .crumb-back{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;min-height:30px;padding:2px 12px;margin:0 8px 0 -5px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--slate);font:inherit;font-size:13.5px;font-weight:700;white-space:nowrap}
 .crumb .crumb-back:hover,.crumb .crumb-back:active{background:var(--slate-soft);text-decoration:none}
 .crumb .crumb-back:focus-visible{outline:3px solid var(--slate);outline-offset:1px}
+/* ── 音乐卡（js/music.js）：顶部滑动卡片的最后一张；睡着时在睡眠卡下面 ── */
+.hero.musichero{background:radial-gradient(120% 140% at 100% 0%,#5a6fd0 0%,transparent 55%),linear-gradient(135deg,#1c2547,#2e2f6a 60%,#463366);color:#fff;padding:16px 18px 14px}
+.herobox > .hero.musichero{margin-top:10px}
+.bm-card{display:flex;flex-direction:column;gap:10px;min-width:0}
+.bm-head{display:flex;align-items:center;gap:8px;font-size:14px}
+.bm-head b{font-weight:600}
+.bm-timer{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:13px}
+.bm-timer select{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:4px 10px;font:inherit;font-size:13px;min-height:32px}
+.bm-timer select option{color:#1d2733}
+.bm-timer-left{font-variant-numeric:tabular-nums;opacity:.85}
+.bm-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.bm-tab{min-height:34px;padding:4px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:transparent;color:#fff;font:inherit;font-size:13px;cursor:pointer}
+.bm-tab[aria-pressed="true"]{background:#fff;color:#2e2f6a;border-color:#fff;font-weight:600}
+.bm-now{min-width:0}
+.bm-title{font-weight:700;font-size:18px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bm-sub{font-size:13px;opacity:.75;margin-top:2px;line-height:1.4}
+.bm-sounds{display:flex;gap:6px;flex-wrap:wrap}
+.bm-chip{width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.08);font-size:20px;line-height:1;cursor:pointer;display:grid;place-items:center;padding:0}
+.bm-chip[aria-pressed="true"]{background:#fff;border-color:#fff}
+.bm-prog{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;font-size:12px;font-variant-numeric:tabular-nums;opacity:.9}
+.bm-bar{-webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;margin:0;cursor:pointer;--p:0%;color:#fff}
+.bm-bar::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(90deg,#fff var(--p),rgba(255,255,255,.28) var(--p))}
+.bm-bar::-moz-range-track{height:4px;border-radius:2px;background:rgba(255,255,255,.28)}
+.bm-bar::-moz-range-progress{height:4px;border-radius:2px;background:#fff}
+.bm-bar::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:-5px;border-radius:50%;background:#fff;border:0}
+.bm-bar::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:0}
+.bm-ctrl{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap}
+.bm-btn{display:grid;place-items:center;width:40px;height:40px;border:0;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;font-size:16px;line-height:1;cursor:pointer;flex:none;padding:0}
+.bm-btn:hover{background:rgba(255,255,255,.22)}
+.bm-btn:focus-visible,.bm-tab:focus-visible,.bm-chip:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.bm-btn:disabled{opacity:.4;cursor:default}
+.bm-main{width:52px;height:52px;background:#fff;color:#2e2f6a;font-size:19px}
+.bm-main:hover{background:#f1f1ff}
+.bm-vol{display:flex;align-items:center;gap:6px;margin-left:4px;font-size:14px}
+.bm-vol input{width:86px;accent-color:#fff}
+@media (max-width:420px){.bm-vol input{width:64px}.bm-btn{width:38px;height:38px}.bm-main{width:48px;height:48px}}

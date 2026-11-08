@@ -1,4 +1,5 @@
 import { updateMiniBar } from "./minibar.js";
+import { musicSlideInner } from "./music.js";
 import { aboutHTML } from "./about.js";
 import { APPS, THIS_APP } from "./apps.js";
 import { byTime, last, medStatus, suggestSide, within } from "./derived.js";
@@ -122,15 +123,17 @@ function heroHTML(){
     <div class="lbl">${t("宝宝已经睡了")}</div>
     <div class="big num">${bigDur(Date.now() - sl.ts)}</div>
     <div class="meta"><span>${t("{time} 入睡", { time: hm(sl.ts) })}</span>${sl.where ? `<span>${esc(t(sl.where))}</span>` : ""}</div>
-    <div class="act"><button data-act="wake" data-id="${sl.id}">${t("醒了，记录结束")}</button></div></section></div>`;
+    <div class="act"><button data-act="wake" data-id="${sl.id}">${t("醒了，记录结束")}</button></div></section>
+    <section class="hero musichero" aria-label="${esc(t("音乐"))}">${musicSlideInner(false)}</section></div>`;   // 睡着时：白噪音 / 嘘声就在下面
   if (!activeCards("stats").includes("hero")) return ""; // the child's card settings turned the clock off
   // a card that has run well past the child's usual rhythm moves to the front (worst first) and changes colour; the saved order is untouched
   const own = heroKeys(), an = heroAnomalies(), bad = new Map(an.map(a => [a.k, a]));
-  const order = [...an.map(a => own.indexOf(a.k)), ...own.map((_, i) => i).filter(i => !bad.has(own[i]))], keys = order.map(i => own[i]), n = keys.length;
+  const order = [...an.map(a => own.indexOf(a.k)), ...own.map((_, i) => i).filter(i => !bad.has(own[i]))], keys = [...order.map(i => own[i]), "music"], n = keys.length;   // 最后一张是音乐卡（js/music.js）
   const sig = an.map(a => a.k).join(","); // a card newly running long: bring the track back to the front so it is seen
   if (sig !== S.heroAnomSig) { if (an.some(a => !(S.heroAnomSig || "").split(",").includes(a.k))) S.heroIdx = 0; S.heroAnomSig = sig; }
   const cur = Math.min(S.heroIdx || 0, n - 1);
-  const slide = (k, j, clone) => { const a = bad.get(k); return `<section class="hero${a ? " alert " + a.level : ""}" ${clone ? 'aria-hidden="true"' : `aria-label="${j + 1}/${n}"`}><div class="moon"></div>
+  const slide = (k, j, clone) => { if (k === "music") return `<section class="hero musichero" ${clone ? 'aria-hidden="true" inert' : `aria-label="${j + 1}/${n}"`}>${musicSlideInner(clone)}</section>`;
+    const a = bad.get(k); return `<section class="hero${a ? " alert " + a.level : ""}" ${clone ? 'aria-hidden="true"' : `aria-label="${j + 1}/${n}"`}><div class="moon"></div>
     <button class="gear" data-tab="herocfg" data-slot="${order[j]}" aria-label="${t("编辑顶部卡片")}" ${clone ? 'tabindex="-1"' : ""}>⚙</button>${a ? `<div class="heroalert" ${clone ? "" : 'role="status"'}><i class="tri" aria-hidden="true">⚠️</i><span>${esc(anomalyText(a))}</span></div>` : ""}${bigClock(k)}</section>`; };
   const loop = n > 1, COPIES = 5; // five copies of the list side by side; the middle one is the real one (see heroSettle in js/app.js)
   const slides = loop ? Array.from({ length: COPIES }, (_, c) => keys.map((k, j) => slide(k, j, c !== 2)).join("")).join("") : slide(keys[0], 0);
