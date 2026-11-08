@@ -56,7 +56,7 @@ function aboutHTML(){
   <div class="panel"><ul class="plain">${A.caveats.map(s => `<li>${t(s)}</li>`).join("")}</ul></div>
   <h2>${t("数据与隐私")}</h2>
   <div class="panel"><p class="small">${t(A.data)}</p>
-    <p class="small muted">${t("姐妹应用：")}${APPS.filter(a => a.key !== THIS_APP).map(a => `<a href="${a.url}">${esc(t(a.name))}</a>`).join(" · ")} · ${t("版本 {v}", { v: APP_VERSION })}</p></div>`;
+    <p class="small muted">${t("姐妹应用：")}${APPS.filter(a => a.key !== THIS_APP).map(a => `<a href="${a.url}">${esc(t(a.name))}</a>`).join(" · ")} · <button type="button" class="verlink" data-tab="releases" aria-label="${t("发布日志")}">${t("版本 {v}", { v: APP_VERSION })}</button></p></div>`;
 }
 
 export { ABOUT, aboutHTML };

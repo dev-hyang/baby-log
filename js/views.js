@@ -2,6 +2,7 @@ import { updateMiniBar } from "./minibar.js";
 import { heroCtrlHTML } from "./herocycle.js";
 import { musicMiniHTML, musicSlideInner } from "./music.js";
 import { aboutHTML } from "./about.js";
+import { releaseBadgeHTML, releasePageHTML } from "./releases-ui.js";
 import { APPS, THIS_APP } from "./apps.js";
 import { byTime, last, medStatus, suggestSide, within } from "./derived.js";
 import { LANGS, lang, langPref, t } from "./i18n.js";
@@ -72,7 +73,7 @@ const mrow = (attr, title, desc, icon) => `<button class="mrow" ${attr}><span cl
 const SUB = {
   family: ["me", () => familyHubHTML()], "family-members": ["family", () => membersPageHTML()], "family-kids": ["family", () => kidsPageHTML()], "family-meds": ["family", () => medsPageHTML()], "family-faith": ["family", () => faithPageHTML()],
   sync: ["me", () => syncHTML()], prefs: ["me", () => prefsHTML()], settings: ["me", () => familyHubHTML()], // settings: old links
-  cards: ["me", () => cardsHTML()], herocfg: ["today", () => heroCfgHTML()], routinecfg: ["today", () => routineCfgHTML()], learn: ["me", () => viewLearn()], about: ["me", () => aboutHTML()], ask: ["me", () => viewAsk()],
+  cards: ["me", () => cardsHTML()], herocfg: ["today", () => heroCfgHTML()], routinecfg: ["today", () => routineCfgHTML()], learn: ["me", () => viewLearn()], about: ["me", () => aboutHTML()], releases: ["me", () => releasePageHTML()], ask: ["me", () => viewAsk()],
   "grow-milestones": ["grow", () => growMilestones()], "grow-foods": ["grow", () => growFoods()], "grow-sleep": ["grow", () => growSleep()],
   "grow-body": ["grow", () => growBody()], "grow-checkups": ["grow", () => growCheckups()], "grow-vax": ["grow", () => growVax()],
   "mom-charts": ["mom", () => momCharts()], "mom-signs": ["mom", () => momSigns()]
@@ -80,7 +81,7 @@ const SUB = {
 const TAB_LABEL = { today: "今天", me: "我的", grow: "成长", mom: "妈妈" };
 // titles of the sub-pages, for the breadcrumb path
 const PAGE_LABEL = { family: "家庭", "family-members": "家庭协作", "family-kids": "孩子", "family-meds": "妈妈用药间隔", "family-faith": "信仰（可选）", sync: "同步、备份与恢复", prefs: "语言、单位和显示", settings: "家庭",
-  cards: "卡片", herocfg: "顶部大计时", routinecfg: "习惯清单", learn: "问答", about: "介绍", ask: "咩咩咩",
+  cards: "卡片", herocfg: "顶部大计时", routinecfg: "习惯清单", learn: "问答", about: "介绍", releases: "发布日志", ask: "咩咩咩",
   "grow-milestones": "发育里程碑", "grow-foods": "新食物与反应", "grow-sleep": "睡眠", "grow-body": "体重 / 身高", "grow-checkups": "儿科体检与就诊", "grow-vax": "疫苗接种记录", "mom-charts": "体重、疼痛与心情", "mom-signs": "需要立即就医的警示信号" };
 /* 「‹ 返回」= 回到你刚才来的那一页；直接打开或刷新后没有上一页时，退到上一层。面包屑负责按层级往上跳，两者分工（和 iOS / 安卓 / 网页的常见做法一致） */
 const NAV = { last: null, stack: [], back: false };
@@ -194,6 +195,7 @@ function viewToday(){
     : t("下次儿科体检：{label}，约 {date}（{wd}）。", { label: `<b>${t(nc.label)}</b>`, date: dayKey(nc.at), wd: weekday(nc.at) }));
 
   return `
+  ${releaseBadgeHTML()}
   ${heroHTML()}
   ${alerts.map(a => `<div class="alert red" role="alert"><b>${t("需要留意")}</b> · ${hm(a.e.ts)} ${esc(a.t)}</div>`).join("")}
   ${heroAnomalies().map(a => `<div class="alert red" role="alert"><b>${t("需要留意")}</b> · ⚠️ ${esc(t(clockOf(a.k).label))}：${t("已 {d}", { d: dur(a.gap) })}，${esc(anomalyText(a))}</div>`).join("")}

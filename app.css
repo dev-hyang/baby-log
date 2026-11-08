@@ -452,6 +452,14 @@ table.meal th .sortlbl{text-align:center}
 /* app version next to the sync status (the same line in all four sister apps), so an update can be checked without scrolling to the About page */
 .hdr-line{display:inline-flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:2px 8px}
 .appver{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* the version (header, 我的, 介绍) opens 发布日志: same look as plain text, underline on hover, ring on keyboard focus */
+button.appver,.verlink{all:unset;box-sizing:border-box;cursor:pointer;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;border-radius:4px;text-underline-offset:2px}
+button.appver{font-size:11px;padding:2px 2px;margin:-2px -2px}
+.verlink{font-size:inherit;line-height:inherit}
+button.appver:hover,.verlink:hover{color:var(--slate);text-decoration:underline}
+button.appver:focus-visible,.verlink:focus-visible{outline:2px solid var(--slate);outline-offset:2px}
+/* 今天页顶上的新版本提示（js/releases-ui.js）：和顶部卡片一样离页头 8px，下面留 12px */
+#main > .rl-badge{margin:8px 0 12px}
 /* Today: the heading and the list / axis switch on one line */
 .listbar.todayhead{margin:18px 0 6px}
 .listbar.todayhead h2{margin:0}

@@ -1631,4 +1631,6 @@ export default {
 "循环播放中，直到暂停或定时关；关屏也继续": "Looping until you pause or the timer ends; keeps going with the screen off",
 "会一直循环播放；手机现场合成，离线也能放": "Loops continuously; generated on the phone and works offline",
 "宝宝声音一直循环": "Baby sounds always loop",
+"发布日志": "Release notes",
+"每次更新了什么": "What changed in each update",
 };

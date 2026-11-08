@@ -3,15 +3,20 @@
    Cross-module calls happen only inside functions, so the import cycles (store ↔ sync ↔ views) are safe. */
 import { initHeroCycle, markHeroDash } from "./herocycle.js";
 import "./events.js"; // registers the global click / change / input handlers
-import { applyLang } from "./i18n.js";
-import { S, loadLocal } from "./state.js";
+import { applyLang, lang } from "./i18n.js";
+import { APP_VERSION, S, loadLocal } from "./state.js";
+import { initReleases } from "./releases-ui.js";
+import { RELEASES } from "./releases-data.js";
 import { initCloud } from "./store.js";
 import { initProviders, runScheduled } from "./backup.js";
 import { initSupabase, syncNow } from "./sync.js";
 import { $ } from "./util.js";
 import { heroHTML, heroPage, heroRestore, heroSettle, render } from "./views.js";
 
-applyLang(); loadLocal(); render();
+applyLang(); loadLocal();
+// 发布日志（js/releases-ui.js，四个姊妹应用同一份）：记新版本提示出现了几次；在首屏 render 之前，今天页才能带上提示
+initReleases({ version: APP_VERSION, releases: RELEASES, lang, accent: "var(--slate)", appId: "baby-log", open: 'data-tab="releases"' });
+render();
 initProviders();   // 从 Dropbox 授权页跳回来时把 ?code= 换成令牌（js/backup.js）
 setInterval(() => { if (S.tab === "today" && !$("#sheet").open) { const h = document.querySelector(".herobox"); if (h) { h.outerHTML = heroHTML(); heroRestore(); } } }, 30e3);
 // remember which top card is showing (and move the dots) while swiping. A looping track holds five copies of the card list; the middle copy is the one at rest.

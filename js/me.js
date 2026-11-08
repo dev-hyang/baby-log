@@ -40,6 +40,7 @@ function viewMe(){
     ${row('data-tab="cards"', t("卡片"), t("今天页的快捷按钮和统计：按孩子打开或关闭，已有记录不受影响"), "◫")}
     ${row('data-tab="learn"', t("问答"), t("什么时候联系儿科医生、向 AI 提问、权威资料"), "?")}
     ${row('data-tab="about"', t("介绍"), t("这是什么、每页怎么用、小技巧、注意事项、数据与隐私"), "✎")}
+    ${row('data-tab="releases"', t("发布日志"), `${t("每次更新了什么")} · ${t("版本 {v}", { v: APP_VERSION })}`, "📰")}
   </div>
 
   <h2>${t("打印")}</h2>
@@ -54,7 +55,7 @@ function viewMe(){
   <h2>${t("姐妹应用")}</h2>
   <div class="panel mlist">${APPS.filter(a => a.key !== THIS_APP).map(link).join("")}</div>
   <p class="small muted">${t("同一个账号、同一个家庭，四个站点互通；标题旁的左右箭头也能切换。")}</p>
-  <p class="small muted" style="margin-top:24px">${t("小月亮 · 母婴记录")} · ${t("版本 {v}", { v: APP_VERSION })}</p>`;
+  <p class="small muted" style="margin-top:24px">${t("小月亮 · 母婴记录")} · <button type="button" class="verlink" data-tab="releases" aria-label="${t("发布日志")}">${t("版本 {v}", { v: APP_VERSION })}</button></p>`;
 }
 
 /* ---- 家庭: a third-level hub. One summary card, then one row per topic; each opens its own page ---- */
