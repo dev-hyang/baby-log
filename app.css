@@ -769,3 +769,32 @@ details.more summary .small{font-weight:400}
 .bm-vol input{max-width:180px}
 .bm-timer select{min-height:28px;font-size:12px;padding:2px 8px}
 @media (max-width:400px){.bm-ctrl{gap:8px;grid-template-columns:34px 34px 44px 34px 34px}.bm-btn,.bm-gap{width:34px;height:34px}.bm-main{width:44px;height:44px}.bm-snd-n{font-size:10px}}
+/* ── 11-08 音乐卡第三版：和家庭学堂音乐卡同一种排法；宽度不超出卡片，下拉框明显，字号统一 ── */
+.hero.musichero{padding:14px 16px 12px;min-width:0}
+.bm-card{gap:10px;min-width:0;max-width:100%}
+.bm-top{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;min-width:0}
+.bm-top .bm-ttl{font-size:16px;flex:none}
+.bm-top .bm-seg{flex:0 1 auto;min-width:0}
+.bm-top .bm-seg button{min-height:28px;padding:3px 10px;font-size:12px}
+.bm-top .bm-timer{margin-left:auto;flex:none}
+.bm-top .bm-timer-left{display:none}
+.bm-sel{display:flex;flex-direction:column;gap:3px;min-width:0}
+.bm-pick{display:block;width:100%;min-width:0;min-height:36px;padding:6px 34px 6px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.4);background-color:rgba(255,255,255,.14);color:#fff;font:inherit;font-size:14px;font-weight:600;text-overflow:ellipsis;cursor:pointer;-webkit-appearance:none;appearance:none;background-image:linear-gradient(45deg,transparent 50%,#fff 50%),linear-gradient(135deg,#fff 50%,transparent 50%);background-position:calc(100% - 17px) 52%,calc(100% - 12px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.bm-pick:hover{background-color:rgba(255,255,255,.2)}
+.bm-pick:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.bm-pick option{color:#1d2733;background:#fff;font-weight:400}
+.bm-sel .bm-sub{font-size:11.5px;margin:0;color:rgba(255,255,255,.72);line-height:1.35}
+.bm-empty{font-size:12.5px;line-height:1.4;color:rgba(255,255,255,.8)}
+.bm-prog{gap:8px;font-size:11px}
+.bm-bar{height:18px}
+.bm-ctrl{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:nowrap;min-width:0}
+.bm-ctrl .bm-btn{width:34px;height:34px;flex:none}
+.bm-ctrl .bm-btn svg{width:17px;height:17px}
+.bm-ctrl .bm-main{width:44px;height:44px}
+.bm-ctrl .bm-main svg{width:20px;height:20px}
+.bm-loop.is-fixed{cursor:default;background:rgba(255,255,255,.08)}
+.bm-ctrl .bm-vol{flex:0 1 auto;min-width:0;margin:0 0 0 6px;gap:4px}
+.bm-ctrl .bm-vol svg{width:16px;height:16px;flex:none}
+.bm-ctrl .bm-vol input{width:64px;max-width:64px;flex:none}
+.bm-sounds,.bm-now,.bm-bottom{display:none}
+@media (max-width:380px){.bm-top .bm-seg button{padding:3px 8px}.bm-ctrl{gap:6px}.bm-ctrl .bm-vol input{width:48px;max-width:48px}}

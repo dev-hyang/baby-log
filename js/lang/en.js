@@ -1628,4 +1628,7 @@ export default {
 "自动切换已关闭": "Auto-advance is off",
 "第 {i} 张，共 {n} 张": "Card {i} of {n}",
 "宝宝睡着时停在睡眠卡，不自动换": "Stays on the sleep card while the baby sleeps (no auto-advance)",
+"循环播放中，直到暂停或定时关；关屏也继续": "Looping until you pause or the timer ends; keeps going with the screen off",
+"会一直循环播放；手机现场合成，离线也能放": "Loops continuously; generated on the phone and works offline",
+"宝宝声音一直循环": "Baby sounds always loop",
 };

@@ -168,34 +168,35 @@ function repaint(){
   document.querySelectorAll("[data-bmmini]").forEach((el) => { el.outerHTML = musicMiniHTML(); });
 }
 
-/** 整张音乐卡（clone = 循环轨道里的副本） */
+/** 整张音乐卡（clone = 循环轨道里的副本）：和家庭学堂音乐卡同一种排法——
+ *  第一行：🎶 + 「宝宝声音 / 学堂的歌」+ 定时；第二行：一个明显的下拉框（选声音 / 选歌）+ 一行小字；歌有进度条；最后一行控件 + 音量。 */
 export function musicSlideInner(clone = false){
   if (SB.family && !M.songsAt) loadSongs();
   const src = srcNow(), song = src === "song", s = song ? M.songs[M.i] : null, snd = soundOf(M.sound), live = M.audio && M.kind === src;
   const a = live && song ? M.audio : null, pos = a && a.duration ? (a.currentTime / a.duration) * 100 : 0;
   const seg = `<div class="bm-seg" role="group" aria-label="${esc(t("声音来源"))}"><button type="button" data-bm="src-sound" aria-pressed="${!song}">${t("宝宝声音")}</button><button type="button" data-bm="src-song" aria-pressed="${song}">${t("学堂的歌")}</button></div>`;
-  const art = song ? `<span class="bm-art bm-art-song" aria-hidden="true">♪</span>` : `<span class="bm-art" aria-hidden="true">${snd[2]}</span>`;
-  const meta = song
-    ? (M.songs.length ? `<div class="bm-title">${esc(s?.title || "")}</div><div class="bm-sub">${s?.artist ? `${esc(s.artist)} · ` : ""}${M.i + 1} / ${M.songs.length}</div>`
-      : `<div class="bm-title">${t("还没有歌")}</div><div class="bm-sub">${SB.family ? t("在家庭学堂「资源 → 音乐 → 全部歌曲」里上传 MP3，这里就能放") : t("登录家庭后，能放家庭学堂里上传的歌")}</div>`)
-    : `<div class="bm-title">${esc(t(snd[1]))}</div><div class="bm-sub">${live && M.playing ? t("正在播放 · 关屏也会继续") : t("手机现场合成，离线也能放")}</div>`;
-  const middle = song
-    ? (M.songs.length ? `<label class="bm-songsel"><span class="sr-only">${t("选歌")}</span><select data-bmsong aria-label="${esc(t("选歌"))}">${M.songs.map((x, i) => `<option value="${i}" ${i === M.i ? "selected" : ""}>${i + 1}. ${esc(x.title)}</option>`).join("")}</select></label>
-      <div class="bm-prog"><span class="bm-cur">${mmss(a?.currentTime || 0)}</span><input class="bm-bar" type="range" min="0" max="100" step="0.1" value="${pos}" style="--p:${pos}%" aria-label="${esc(t("播放进度"))}" ${a ? "" : "disabled"}><span class="bm-dur">${mmss(a?.duration || s?.duration || 0)}</span></div>` : "")
-    : `<div class="bm-sounds" role="group" aria-label="${esc(t("选声音"))}">${SOUNDS.map(([k, n, ic]) => `<button type="button" class="bm-snd" data-bm="sound:${k}" aria-pressed="${M.sound === k}"><span aria-hidden="true">${ic}</span><span class="bm-snd-n">${esc(t(n))}</span></button>`).join("")}</div>`;
+  const pick = song
+    ? (M.songs.length ? `<select class="bm-pick" data-bmsong aria-label="${esc(t("选歌"))}">${M.songs.map((x, i) => `<option value="${i}" ${i === M.i ? "selected" : ""}>${esc(x.title)}</option>`).join("")}</select>`
+      : `<div class="bm-empty">${SB.family ? t("在家庭学堂「资源 → 音乐 → 全部歌曲」里上传 MP3，这里就能放") : t("登录家庭后，能放家庭学堂里上传的歌")}</div>`)
+    : `<select class="bm-pick" data-bmsound aria-label="${esc(t("选声音"))}">${SOUNDS.map(([k, n, ic]) => `<option value="${k}" ${M.sound === k ? "selected" : ""}>${ic} ${esc(t(n))}</option>`).join("")}</select>`;
+  const sub = song
+    ? (M.songs.length ? `${s?.artist ? `${esc(s.artist)} · ` : ""}${M.i + 1} / ${M.songs.length}` : "")
+    : (live && M.playing ? t("循环播放中，直到暂停或定时关；关屏也继续") : t("会一直循环播放；手机现场合成，离线也能放"));
+  const prog = song && M.songs.length ? `<div class="bm-prog"><span class="bm-cur">${mmss(a?.currentTime || 0)}</span><input class="bm-bar" type="range" min="0" max="100" step="0.1" value="${pos}" style="--p:${pos}%" aria-label="${esc(t("播放进度"))}" ${a ? "" : "disabled"}><span class="bm-dur">${mmss(a?.duration || s?.duration || 0)}</span></div>` : "";
+  const loopBtn = song ? btn("loop", t(LOOPS[M.loop][1]), ICON[LOOPS[M.loop][0]], `bm-loop ${M.loop === "off" ? "" : "is-on"}`)
+    : `<span class="bm-btn bm-loop is-on is-fixed" title="${esc(t("宝宝声音一直循环"))}" aria-label="${esc(t("宝宝声音一直循环"))}" role="img">${ICON.list}</span>`;
   const ctrl = `<div class="bm-ctrl">
-      ${song ? btn("loop", t(LOOPS[M.loop][1]), ICON[LOOPS[M.loop][0]], `bm-loop ${M.loop === "off" ? "" : "is-on"}`) : `<span class="bm-gap"></span>`}
+      ${loopBtn}
       ${btn("prev", song ? t("上一首") : t("上一个声音"), ICON.prev)}
       ${btn("toggle", live && M.playing ? t("暂停") : t("播放"), live ? mainIcon() : ICON.play, "bm-main", song && !M.songs.length ? "disabled" : "")}
       ${btn("next", song ? t("下一首") : t("下一个声音"), ICON.next)}
-      <span class="bm-gap"></span>
+      <label class="bm-vol" title="${esc(t("音量"))}">${ICON.vol}<input type="range" min="0" max="1" step="0.05" value="${M.vol}" data-bmvol aria-label="${esc(t("音量"))}" style="--p:${M.vol * 100}%"></label>
     </div>`;
   return `<div class="bm-card" data-bmcard="${clone ? "clone" : "main"}">
-    <div class="bm-top"><span class="bm-ttl">🎶 ${t("音乐")}</span>${seg}</div>
-    <div class="bm-now">${art}<div class="bm-meta">${meta}</div></div>
-    ${middle}
+    <div class="bm-top"><span class="bm-ttl" aria-hidden="true">🎶</span>${seg}${timerSel()}</div>
+    <div class="bm-sel">${pick}${sub || M.timerEnd ? `<div class="bm-sub">${sub}${M.timerEnd ? ` · ⏲ <span class="bm-timer-left">${mmss((M.timerEnd - Date.now()) / 1000)}</span>` : ""}</div>` : ""}</div>
+    ${prog}
     ${ctrl}
-    <div class="bm-bottom"><label class="bm-vol" title="${esc(t("音量"))}">${ICON.vol}<input type="range" min="0" max="1" step="0.05" value="${M.vol}" data-bmvol aria-label="${esc(t("音量"))}" style="--p:${M.vol * 100}%"></label>${timerSel()}</div>
   </div>`;
 }
 /** 宝宝睡着时：睡眠卡里一行（选声音 + 播放 / 暂停 + 定时） */
