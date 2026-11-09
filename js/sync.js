@@ -7,7 +7,7 @@ import { LS_KEY, S, child, normalizeSettings, saveLocal } from "./state.js";
 import { clean } from "./store.js";
 import { trim } from "./units.js";
 import { $, esc, num, toast } from "./util.js";
-import { render, renderStatus } from "./views.js";
+import { render, renderBg, renderStatus } from "./views.js";
 
 /* ============ Supabase family sync ============
    Accounts: whoever creates a family signs up with an email (that account can get the family back on a
@@ -63,12 +63,12 @@ function initSupabase(){
 async function afterAuth(){
   if (SB.busy) return; // a join flow is in progress and will call enterFamily itself
   stopWaiting(); teardownRealtime(); SB.family = null; SB.members = {}; SB.pending = [];
-  if (!SB.user) { S.mode = "local"; render(); refreshSettingsIfOpen(); return; }
+  if (!SB.user) { S.mode = "local"; renderBg(); return; }
   const { data, error } = await myFamilyRow();
-  if (error) { toast(t("连接云端失败，先用本机记录")); render(); return; }
+  if (error) { toast(t("连接云端失败，先用本机记录")); renderBg(); return; }
   if (data.length && data[0].status === "pending") { startWaiting(); return; } // the family row is hidden by RLS until the owner approves
   if (data.length && data[0].families) await enterFamily(data[0].families);
-  else { S.mode = "local"; render(); refreshSettingsIfOpen(); }
+  else { S.mode = "local"; renderBg(); }
 }
 /* Migration 022 adds family_members.status; before it runs the column does not exist (42703), so retry without it (no status = active). */
 const noStatusCol = err => !!err && (err.code === "42703" || /status/i.test(err.message || ""));
@@ -85,7 +85,7 @@ function startWaiting(){
   SB.channel = SB.client.channel("wait-" + SB.user.id)
     .on("postgres_changes", { event: "*", schema: "public", table: "family_members", filter: "user_id=eq." + SB.user.id }, () => checkWaiting())
     .subscribe();
-  render(); refreshSettingsIfOpen();
+  renderBg();
 }
 function stopWaiting(){ SB.waiting = false; if (SB.waitTimer) { clearInterval(SB.waitTimer); SB.waitTimer = null; } }
 async function checkWaiting(){
@@ -96,7 +96,7 @@ async function checkWaiting(){
   toast(data.length ? t("家主已批准，欢迎加入") : t("你的加入申请没有通过"));
   await afterAuth();
 }
-const redraw = () => { if (!$("#sheet").open) render(); };
+const redraw = () => { if (!$("#sheet").open) renderBg(); };   // 后台重画：保住正在填的输入（js/views.js renderBg）
 const fmtDate = ms => new Date(ms).toLocaleDateString(lang() === "en" ? "en-US" : undefined, { year: "numeric", month: "numeric", day: "numeric" });
 async function enterFamily(fam){
   const sync = loadJSON(SYNC_KEY, {});
@@ -125,14 +125,14 @@ async function enterFamily(fam){
   SB.forceReconcile = true; // a fresh start checks that no record this member lost access to is still cached
   await syncNow();
   setupRealtime();
-  render(); refreshSettingsIfOpen();
+  renderBg();
   runScheduled();   // 定时备份到期了就在后台做一次
 }
 // This device was removed from the family (or the family is gone): drop the local copy, like logging out
 function leaveFamily(msg){
   teardownRealtime(); SB.family = null; SB.members = {};
   S.entries = []; saveTombs([]); saveJSON(SYNC_KEY, {}); saveLocal();
-  S.mode = "local"; if (msg) toast(msg); render(); refreshSettingsIfOpen();
+  S.mode = "local"; if (msg) toast(msg); renderBg();
 }
 async function loadMembers(){
   let { data, error } = await SB.client.from("family_members").select("user_id, display_name, role, status, joined_at").eq("family_id", SB.family.id);
@@ -247,7 +247,7 @@ async function syncNow(force){
     if (SB.vis && (SB.forceReconcile || Date.now() - SB.reconciledAt > 5 * 60e3)) { SB.forceReconcile = false; await reconcile(); }
     // 4) realtime drops quietly while the phone sleeps; bring it back if it is no longer subscribed
     if (SB.channel && !["joined", "joining"].includes(SB.channel.state)) setupRealtime();
-    saveLocal(); render();
+    saveLocal(); renderBg();   // 定时 / 回到前台 / 联网时的同步：不冲掉没保存的输入
   } catch (err) {
     renderStatus(); // unsent records stay marked and retry on the next sync
     if (navigator.onLine && SB.family) loadMembers(); // a write refused by RLS usually means this member was removed
@@ -262,14 +262,14 @@ function setupRealtime(){
   teardownRealtime();
   SB.channel = SB.client.channel("family-" + SB.family.id)
     .on("postgres_changes", { event: "*", schema: "public", table: "entries", filter: "family_id=eq." + SB.family.id }, payload => {
-      if (payload.new && payload.new.id) { applyRow(payload.new); saveLocal(); if (!$("#sheet").open) render(); else renderStatus(); }
+      if (payload.new && payload.new.id) { applyRow(payload.new); saveLocal(); if (!$("#sheet").open) renderBg(); else renderStatus(); }
     })
     .on("postgres_changes", { event: "UPDATE", schema: "public", table: "families", filter: "id=eq." + SB.family.id }, payload => {
       if (!payload.new) return;
       if (payload.new.invite_code && SB.family) SB.family.invite_code = payload.new.invite_code; // reset by an owner on another device
       if (SB.family && "invite_expires_at" in payload.new) SB.family.invite_expires_at = payload.new.invite_expires_at;
       if (payload.new.settings) { S.settings = { ...S.settings, ...payload.new.settings }; normalizeSettings(); saveLocal(); }
-      if (!$("#sheet").open) render(); else refreshSettingsIfOpen();
+      if (!$("#sheet").open) renderBg();
     })
     .on("postgres_changes", { event: "*", schema: "public", table: "family_members", filter: "family_id=eq." + SB.family.id }, () => {
       loadMembers().then(() => { renderStatus(); redraw(); });

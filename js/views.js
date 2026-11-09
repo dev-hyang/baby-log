@@ -97,6 +97,58 @@ function crumbHTML(tab, cls = ""){
 }
 // the whole render is one vis() pass: the visible records are filtered once, however many cards and lists ask for them
 function render(){ withVisPass(renderPass); }
+/* ---- 后台重画（定时同步、实时推送、云端载入完成、备份列表读完…）保住还没保存的输入 ----
+   render() 用 innerHTML 整页重建 #main，表单会按已保存的数据重画，正在填的内容就没了。后台路径改调 renderBg()：
+   重画前记下 #main 里每个改过的输入（value≠defaultValue、checked≠defaultChecked、下拉选项≠defaultSelected）、
+   展开的 <details> 和焦点 / 光标，重画后同一页上按同一个键放回去。用户自己点的 render() 照旧（保存 / 取消就是要按数据重画）。
+   键：id，否则 name，否则 data-* 属性，否则序号；顶部卡片和音乐卡里的控件不管（它们改了立刻生效，进度条还在走）。 */
+let mainKey = "";
+const pageKey = () => `${S.tab}|${S.logView}|${S.checkupView}|${S.childId}`;
+const SKIP = ".herobox, [data-bmcard], [data-bmmini]";
+function formKeys(root){
+  const seen = new Map(), out = [];
+  root.querySelectorAll("input, textarea, select, details").forEach((el, i) => {
+    if (el.closest(SKIP) || el.type === "file") return;
+    let k = el.id ? "#" + el.id : el.name ? `n:${el.name}${el.type === "checkbox" || el.type === "radio" ? ":" + el.value : ""}` : "";
+    if (!k) { const d = Object.entries(el.dataset).filter(([n]) => n !== "orig").map(([n, v]) => `${n}=${v}`).join(","); k = d ? `${el.tagName}:${d}` : `${el.tagName}@${i}`; }
+    const c = seen.get(k) || 0; seen.set(k, c + 1);
+    out.push([c ? `${k}~${c}` : k, el]);
+  });
+  return out;
+}
+function dirtyOf(el){
+  if (el.tagName === "DETAILS") return { open: el.open };
+  if (el.type === "checkbox" || el.type === "radio") return el.checked !== el.defaultChecked ? { checked: el.checked } : null;
+  if (el.tagName === "SELECT") {   // 单选下拉没写 selected 时默认是第一项
+    const o = [...el.options], di = Math.max(0, o.map(x => x.defaultSelected).lastIndexOf(true));
+    return (el.multiple ? o.some(x => x.selected !== x.defaultSelected) : el.selectedIndex !== di) ? { sel: o.filter(x => x.selected).map(x => x.value) } : null;
+  }
+  return el.value !== el.defaultValue ? { value: el.value } : null;
+}
+function renderBg(){
+  const main = $("#main"), keep = new Map(), act = document.activeElement;
+  let focus = null;
+  if (mainKey === pageKey()) for (const [k, el] of formKeys(main)) {
+    const d = dirtyOf(el); if (d) keep.set(k, d);
+    if (el === act) { focus = { k }; try { focus.a = el.selectionStart; focus.b = el.selectionEnd; focus.dir = el.selectionDirection; } catch (e) { /* 日期 / 数字框没有光标位置 */ } }
+  }
+  const before = mainKey;
+  render();
+  if (!keep.size && !focus || mainKey !== before) return;   // 什么都没填，或者换了页：照常按数据重画
+  for (const [k, el] of formKeys(main)) {
+    const d = keep.get(k);
+    if (d) {
+      if ("open" in d) el.open = d.open;
+      else if ("checked" in d) el.checked = d.checked;
+      else if (d.sel) [...el.options].forEach(o => { o.selected = d.sel.includes(o.value); });
+      else el.value = d.value;   // 只放回值，不派发 input / change：不会触发自动保存
+    }
+    if (focus && focus.k === k && document.activeElement !== el) {
+      el.focus({ preventScroll: true });
+      if (focus.a != null) try { el.setSelectionRange(focus.a, focus.b, focus.dir || "none"); } catch (e) { /* 忽略 */ }
+    }
+  }
+}
 function renderPass(){
   renderStatus();
   // the postpartum tab matters in the newborn stage, or while mother records are still being written
@@ -110,10 +162,11 @@ function renderPass(){
   const v = sub ? sub[1] : ({ today: viewToday, log: viewLog, mom: viewMom, grow: viewGrow, me: viewMe }[S.tab] || viewToday);
   // 2 岁以上的孩子在家庭学堂里记：这里的今天 / 记录 / 成长 / 产后页不显示他们的内容，只放一个去家庭学堂的入口（「我的」和设置照常可用）
   if (goesToSchool(S.childId) && ["today", "log", "grow", "mom"].includes(cur)) {
+    mainKey = "";
     $("#main").innerHTML = `<section class="panel" style="margin-top:12px"><h2 style="margin:0 0 6px">${esc(childName())} · ${esc(ageText())}</h2><p class="muted" style="margin:0 0 12px">${t("2 岁以上的孩子在家庭学堂里记录（如厕、吃饭、户外、情绪等）。小月亮专注 0–2 岁。")}</p><button type="button" class="btn primary" data-kidsel="${esc(S.childId)}">${t("去家庭学堂记录")} ›</button></section>`;
     updateMiniBar($("#bname").textContent, "", t("回到顶部")); return;
   }
-  $("#main").innerHTML = (sub ? crumbHTML(S.tab) : "") + v();
+  $("#main").innerHTML = (sub ? crumbHTML(S.tab) : "") + v(); mainKey = pageKey();
   updateMiniBar($("#bname").textContent, sub ? crumbHTML(S.tab, "mini") : "", t("回到顶部"));
   heroRestore();
   if (S.tab === "log") { const s = $("#q"); if (s && document.activeElement !== s && S.logFocus) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); S.logFocus = false; } }
@@ -523,4 +576,4 @@ function viewLearn(){
     ${["丁香妈妈", "崔玉涛育学园", "年糕妈妈"].map(n => `<div class="medrow"><span>${n}</span><button class="chip" data-copy="${n}">${t("复制名称")}</button></div>`).join("")}</div>`;
 }
 
-export { backTo, heroSettle, heroPage, renderStatus, render, toggleKids, mrow, SUB, heroHTML, heroRestore, bigDur, viewToday, medRow, entryRow, viewLog, viewList, lineChart, sleepBarcode, viewMom, viewGrow, milestonesHTML, foodsHTML, vaxHTML, viewLearn };
+export { backTo, heroSettle, heroPage, renderStatus, render, renderBg, toggleKids, mrow, SUB, heroHTML, heroRestore, bigDur, viewToday, medRow, entryRow, viewLog, viewList, lineChart, sleepBarcode, viewMom, viewGrow, milestonesHTML, foodsHTML, vaxHTML, viewLearn };

@@ -6,7 +6,7 @@ import { APP_VERSION, S, activeKids, kidCount, ageText, childName, groupTone, RO
 import { SB, familyHTML, lapsed, memberNames } from "./sync.js";
 import { isUS, unitPref } from "./units.js";
 import { $, esc } from "./util.js";
-import { mrow, render } from "./views.js";
+import { mrow, render, renderBg } from "./views.js";
 import { backupSummary } from "./backup.js";
 import { aiIcon } from "./ask.js";
 import { PAGE_SIZES, pageSize } from "./pager.js";
@@ -219,7 +219,8 @@ function readSettingsInputs(){
   const fs = $("#faithStatement"); if (fs) S.settings.faith.statement = fs.value.trim();
 }
 // re-render a 我的 page after cloud state changed (login, members, invite code, backup lists), unless a form is open on top
+// bg：后台来的（云端 / 备份列表读完），保住正在填的输入（js/views.js renderBg）
 const ME_PAGES = new Set(["me", "settings", "family", "family-members", "family-kids", "family-meds", "family-faith", "sync", "prefs", "ask"]);
-function refreshSettingsIfOpen(){ if (ME_PAGES.has(S.tab) && !$("#sheet").open) render(); }
+function refreshSettingsIfOpen(bg){ if (ME_PAGES.has(S.tab) && !$("#sheet").open) (bg ? renderBg : render)(); }
 
 export { viewMe, familyHubHTML, membersPageHTML, kidsPageHTML, medsPageHTML, faithPageHTML, prefsHTML, cardsHTML, heroCfgHTML, routineCfgHTML, faithHTML, FAITH_TEMPLATE, readSettingsInputs, refreshSettingsIfOpen };

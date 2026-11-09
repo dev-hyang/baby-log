@@ -2,6 +2,10 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-09.1", title: { zh: "填表时没保存的内容不会再被自动刷新冲掉", en: "Unsaved typing is no longer wiped by background refreshes" }, items: [
+    { k: "fix", zh: "在设置、家庭、备份、问咩咩等页面填写时，后台同步或家人那边有更新也不会清空你正在填的内容，光标也留在原处", en: "While you fill in settings, family, backup or Ask pages, a background sync or a family member's update no longer clears what you're typing, and the cursor stays put" },
+    { k: "fix", zh: "顶部卡片每 30 秒刷新时，正在用的音乐下拉框和 ⚙ 菜单不会被关掉", en: "The 30-second top-card refresh no longer closes the music menu or the ⚙ menu you're using" }
+  ] },
   { v: "2026-11-08.5", title: { zh: "发布日志可以按天或按版本分组，补上了早期的更新记录", en: "Release notes group by day or version, with the full early history" }, items: [
     { k: "new", zh: "发布日志新增「分组」：按版本或按天，记住你的选择", en: "Release notes get a Group option: by version or by day, remembered" },
     { k: "better", zh: "补上了从上线第一天起的更新记录", en: "Every update since the first day is now listed" }

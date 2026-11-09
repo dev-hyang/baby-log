@@ -165,7 +165,7 @@ async function initProviders() {
   if (!new URL(location.href).searchParams.get("code")) return;
   try { if (await DR.initProviders()) { saveSettings({ targets: [...new Set([...settings().targets, "dropbox"])] }); toast(t("已连接 Dropbox")); } }
   catch (e) { toast(t("连接 Dropbox 失败：{msg}", { msg: e.message })); }
-  S.tab = "sync"; UI.stale = true; refreshSettingsIfOpen();
+  S.tab = "sync"; UI.stale = true; refreshSettingsIfOpen(true);
 }
 
 /* ---- 跑一次备份 ---- */
@@ -267,7 +267,7 @@ function reload() {
   UI.stale = false; UI.loading = true;
   const srcs = available();
   Promise.all([folderStatus().catch(() => ({ supported: false, perm: "none", name: "" })), sqlStatus().catch(() => ({ name: "" })), ...srcs.map((k) => SOURCES[k].list().then((r) => ({ r }), (e) => ({ e })))])
-    .then(([f, q, ...ls]) => { UI.folder = f; UI.sql = q; srcs.forEach((k, i) => { if (ls[i].e) UI.errs[k] = bkErr(ls[i].e); else { UI.lists[k] = ls[i].r; UI.errs[k] = ""; } }); /* 读失败（多半是 Google 令牌过期）：保留上次的列表，不要清空 */ UI.loading = false; refreshSettingsIfOpen(); });
+    .then(([f, q, ...ls]) => { UI.folder = f; UI.sql = q; srcs.forEach((k, i) => { if (ls[i].e) UI.errs[k] = bkErr(ls[i].e); else { UI.lists[k] = ls[i].r; UI.errs[k] = ""; } }); /* 读失败（多半是 Google 令牌过期）：保留上次的列表，不要清空 */ UI.loading = false; refreshSettingsIfOpen(true); });
 }
 /** 一句话给「我的」入口行用 */
 function backupSummary() { const s = settings(); return s.last ? t("上次备份 {d}", { d: when(s.last) }) : t("还没备份过"); }

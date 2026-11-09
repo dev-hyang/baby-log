@@ -3,7 +3,7 @@ import { S, child, childName, childOf, isKidType, normalizeSettings, saveLocal }
 import { SB, lapsed, loadTombs, saveTombs, syncNow } from "./sync.js";
 import { TYPES, summary, typeLabel } from "./types.js";
 import { $, D, H, dayKey, hm, newId, startOfDay, toast } from "./util.js";
-import { render, renderStatus } from "./views.js";
+import { render, renderBg, renderStatus } from "./views.js";
 
 function cloudFail(){ S.mode = "local"; S.col = null; S.prof = null; renderStatus(); toast(t("云端保存失败，记录已存在本设备")); }
 
@@ -28,7 +28,7 @@ async function getAllDocs(col){
 }
 async function initCloud(){
   if (!(await waitForClaude())) return;
-  claude.use("sample").then(s => { S.sample = s; if (S.tab === "learn") render(); }).catch(() => {});
+  claude.use("sample").then(s => { S.sample = s; if (S.tab === "learn") renderBg(); }).catch(() => {});
   try {
     const [db, user] = await Promise.all([claude.use("db"), claude.use("user")]);
     if (!db || !user) return;
@@ -42,7 +42,7 @@ async function initCloud(){
     if (ps.exists && ps.data().settings) S.settings = { ...S.settings, ...ps.data().settings };
     normalizeSettings();
     S.entries = [...map.values()]; S.col = col; S.prof = prof; S.mode = "cloud";
-    saveLocal(); render();
+    saveLocal(); renderBg();   // 打开后几秒云端才载完：不冲掉已经开始填的输入
     for (const e of toUpload) await col.doc(e.id).set(JSON.parse(JSON.stringify(e)));
     if (!ps.exists) await prof.set({ settings: S.settings });
   } catch (err) { S.mode = "local"; S.col = null; S.prof = null; renderStatus(); }

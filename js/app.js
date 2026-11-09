@@ -18,7 +18,8 @@ applyLang(); loadLocal();
 initReleases({ version: APP_VERSION, releases: RELEASES, lang, accent: "var(--slate)", appId: "baby-log", open: 'data-tab="releases"' });
 render();
 initProviders();   // 从 Dropbox 授权页跳回来时把 ?code= 换成令牌（js/backup.js）
-setInterval(() => { if (S.tab === "today" && !$("#sheet").open) { const h = document.querySelector(".herobox"); if (h) { h.outerHTML = heroHTML(); heroRestore(); } } }, 30e3);
+// 每 30 秒刷新顶部计时卡（只换 .herobox）；正在用音乐卡的下拉框 / 滑块，或 ⚙ 菜单开着时这一轮先不换
+setInterval(() => { if (S.tab === "today" && !$("#sheet").open) { const h = document.querySelector(".herobox"); const a = document.activeElement; if (h && !(h.contains(a) && a.matches("select, input")) && !h.querySelector(".herogear[open]")) { h.outerHTML = heroHTML(); heroRestore(); } } }, 30e3);
 // remember which top card is showing (and move the dots) while swiping. A looping track holds five copies of the card list; the middle copy is the one at rest.
 
 document.addEventListener("scroll", e => {
