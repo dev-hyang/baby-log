@@ -2,6 +2,10 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-09.2", title: { zh: "记录时间不能选到未来", en: "Record times can no longer be in the future" }, items: [
+    { k: "better", zh: "记录和补记时，时间选择器里晚于现在的时间变灰、不能选", en: "When adding or editing a record, times later than now are greyed out in the picker" },
+    { k: "better", zh: "手动填了未来的时间，保存时会提醒", en: "A future time typed by hand gets a reminder when you save" }
+  ] },
   { v: "2026-11-09.1", title: { zh: "填表时没保存的内容不会再被自动刷新冲掉", en: "Unsaved typing is no longer wiped by background refreshes" }, items: [
     { k: "fix", zh: "在设置、家庭、备份、问咩咩等页面填写时，后台同步或家人那边有更新也不会清空你正在填的内容，光标也留在原处", en: "While you fill in settings, family, backup or Ask pages, a background sync or a family member's update no longer clears what you're typing, and the cursor stays put" },
     { k: "fix", zh: "顶部卡片每 30 秒刷新时，正在用的音乐下拉框和 ⚙ 菜单不会被关掉", en: "The 30-second top-card refresh no longer closes the music menu or the ⚙ menu you're using" }

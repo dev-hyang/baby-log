@@ -34,6 +34,7 @@ export default {
 "美制": "US",
 "公制": "Metric",
 "醒来时间要晚于入睡时间": "Wake time must be after the time asleep",
+"时间不能晚于现在": "The time can't be later than now",
 "已保存 {n} 条": "Saved {n} records",
 "已保存": "Saved",
 "删除这条记录？": "Delete this record?",

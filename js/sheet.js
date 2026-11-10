@@ -57,6 +57,7 @@ function openForm(type, existing, preset){
 }
 function drawForm(focusKey){
   const T = TYPES[draft.type], isNew = !S.entries.some(e => e.id === draft.id);
+  const nowMax = toInput(Date.now()); // records are things that already happened: the pickers grey out anything later than now
   const fieldsHTML = T.fields.filter(f => !f.show || f.show(draft)).map(f => {
     const v = draft[f.k], id = "f_" + f.k, label = t(f.label), ph = esc(f.ph ? t(f.ph) : "");
     let inner = "";
@@ -78,7 +79,7 @@ function drawForm(focusKey){
       const dv = f.dim ? (v == null || v === "" ? "" : trim(toDisp(f.dim, v), DISP_DEC[f.dim])) : (v ?? "");
       inner = `<label for="${id}">${f.dim ? t("{label}（{u}）", { label, u: unitOf(f.dim) }) : label}</label><input id="${id}" type="number" inputmode="decimal" step="${f.dim && isUS() ? "any" : (f.step || 1)}" min="0" data-f="${f.k}" ${f.dim ? `data-dim="${f.dim}" data-orig="${dv}"` : ""} value="${dv}" placeholder="${ph}">`;
     }
-    else if (f.type === "datetime") inner = `<label for="${id}">${label}</label><input id="${id}" type="datetime-local" data-f="${f.k}" data-kind="dt" value="${v ? toInput(v) : ""}">`;
+    else if (f.type === "datetime") inner = `<label for="${id}">${label}</label><input id="${id}" type="datetime-local" data-f="${f.k}" data-kind="dt" max="${nowMax}" value="${v ? toInput(v) : ""}">`;
     else if (f.type === "range") inner = `<label for="${id}">${label}</label><div class="range"><input id="${id}" type="range" min="${f.min}" max="${f.max}" data-f="${f.k}" value="${v ?? Math.round((f.min + f.max) / 2)}"><output class="num" style="min-width:24px">${v ?? "–"}</output></div>`;
     else if (f.type === "area") inner = `<label for="${id}">${label}</label><textarea id="${id}" data-f="${f.k}" placeholder="${ph}">${esc(v || "")}</textarea>`;
     else inner = `<label for="${id}">${label}</label><input id="${id}" type="text" data-f="${f.k}" value="${esc(v || "")}" ${f.list ? `list="${f.list}"` : ""} placeholder="${ph}">`;
@@ -93,7 +94,7 @@ function drawForm(focusKey){
   $("#sheetIn").innerHTML = `${head(`${T.icon} ${t(isNew ? "记录{type}" : "修改{type}", { type: typeLabel(draft.type) })}`)}
     ${draft.type === "faith" && S.settings.faith.statement ? `<p class="small muted" style="margin:0 0 10px">${esc(S.settings.faith.statement)}</p>` : ""}
     ${whoHTML(isNew)}
-    <div class="field"><label for="f_ts">${draft.type === "sleep" ? t("入睡时间") : t("时间")}</label><input id="f_ts" type="datetime-local" data-f="ts" data-kind="dt" value="${toInput(draft.ts)}"></div>
+    <div class="field"><label for="f_ts">${draft.type === "sleep" ? t("入睡时间") : t("时间")}</label><input id="f_ts" type="datetime-local" data-f="ts" data-kind="dt" max="${nowMax}" value="${toInput(draft.ts)}"></div>
     ${out.join("")}
     ${fl.map(f => `<div class="warnline" role="alert">${esc(f)}</div>`).join("")}
     ${datalist("vaxlist", VAX_LIST.map(v => t(v)))}${datalist("medlist", MED_LIST.map(v => t(v)))}${datalist("foodlist", FOOD_LIST.map(v => t(v)))}${datalist("milestonelist", milestoneNames())}

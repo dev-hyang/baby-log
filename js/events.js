@@ -143,6 +143,8 @@ document.addEventListener("click", async ev => {
     case "save": { readDraftInputs(); const e = { ...draft }; const isNewRecord = !S.entries.some(x => x.id === e.id);
       const also = e.also || []; delete e.also; delete e._pick; // form-only state never reaches storage
       if (isKidType(e.type)) e.child = childOf(e); // legacy records become explicit once edited
+      // the picker's max is only a hint (typed values, iOS wheels), so saving checks too; a minute of slack for the clock ticking while the form is open
+      if (e.ts > Date.now() + 60000 || (e.end && e.end > Date.now() + 60000)) { toast(t("时间不能晚于现在")); return; }
       if (e.type === "sleep" && e.end && e.end < e.ts) { toast(t("醒来时间要晚于入睡时间")); return; }
       if (e.vis === "shared" && !(e.with || []).length) { toast(t("请选择至少一位家人，或改成“仅我”")); return; }
       if (e.vis !== "shared") delete e.with;
