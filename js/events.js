@@ -30,6 +30,7 @@ document.addEventListener("click", async ev => {
   if (t0.id === "bname") { toggleKids(); return; }
   if (t0.dataset.act === "nav-back") { goTab(backTo(t0.dataset.parent)); return; }   // 返回：上一页，没有就上一层
   if (t0.dataset.tab) { if (t0.dataset.slot !== undefined) S.heroEdit = +t0.dataset.slot; goTab(t0.dataset.tab); return; } // the card's gear opens the editor on that card
+  if (t0.dataset.grr) { ((S.grf ||= {})[t0.dataset.grr] ||= { sub: "all" }).range = t0.dataset.v; render(); const again = document.querySelector(`[data-grr="${t0.dataset.grr}"][data-v="${t0.dataset.v}"]`); again && again.focus(); return; }   // 成长各页的记录：时间范围
   if (t0.dataset.add) { openForm(t0.dataset.add, null, t0.dataset.preset ? JSON.parse(t0.dataset.preset) : {}); return; }
   if (t0.dataset.edit) { const e = S.entries.find(x => x.id === t0.dataset.edit); e && openForm(e.type, e); return; }
   if (t0.dataset.liststyle) { S.listStyle = t0.dataset.liststyle; try { localStorage.setItem("baby.listStyle", S.listStyle); } catch (e) { /* only a convenience */ } render(); const again = document.querySelector(`[data-liststyle="${S.listStyle}"]`); again && again.focus(); return; } // timeline: list rows or vertical axis
@@ -229,6 +230,7 @@ document.addEventListener("click", async ev => {
 document.addEventListener("change", async ev => {
   if (await bkChange(ev)) return;   // 备份设置 / 选了备份文件
   // drop-downs: timeline type, trend range and trend metric
+  if (ev.target.dataset.grs !== undefined) { ((S.grf ||= {})[ev.target.dataset.grs] ||= { range: "all" }).sub = ev.target.value; render(); const again = document.querySelector(`[data-grs="${ev.target.dataset.grs}"]`); again && again.focus(); return; }   // 成长各页的记录：分类
   if (ev.target.dataset.logfilter !== undefined) { S.filter = ev.target.value; render(); const again = document.querySelector("[data-logfilter]"); again && again.focus(); return; }
   if (ev.target.dataset.trendrange !== undefined) { const [g, n] = ev.target.value.split(":"); S.gran = g === "week" ? "week" : "day"; S.span = +n || (S.gran === "week" ? 8 : 14); render(); const again = document.querySelector("[data-trendrange]"); again && again.focus(); return; }
   if (ev.target.dataset.trendmetric !== undefined) { S.metric = ev.target.value; render(); const again = document.querySelector("[data-trendmetric]"); again && again.focus(); return; }

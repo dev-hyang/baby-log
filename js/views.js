@@ -446,20 +446,47 @@ function viewGrow(){
     ${mrow('data-tab="grow-vax"', t("疫苗接种记录"), vax ? t("共 {n} 次", { n: vax }) : t("还没有接种记录"), "💉")}
   </div>`;
 }
+/* ---- 成长各页的「记录」块（2026-11-12）：和记录页的时间线同一套——时间范围、分类筛选、列表 | 时间轴、按天分组、点一条修改 / 删除、继续加载 ----
+   id：哪一页；all：这一页的全部记录；subs = [[值, 名字, 筛选函数]]（有的页按类别 / 来源再分）；def：默认时间范围；add：右边的「＋」按钮 */
+const GR_RANGES = [["30", "近 30 天"], ["90", "近 3 个月"], ["365", "近 1 年"], ["all", "全部"]];
+function growRecords(id, all, { subs = null, def = "all", add = "", empty = "" } = {}){
+  const F = ((S.grf ||= {})[id] ||= { range: def, sub: "all" });
+  const R = { "30": 30, "90": 91, "365": 365 }[F.range];
+  let list = all.filter(e => !R || e.ts >= Date.now() - R * D);
+  if (subs && F.sub !== "all") { const sb = subs.find(x => x[0] === F.sub); if (sb) list = list.filter(sb[2]); else F.sub = "all"; }
+  list = list.slice().sort((a, b) => b.ts - a.ts);
+  const key = "gr-" + id, shown = shownOf(key, [S.childId, F.range, F.sub].join("|")), style = S.listStyle === "axis" ? "axis" : "rows";
+  let left = shown;
+  const groups = []; for (const e of list) { const k = dayKey(e.ts), g = groups[groups.length - 1]; if (g && g.k === k) g.es.push(e); else groups.push({ k, es: [e] }); }
+  const show = es => { const k = Math.min(es.length, left); left -= k; return style === "axis" ? axisHTML(es, k) : es.slice(0, k).map(entryRow).join(""); };
+  const body = list.length
+    ? groups.map(g => (left ? `<div class="day">${g.k} ${weekday(g.es[0].ts)}<span class="muted"> · ${ageAtText(g.es[0].ts)}</span></div>${show(g.es)}` : "")).join("") + moreHTML(key, list.length, shown)
+    : `<div class="empty"><div class="eicon" aria-hidden="true">🗓</div>${F.range !== "all" || F.sub !== "all" ? t("这段时间、这一类没有记录。") : empty || t("还没有记录。")}</div>`;
+  return `<section class="grrec"><div class="listbar"><h2 style="margin:0">${t("记录")} <span class="small muted">${t("{n} 条", { n: list.length })}</span></h2>${listStyleSwitch()}</div>
+    <div class="grfilter"><div class="segmini grr" role="group" aria-label="${t("时间范围")}">${GR_RANGES.map(([k, l]) => `<button data-grr="${id}" data-v="${k}" aria-pressed="${F.range === k}">${t(l)}</button>`).join("")}</div>
+      ${subs ? `<select class="filtersel" data-grs="${id}" aria-label="${t("类型")}"><option value="all">${t("全部")}</option>${subs.map(([k, l]) => `<option value="${esc(k)}"${F.sub === k ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>` : ""}${add}</div>
+    <div class="grlist">${body}</div>
+    ${list.length ? `<p class="small muted" style="margin-top:8px">${t("点一条可以修改或删除。")}</p>` : ""}</section>`;
+}
 function growMilestones(){
-  const all = vis();
+  const all = vis(), ms = all.filter(e => e.type === "milestone"), cats = TYPES.milestone.fields.find(f => f.k === "cat").opts;
+  const counts = cats.map(c => [c, ms.filter(e => e.cat === c).length]).filter(([, n]) => n);
   return `<h2>${t("发育里程碑")}</h2>
-  <div class="panel">${milestonesHTML(all)}${milestoneRefHTML()}
-    <div class="btns"><button class="btn" data-add="milestone">${t("＋ 记录一个里程碑")}</button></div></div>`;
+  ${counts.length ? `<div class="grsum">${counts.map(([c, n]) => `<span class="grsum-i"><b class="num">${n}</b>${esc(t(c))}</span>`).join("")}</div>` : ""}
+  ${growRecords("ms", ms, { subs: cats.map(c => [c, t(c), e => e.cat === c]), add: `<button class="btn" data-add="milestone">＋ ${t("里程碑")}</button>`, empty: t("还没有记录里程碑。第一次翻身、第一次叫妈妈，记下日期以后很难忘。") })}
+  <h2>${t("各月龄参考（CDC）")}</h2><div class="panel">${milestoneRefHTML()}</div>`;
 }
 function growFoods(){
-  return `<h2>${t("新食物与反应")}</h2><div class="panel">${foodsHTML(vis())}
-    <div class="btns"><button class="btn" data-add="food" data-preset='{"newFood":true}'>${t("＋ 记录一种新食物")}</button></div></div>`;
+  const list = newFoods(vis());
+  return `<h2>${t("新食物与反应")}</h2>
+  ${growRecords("foods", list, { subs: [["new", t("第一次尝试的"), e => e.newFood], ["react", t("有反应的"), e => e.reaction && e.reaction !== "无"]], add: `<button class="btn" data-add="food" data-preset='{"newFood":true}'>＋ ${t("新食物")}</button>`, empty: t("还没有新食物记录。记录饮食时勾上“第一次尝试的新食物”或填写反应，就会出现在这里。") })}
+  <p class="small muted">${t("只列出勾了“第一次尝试”或有反应的记录。新食物建议一次只加一种、连续观察 2–3 天，以医生建议为准。")}</p>`;
 }
 function growSleep(){
   return `<h2>${t("最近 7 天睡眠")}</h2>
   <div class="panel">${sleepBarcode()}
     <p class="small muted" style="margin-top:8px">${t("每一行是一天，从 0 点到 24 点。看得出白天和夜里的睡眠慢慢分开，就是作息在形成。")}</p></div>
+  ${growRecords("sleep", vis().filter(e => e.type === "sleep"), { def: "30", add: `<button class="btn" data-add="sleep">＋ ${t("睡眠")}</button>` })}
   <h2>${t("睡眠参考")}</h2>
   <div class="panel scroll-x"><table>
     <thead><tr><th>${t("月龄")}</th><th>${t("24小时总睡眠")}</th><th>${t("常见清醒时长")}</th></tr></thead>
@@ -481,7 +508,8 @@ function growBody(){
   return `<h2>${t("{label}（{u}）", { label: t("体重"), u: unitOf("wbaby") })}</h2><div class="panel">${lineChart(w, { color: "var(--sky)", unit: unitOf("wbaby"), label: t("宝宝体重") })}
     <p class="small muted">${newborn ? t("新生儿出生后几天体重下降常见；通常约 10–14 天回到出生体重。") : ""}${t("是否正常请以儿科医生对照生长曲线的判断为准。")}</p>
     ${len.length >= 2 ? `<h3 class="small muted" style="margin-top:10px">${t("{label}（{u}）", { label: t("身高 / 身长"), u: unitOf("len") })}</h3>${lineChart(len, { color: "var(--sage)", unit: unitOf("len"), label: t("身高") })}` : ""}
-    <div class="btns"><button class="btn" data-add="baby">${t("记录体重 / 身高 / 头围")}</button></div></div>`;
+    </div>
+  ${growRecords("body", vis().filter(e => e.type === "baby" && (num(e.weight) != null || num(e.length) != null || num(e.head) != null)), { subs: [["home", t("在家量的"), e => !isVisit(e)], ["clinic", t("体检 / 看病时量的"), e => isVisit(e)]], add: `<button class="btn" data-add="baby">＋ ${t("体重 / 身高")}</button>` })}`;
 }
 function growCheckups(){
   const all = vis(), done = checkupsDone();
@@ -508,18 +536,8 @@ function checkupPlanHTML(all, done){
 }
 // every baby-health record taken at a clinic, newest first: the visit history a parent flips back through
 function checkupHistoryHTML(all){
-  const list = all.filter(isVisit).sort((a, b) => b.ts - a.ts), shown = shownOf("visits", S.childId);
-  const meas = e => [e.temp && `${t("体温")} ${fmtU("temp", e.temp)}`, e.weight && `${t("体重")} ${fmtU("wbaby", e.weight)}`, e.length && `${t("身长")} ${fmtU("len", e.length)}`, e.head && `${t("头围")} ${fmtU("len", e.head)}`].filter(Boolean).join(" · ");
-  return `<div class="panel">
-    ${list.length ? `<div class="scroll-x"><table><thead><tr><th>${t("日期")}</th><th>${t("类型")}</th><th>${t("测量")}</th></tr></thead><tbody>
-      ${list.slice(0, shown).map(e => { const m = e.src === "儿科体检" ? matchCheckup(e.ts, childOf(e)) : null;
-        return `<tr><td class="num"><button class="cellbtn" style="all:unset;cursor:pointer" data-edit="${e.id}" aria-label="${t("修改 {date} 的记录", { date: dayKey(e.ts) })}">${dayKey(e.ts)}</button> <span class="small muted">${weekday(e.ts)}</span><br><span class="small muted">${ageAtText(e.ts)}</span></td>
-        <td>${esc(t(e.src))}${m ? `<br><span class="small muted">${t(m.label)}</span>` : ""}${e.clinic ? `<br><span class="small muted">${esc(e.clinic)}</span>` : ""}</td>
-        <td>${esc(meas(e))}${e.note ? `<br><span class="small muted">${esc(e.note)}</span>` : ""}</td></tr>`; }).join("")}
-    </tbody></table></div>${moreHTML("visits", list.length, shown)}<p class="small muted" style="margin-top:6px">${t("共 {n} 次。点日期可修改。", { n: list.length })}</p>`
-    : `<p class="muted">${t("还没有体检或就诊记录。记录宝宝健康时把来源选成“儿科体检”或“看病/急诊”，就会出现在这里。")}</p>`}
-    <div class="btns"><button class="btn primary" data-ix="open" data-src="儿科体检">✦ ${t("AI 一次录入")}</button><button class="btn" data-add="baby" data-preset='{"src":"儿科体检"}'>${t("＋ 记录一次体检")}</button><button class="btn" data-add="baby" data-preset='{"src":"看病/急诊"}'>${t("＋ 记录一次看病")}</button></div>
-  </div>`;
+  return growRecords("visits", all.filter(isVisit), { subs: [["checkup", t("儿科体检"), e => e.src === "儿科体检"], ["sick", t("看病/急诊"), e => e.src === "看病/急诊"]],
+    add: `<button class="btn" data-ix="open" data-src="儿科体检">✦ ${t("AI 录入")}</button>`, empty: t("还没有体检或就诊记录。记录宝宝健康时把来源选成“儿科体检”或“看病/急诊”，就会出现在这里。") });
 }
 function milestonesHTML(all){
   const list = all.filter(e => e.type === "milestone").sort((a, b) => a.ts - b.ts), shown = shownOf("milestones", S.childId);
@@ -537,17 +555,11 @@ function foodsHTML(all){
   </tbody></table></div>${moreHTML("foods", foods.length, shown)}<p class="small muted" style="margin-top:6px">${t("只列出勾了“第一次尝试”或有反应的记录。新食物建议一次只加一种、连续观察 2–3 天，以医生建议为准。")}</p>`;
 }
 function vaxHTML(){
-  const list = vaxList(vis()), shown = shownOf("vax", S.childId);
+  const list = vaxList(vis()), names = [...new Set(list.map(e => e.name).filter(Boolean))];
   return `<h2>${t("疫苗接种记录")}</h2>
-  <div class="panel">
-    ${list.length ? `<div class="scroll-x"><table><thead><tr><th>${t("日期")}</th><th>${t("疫苗")}</th><th>${t("剂次")}</th><th>${t("部位")}</th><th>${t("反应")}</th></tr></thead><tbody>
-      ${list.slice(0, shown).map(e => `<tr><td class="num"><button class="cellbtn" style="all:unset;cursor:pointer" data-edit="${e.id}" aria-label="${t("修改 {date} 的接种记录", { date: dayKey(e.ts) })}">${dayKey(e.ts)}</button><br><span class="small muted">${ageAtText(e.ts)}</span></td>
-        <td>${esc(e.name || (e.cat ? t(e.cat) : ""))}</td><td>${esc(e.dose ? t(e.dose) : "")}</td><td>${esc(e.site ? t(e.site) : "")}</td><td>${esc(e.reaction ? t(e.reaction) : "")}</td></tr>`).join("")}
-    </tbody></table></div>${moreHTML("vax", list.length, shown)}<p class="small muted" style="margin-top:6px">${t("共 {n} 次。点日期可修改。", { n: list.length })}</p>`
-    : `<p class="muted">${t("还没有接种记录。打完疫苗后记一笔，看儿科或办入学时翻出来很方便。")}</p>`}
-    <div class="btns"><button class="btn" data-add="vax">${t("＋ 记录一次接种")}</button><button class="btn" data-ix="open" data-src="儿科体检">✦ ${t("AI 一次录入（连同体征和医生建议）")}</button></div>
-    <p class="small muted" style="margin-top:8px">${t("这里是家庭自己的备份，正式凭证仍以接种本、医院系统或学校要求的官方记录为准。")}</p>
-  </div>`;
+  ${growRecords("vax", list, { subs: names.length > 1 ? names.map(n => [n, t(n), e => e.name === n]) : null, add: `<button class="btn" data-add="vax">＋ ${t("接种")}</button>`, empty: t("还没有接种记录。打完疫苗后记一笔，看儿科或办入学时翻出来很方便。") })}
+  <div class="btns"><button class="btn" data-ix="open" data-src="儿科体检">✦ ${t("AI 一次录入（连同体征和医生建议）")}</button></div>
+  <p class="small muted" style="margin-top:8px">${t("这里是家庭自己的备份，正式凭证仍以接种本、医院系统或学校要求的官方记录为准。")}</p>`;
 }
 
 function viewLearn(){

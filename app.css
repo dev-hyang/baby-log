@@ -854,3 +854,16 @@ details.more summary .small{font-weight:400}
 .att-n{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--slate);color:var(--surface);font-size:12px}
 .att-body{display:flex;flex-direction:column;gap:10px}
 textarea[data-autosize]{resize:none;transition:height .08s ease-out}
+/* 成长各页的「记录」块（views.js growRecords）：和记录页同一个时间线，上面一行时间范围 + 分类 + 「＋」 */
+.grrec{margin:18px 0 6px}
+.grfilter{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 4px}
+.grfilter .grr{grid-template-columns:repeat(4,auto)}
+.grfilter .grr button{padding:0 12px;white-space:nowrap}
+.grfilter .filtersel{flex:1 1 140px;min-width:0;width:auto;min-height:42px}
+.grfilter .btn{flex:none;min-height:42px;padding:0 14px;white-space:nowrap}
+@media (max-width:640px){.grfilter .grr{display:grid;width:100%;grid-template-columns:repeat(4,1fr)}.grfilter .grr button{padding:0 4px;font-size:13px}}
+.grsum{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 4px}
+.grsum-i{display:inline-flex;align-items:baseline;gap:6px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:14px}
+.grsum-i b{font-size:16px}
+/* AI 一次录入：文字框和下面的按钮之间留出距离 */
+.ix-read .att + .btns{margin-top:14px !important}
