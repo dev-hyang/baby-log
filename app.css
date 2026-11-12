@@ -867,3 +867,4 @@ textarea[data-autosize]{resize:none;transition:height .08s ease-out}
 .grsum-i b{font-size:16px}
 /* AI 一次录入：文字框和下面的按钮之间留出距离 */
 .ix-read .att + .btns{margin-top:14px !important}
+.ask-att{margin-top:10px}

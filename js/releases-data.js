@@ -2,6 +2,9 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-12.3", title: { zh: "问咩咩咩可以带照片和文件", en: "Ask with photos and files" }, items: [
+    { k: "new", zh: "提问框下面可以拍照、选多张图片或 PDF 一起问，每张都能删", en: "Add several photos or PDFs under the question box; remove any of them" }
+  ] },
   { v: "2026-11-12.2", title: { zh: "成长各页都能按时间翻看记录，点一条就能改", en: "Every Growth page lists its records by time, tap one to edit" }, items: [
     { k: "better", zh: "里程碑、新食物、睡眠、体重身高、体检就诊、疫苗：都有和「记录」页一样的时间线，可按时间范围和类别筛选，列表 / 时间轴两种看法", en: "Milestones, new foods, sleep, weight & height, checkups and vaccines all get a timeline like the Log page, with time and type filters and list / axis views" },
     { k: "better", zh: "点任何一条记录就能修改或删除", en: "Tap any record to edit or delete it" },
