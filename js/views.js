@@ -437,6 +437,7 @@ function viewGrow(){
   <div class="stages">${STAGES.map((s, i) => `<div class="stage ${i === cur ? "now" : ""}"><b>${t(s.name)}</b>${t(s.range)}<ul>${s.items.map(x => `<li>${t(x)}</li>`).join("")}</ul></div>`).join("")}</div>
   <p class="small muted" style="margin-top:6px">${cur >= 0 ? t("现在是「{stage}」，首页的快捷按钮、统计和趋势指标会按阶段变化。", { stage: t(STAGES[cur].name) }) : t("在设置里填写宝宝生日后，会自动定位到当前阶段。")}</p>
   <div class="panel mlist" style="margin-top:14px">
+    ${mrow('data-ix="open" data-src="儿科体检"', `✦ ${t("AI 一次录入体检 / 就诊")}`, t("拍小结或打一段话：体征、疫苗、医生建议、维生素一次记好"), "📷")}
     ${mrow('data-tab="grow-milestones"', t("发育里程碑"), ms ? t("已记录 {n} 个 · 附 CDC 月龄参考", { n: ms }) : t("记下第一次翻身、第一次叫妈妈 · 附 CDC 月龄参考"), "⭐")}
     ${mrow('data-tab="grow-foods"', t("新食物与反应"), foods ? t("{n} 条新食物或反应记录", { n: foods }) : t("第一次尝试的食物和过敏反应"), "🥣")}
     ${mrow('data-tab="grow-sleep"', t("睡眠"), t("最近 7 天分布 · 各月龄睡眠参考"), "🌙")}
@@ -517,7 +518,7 @@ function checkupHistoryHTML(all){
         <td>${esc(meas(e))}${e.note ? `<br><span class="small muted">${esc(e.note)}</span>` : ""}</td></tr>`; }).join("")}
     </tbody></table></div>${moreHTML("visits", list.length, shown)}<p class="small muted" style="margin-top:6px">${t("共 {n} 次。点日期可修改。", { n: list.length })}</p>`
     : `<p class="muted">${t("还没有体检或就诊记录。记录宝宝健康时把来源选成“儿科体检”或“看病/急诊”，就会出现在这里。")}</p>`}
-    <div class="btns"><button class="btn" data-add="baby" data-preset='{"src":"儿科体检"}'>${t("＋ 记录一次体检")}</button><button class="btn" data-add="baby" data-preset='{"src":"看病/急诊"}'>${t("＋ 记录一次看病")}</button></div>
+    <div class="btns"><button class="btn primary" data-ix="open" data-src="儿科体检">✦ ${t("AI 一次录入")}</button><button class="btn" data-add="baby" data-preset='{"src":"儿科体检"}'>${t("＋ 记录一次体检")}</button><button class="btn" data-add="baby" data-preset='{"src":"看病/急诊"}'>${t("＋ 记录一次看病")}</button></div>
   </div>`;
 }
 function milestonesHTML(all){
@@ -544,7 +545,7 @@ function vaxHTML(){
         <td>${esc(e.name || (e.cat ? t(e.cat) : ""))}</td><td>${esc(e.dose ? t(e.dose) : "")}</td><td>${esc(e.site ? t(e.site) : "")}</td><td>${esc(e.reaction ? t(e.reaction) : "")}</td></tr>`).join("")}
     </tbody></table></div>${moreHTML("vax", list.length, shown)}<p class="small muted" style="margin-top:6px">${t("共 {n} 次。点日期可修改。", { n: list.length })}</p>`
     : `<p class="muted">${t("还没有接种记录。打完疫苗后记一笔，看儿科或办入学时翻出来很方便。")}</p>`}
-    <div class="btns"><button class="btn" data-add="vax">${t("＋ 记录一次接种")}</button></div>
+    <div class="btns"><button class="btn" data-add="vax">${t("＋ 记录一次接种")}</button><button class="btn" data-ix="open" data-src="儿科体检">✦ ${t("AI 一次录入（连同体征和医生建议）")}</button></div>
     <p class="small muted" style="margin-top:8px">${t("这里是家庭自己的备份，正式凭证仍以接种本、医院系统或学校要求的官方记录为准。")}</p>
   </div>`;
 }

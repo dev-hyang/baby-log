@@ -806,3 +806,18 @@ details.more summary .small{font-weight:400}
 .bm-ctrl .bm-vol input{width:64px;max-width:64px;flex:none}
 .bm-sounds,.bm-now,.bm-bottom{display:none}
 @media (max-width:380px){.bm-top .bm-seg button{padding:3px 8px}.bm-ctrl{gap:6px}.bm-ctrl .bm-vol input{width:48px;max-width:48px}}
+/* AI 一次录入体检 / 就诊（js/intake.js）：上面一块读图 / 打字，下面一张核对表；疫苗、用药、里程碑每行一个勾 + 几个格子，窄屏自动换行 */
+.ix-read{margin:4px 0 6px}
+.ix-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:15px;margin:16px 0 6px}
+.ix-vitals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 10px}
+@media (min-width:640px){.ix-vitals{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.ix-vitals .field{margin:6px 0}
+.ix-list{display:flex;flex-direction:column;gap:8px}
+.ix-list > p{margin:0}
+.ix-row{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:var(--radius-sm);padding:8px;background:var(--surface)}
+.ix-row.off{opacity:.55}
+.ix-on{min-width:32px;min-height:44px;justify-content:center}
+.ix-on input{width:20px;height:20px}
+.ix-cells{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:8px}
+.ix-cells input,.ix-cells select{box-sizing:border-box;flex:1 1 140px;min-width:0;border:1px solid var(--line);background:var(--honey-soft);border-radius:var(--radius-sm);padding:9px 10px;font-size:16px;min-height:44px;color:var(--ink)}
+.ix-cells input[data-ixk="name"]{flex-basis:100%}

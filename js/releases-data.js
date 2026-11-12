@@ -2,6 +2,11 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-11.1", title: { zh: "体检 / 就诊可以让 AI 一次录入", en: "Log a whole checkup or visit at once with AI" }, items: [
+    { k: "new", zh: "拍就诊小结、体检单或疫苗本，或者打一段话，AI 读出体征、疫苗、医生建议、维生素和里程碑", en: "Snap the visit summary, checkup sheet or vaccine card, or type a few lines; AI picks out measurements, shots, advice, vitamins and milestones" },
+    { k: "new", zh: "在一张表里核对、修改、取消不要的，一次保存成好几条记录", en: "Check, edit or untick items on one page, then save them all as separate records" },
+    { k: "better", zh: "入口在 成长 页最上面、儿科体检与就诊、疫苗接种记录", en: "Find it at the top of Growth, and on the checkups and vaccine pages" }
+  ] },
   { v: "2026-11-09.2", title: { zh: "记录时间不能选到未来", en: "Record times can no longer be in the future" }, items: [
     { k: "better", zh: "记录和补记时，时间选择器里晚于现在的时间变灰、不能选", en: "When adding or editing a record, times later than now are greyed out in the picker" },
     { k: "better", zh: "手动填了未来的时间，保存时会提醒", en: "A future time typed by hand gets a reminder when you save" }
