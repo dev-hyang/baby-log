@@ -825,3 +825,6 @@ details.more summary .small{font-weight:400}
 .ix-cells{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:8px}
 .ix-cells input,.ix-cells select{box-sizing:border-box;flex:1 1 140px;min-width:0;border:1px solid var(--line);background:var(--honey-soft);border-radius:var(--radius-sm);padding:9px 10px;font-size:16px;min-height:44px;color:var(--ink)}
 .ix-cells input[data-ixk="name"]{flex-basis:100%}
+/* 体检时间表：表头居中，「约在」「完成」两列内容也居中，看起来更整齐 */
+.ckplan th{text-align:center}
+.ckplan td:nth-child(2),.ckplan td:nth-child(3){text-align:center}

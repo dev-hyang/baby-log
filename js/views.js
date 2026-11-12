@@ -497,7 +497,7 @@ function checkupPlanHTML(all, done){
   if (!birthTs()) return `<div class="panel"><p class="muted">${t("在设置里填写宝宝生日后，会自动算出每次体检的大概日期。")}</p><button class="btn" data-act="settings">${t("去填写")}</button></div>`;
   const visits = all.filter(e => isVisit(e) && e.src === "儿科体检");
   // the date cell is editable: clinics book the visit earlier or later than the schedule, and the Today reminder follows the real appointment
-  return `<div class="panel scroll-x"><table><thead><tr><th>${t("时间点")}</th><th>${t("约在")}</th><th>${t("完成 / 已去")}</th></tr></thead><tbody>
+  return `<div class="panel scroll-x"><table class="ckplan"><thead><tr><th>${t("时间点")}</th><th>${t("约在")}</th><th>${t("完成")}</th></tr></thead><tbody>
     ${CHECKUPS.map(c => { const at = checkupDate(c), changed = !!checkupOverride(c); const soon = !done[c.k] && at > Date.now() - 14 * D && at < Date.now() + 21 * D;
       const v = visits.find(e => matchCheckup(e.ts, childOf(e)) === c);
       return `<tr><td>${soon ? "<b>" : ""}${t(c.label)}${soon ? "</b>" : ""}</td>

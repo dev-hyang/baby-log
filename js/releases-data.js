@@ -2,6 +2,9 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-11.3", title: { zh: "体检提醒表更整齐", en: "Tidier checkup schedule" }, items: [
+    { k: "better", zh: "表头和日期、勾选列居中对齐；最后一列改名「完成」", en: "Headers, dates and the tick column are centered; the last column is now \"Done\"" }
+  ] },
   { v: "2026-11-11.2", title: { zh: "体检日期带星期；顶栏不再被盖住", en: "Checkup dates show the weekday; header no longer covered" }, items: [
     { k: "better", zh: "儿科体检与就诊：日期后面显示星期几", en: "Checkups & visits: each date shows its weekday" },
     { k: "better", zh: "体检时间表最后一列合成「完成 / 已去」，只留一个勾", en: "The checkup schedule's last column is now a single \"Done\" tick" },
