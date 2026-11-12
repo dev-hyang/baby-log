@@ -1671,4 +1671,9 @@ export default {
 "AI 一次录入（连同体征和医生建议）": "AI: log it all (with measurements and advice)",
 "完成 / 已去": "Done",
 "{label} 已去": "{label}: went",
+"删除这个附件": "Remove this attachment",
+"拍照 / 选图片或文件": "Take photo / choose images or files",
+"第 {n} 张": "Image {n}",
+"PDF 太大了（最多 10 MB）": "That PDF is too large (10 MB max)",
+"只支持照片、PDF 和文字文件": "Only photos, PDFs and text files are supported",
 };

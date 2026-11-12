@@ -2,6 +2,10 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-12.1", title: { zh: "AI 录入：照片、文件一格一格显示，可以删", en: "AI logging: photos and files as thumbnails you can remove" }, items: [
+    { k: "better", zh: "体检录入可以拍很多次、一次选多张，每张缩略图右上角 × 就能删；也能选 PDF", en: "Checkup logging: take as many photos as you like, pick several at once, tap × to remove one; PDFs work too" },
+    { k: "better", zh: "文字框跟着粘贴的内容长高，不用一开始就滑动", en: "Text boxes grow with what you paste, so you don't have to scroll right away" }
+  ] },
   { v: "2026-11-11.3", title: { zh: "体检提醒表更整齐", en: "Tidier checkup schedule" }, items: [
     { k: "better", zh: "表头和日期、勾选列居中对齐；最后一列改名「完成」", en: "Headers, dates and the tick column are centered; the last column is now \"Done\"" }
   ] },

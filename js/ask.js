@@ -141,7 +141,7 @@ function viewAsk(){
   <p class="small muted">${ready ? t("直接问：喂奶、睡眠、辅食、情绪、陪伴、发育……会附上孩子最近 7 天记录的统计摘要（不含备注和姓名），答案就在下面出现。") : t("还没填 API key：点「复制提示词」会把问题连同记录摘要拼好，打开任一 AI 粘贴即可；填了 key 就能在这里直接出答案。")}</p>
   <div class="chips">${topics.map(x => `<button type="button" class="chip" data-act="ask-topic" data-v="${x.id}" aria-pressed="${A.topic === x.id}">${x.icon} ${esc(t(x.name))}</button>`).join("")}</div>
   <div class="panel ask">
-    <textarea id="askq" rows="3" maxlength="1000" placeholder="${t("例如：夜里醒好几次正常吗？什么时候可以开始加辅食？")}">${esc(A.q)}</textarea>
+    <textarea id="askq" data-autosize rows="3" maxlength="1000" placeholder="${t("例如：夜里醒好几次正常吗？什么时候可以开始加辅食？")}">${esc(A.q)}</textarea>
     <label class="chk"><input type="checkbox" id="askctx" ${A.ctx ? "checked" : ""}> <span class="small">${t("附带最近 7 天的记录摘要（只有统计数字，不含备注和姓名）")}</span></label>
     <div class="btns">${ready ? `<button class="btn primary" data-act="ask-send" ${A.busy ? "disabled" : ""}>${A.busy ? t("思考中…") : t("发送")}</button>` : ""}
       <button class="btn ${ready ? "" : "primary"}" data-act="ask-copy">${t("复制提示词")}</button>

@@ -1,6 +1,7 @@
 import { aiReady, askText } from "./ai.js";
 import { t } from "./i18n.js";
 import { INTAKE_SYSTEM, VAX_NAMES, parseIntake } from "./intake-lib.js";
+import { attachHTML, attachHas, attachPayload, attachReset } from "./attach.js";
 import { closeSheet, head, showSheet } from "./sheet.js";
 import { LS_KEY, S, childName, matchCheckup } from "./state.js";
 import { putEntry, saveSettings } from "./store.js";
@@ -14,14 +15,15 @@ import { $, esc, fromInput, newId, toInput, toast } from "./util.js";
    体征和医生总结 → 一条「宝宝健康」（来源 = 儿科体检 / 看病急诊）；每一针 → 一条「疫苗接种」；每种药 → 一条「宝宝用药」；每个里程碑 → 一条「里程碑」。
    每一项可以改、可以取消勾选；不想用 AI 也能直接在这张表里一次填完。保存后同样会勾上体检时间表里对应的那一次。
    照片只在浏览器里压缩后发给用户自己设置的 AI，不保存；不发姓名。入口：成长页、儿科体检与就诊、疫苗接种记录。 */
-const OK_KEY = LS_KEY + ".intakeOk";
+const OK_KEY = LS_KEY + ".intakeOk", ATT = "bl-intake";
 let X = null;   // 这张表的草稿
 const optsOf = (type, k) => (TYPES[type].fields.find(f => f.k === k) || {}).opts || [];
 const VITALS = [["weight", "体重", "wbaby"], ["length", "身长", "len"], ["head", "头围", "len"], ["temp", "体温", "temp"]];
 
 function openIntake(src){
   X = { src: src || "儿科体检", ts: Date.now(), child: S.childId, clinic: "", note: "", weight: null, length: null, head: null, temp: null,
-    vaccines: [], meds: [], milestones: [], files: [], text: "", read: false, busy: false };
+    vaccines: [], meds: [], milestones: [], read: false, busy: false };
+  attachReset(ATT);
   draw(); showSheet("form");
 }
 const sel = (k, opts, v, label) => `<select data-ixk="${k}" aria-label="${esc(label)}"><option value="">${esc(t(label))}</option>${opts.map(o => `<option value="${esc(o)}" ${o === v ? "selected" : ""}>${esc(t(o))}</option>`).join("")}</select>`;
@@ -37,8 +39,7 @@ function draw(){
   const ms = X.milestones.map((m, i) => row(X.milestones, i, `${sel("cat", optsOf("milestone", "cat"), m.cat, "类别")}<input type="text" data-ixk="name" value="${esc(m.name)}" aria-label="${esc(t("做到了什么"))}" placeholder="${esc(t("做到了什么"))}">`)).join("");
   const n = count();
   const read = `<div class="panel ix-read"><p class="small muted" style="margin:0 0 8px">${t("拍就诊小结、体检单或疫苗本（可多张），或者打 / 粘贴一段话：量了多少、打了什么针、医生说了什么。AI 读出来后在下面核对，一次保存成几条记录。")}</p>
-    <div class="btns" style="margin-top:0"><button type="button" class="btn" data-ix="pick">📷 ${X.files.length ? t("已选 {n} 张，重新选", { n: X.files.length }) : t("拍照 / 选图片")}</button></div>
-    <div class="field"><label for="ix_text">${t("或者打字 / 粘贴")}</label><textarea id="ix_text" data-ixf="text" placeholder="${esc(t("例：体重 9.2 kg，身长 74 cm，打了百白破第3剂、乙肝第3剂（左大腿），医生说发育正常，继续每天维生素 D 400IU，下次 12 个月来"))}">${esc(X.text)}</textarea></div>
+    ${attachHTML(ATT, { t, esc, textLabel: t("或者打字 / 粘贴"), ph: t("例：体重 9.2 kg，身长 74 cm，打了百白破第3剂、乙肝第3剂（左大腿），医生说发育正常，继续每天维生素 D 400IU，下次 12 个月来") })}
     <div class="btns" style="margin-top:0"><button type="button" class="btn primary" data-ix="read" ${X.busy ? "disabled" : ""}>${X.busy ? t("正在读取…") : `✦ ${t("让 AI 读出来")}`}</button>${X.read ? "" : `<button type="button" class="btn" data-ix="manual">${t("不用 AI，直接填")}</button>`}</div>
     <p class="small muted" style="margin:6px 0 0">${aiReady() ? t("照片只在浏览器里压缩后发给你自己设置的 AI，不保存；不发孩子的名字。读出来的内容请核对。") : t("还没填 API key，去 设置 → AI 助手")}</p></div>`;
   const form = !X.read ? "" : `
@@ -76,24 +77,9 @@ const keepVitals = () => VITALS.some(([k]) => X[k] != null) || X.note.trim() || 
 const count = () => (keepVitals() ? 1 : 0) + X.vaccines.filter(v => v.on && v.name).length + X.meds.filter(m => m.on && m.name).length + X.milestones.filter(m => m.on && m.name).length;
 
 /* ---- AI ---- */
-async function shrink(file, max = 1800){
-  const url = URL.createObjectURL(file);
-  try {
-    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error(t("这张图片打不开"))); i.src = url; });
-    const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement("canvas");
-    c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
-    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-    return { mime: "image/jpeg", b64: c.toDataURL("image/jpeg", 0.85).split(",")[1] };
-  } finally { URL.revokeObjectURL(url); }
-}
-function pick(){
-  const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.multiple = true;
-  inp.onchange = () => { readIx(); X.files = [...inp.files].slice(0, 6); draw(); };
-  inp.click();
-}
 async function aiRead(){
   readIx();
-  if (!X.files.length && !X.text.trim()) { toast(t("先拍照 / 选图片，或者打一段话")); return; }
+  if (!attachHas(ATT)) { toast(t("先拍照 / 选图片，或者打一段话")); return; }
   if (!aiReady()) { toast(t("还没填 API key，去 设置 → AI 助手")); return; }
   let ok = false; try { ok = localStorage.getItem(OK_KEY) === "1"; } catch (e) {}
   if (!ok) {
@@ -102,8 +88,8 @@ async function aiRead(){
   }
   X.busy = true; draw();
   try {
-    const images = []; for (const f of X.files) images.push(await shrink(f));
-    const user = `Read this pediatric visit.${X.text.trim() ? "\nParent's notes:\n" + X.text.trim().slice(0, 8000) : ""}`;
+    const { images, text } = attachPayload(ATT);   // 照片 / PDF + 文字框和文字文件（js/attach.js）
+    const user = `Read this pediatric visit.${text ? "\nParent's notes:\n" + text.slice(0, 12000) : ""}`;
     const r = parseIntake(await askText(INTAKE_SYSTEM, user, { json: true, images, maxTokens: 3000 }));
     if (!r) throw new Error(t("没读出内容，换一张清楚点的照片或多写几句试试"));
     if (!X) return;   // 读的时候表被关了
@@ -149,7 +135,6 @@ document.addEventListener("click", async ev => {
   if (!X) return;
   readIx();
   switch (act) {
-    case "pick": pick(); return;
     case "read": await aiRead(); return;
     case "manual": X.read = true; break;
     case "src": X.src = b.dataset.v; break;

@@ -3,6 +3,7 @@
    Cross-module calls happen only inside functions, so the import cycles (store ↔ sync ↔ views) are safe. */
 import { initHeroCycle, markHeroDash } from "./herocycle.js";
 import "./events.js"; // registers the global click / change / input handlers
+import "./attach.js";   // AI 附件区 + 会自己长高的文字框（姊妹应用同一份）
 import "./intake.js"; // AI 一次录入体检 / 就诊（自己的 data-ix 点击处理）
 import { applyLang, lang } from "./i18n.js";
 import { APP_VERSION, S, loadLocal } from "./state.js";
