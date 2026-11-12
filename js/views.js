@@ -497,12 +497,12 @@ function checkupPlanHTML(all, done){
   if (!birthTs()) return `<div class="panel"><p class="muted">${t("在设置里填写宝宝生日后，会自动算出每次体检的大概日期。")}</p><button class="btn" data-act="settings">${t("去填写")}</button></div>`;
   const visits = all.filter(e => isVisit(e) && e.src === "儿科体检");
   // the date cell is editable: clinics book the visit earlier or later than the schedule, and the Today reminder follows the real appointment
-  return `<div class="panel scroll-x"><table><thead><tr><th>${t("时间点")}</th><th>${t("约在")}</th><th>${t("完成")}</th></tr></thead><tbody>
+  return `<div class="panel scroll-x"><table><thead><tr><th>${t("时间点")}</th><th>${t("约在")}</th><th>${t("完成 / 已去")}</th></tr></thead><tbody>
     ${CHECKUPS.map(c => { const at = checkupDate(c), changed = !!checkupOverride(c); const soon = !done[c.k] && at > Date.now() - 14 * D && at < Date.now() + 21 * D;
       const v = visits.find(e => matchCheckup(e.ts, childOf(e)) === c);
       return `<tr><td>${soon ? "<b>" : ""}${t(c.label)}${soon ? "</b>" : ""}</td>
-      <td class="num"><span class="ckdate ${changed ? "changed" : ""}"><input type="date" data-ckdate="${c.k}" value="${dayKey(at)}" aria-label="${t("{label} 体检日期", { label: t(c.label) })}" title="${t("改成医生实际约的日期")}">${changed ? `<button type="button" class="ckreset" data-ckreset="${c.k}" title="${t("恢复为时间表的 {date}", { date: dayKey(checkupDefaultDate(c)) })}" aria-label="${t("恢复为时间表的 {date}", { date: dayKey(checkupDefaultDate(c)) })}">↺</button>` : ""}</span>${changed ? `<br><span class="small muted">${t("已改，时间表原为 {date}", { date: dayKey(checkupDefaultDate(c)) })}</span>` : ""}${v ? `<br><button class="cellbtn small" style="all:unset;cursor:pointer;color:var(--sage)" data-edit="${v.id}">${t("已记录 {date}", { date: dayKey(v.ts) })}</button>` : ""}</td>
-      <td><label class="check"><input type="checkbox" data-checkup="${c.k}" ${done[c.k] ? "checked" : ""}><span class="small">${t("已去")}</span></label></td></tr>`; }).join("")}
+      <td class="num"><span class="ckdate ${changed ? "changed" : ""}"><input type="date" data-ckdate="${c.k}" value="${dayKey(at)}" aria-label="${t("{label} 体检日期", { label: t(c.label) })}" title="${t("改成医生实际约的日期")}"><span class="ckwd small muted">${weekday(at)}</span>${changed ? `<button type="button" class="ckreset" data-ckreset="${c.k}" title="${t("恢复为时间表的 {date}", { date: dayKey(checkupDefaultDate(c)) })}" aria-label="${t("恢复为时间表的 {date}", { date: dayKey(checkupDefaultDate(c)) })}">↺</button>` : ""}</span>${changed ? `<br><span class="small muted">${t("已改，时间表原为 {date}", { date: dayKey(checkupDefaultDate(c)) })}</span>` : ""}${v ? `<br><button class="cellbtn small" style="all:unset;cursor:pointer;color:var(--sage)" data-edit="${v.id}">${t("已记录 {date}", { date: `${dayKey(v.ts)} ${weekday(v.ts)}` })}</button>` : ""}</td>
+      <td class="ckdone"><label class="check"><input type="checkbox" data-checkup="${c.k}" ${done[c.k] ? "checked" : ""} aria-label="${t("{label} 已去", { label: t(c.label) })}"></label></td></tr>`; }).join("")}
     </tbody></table>
     <p class="small muted" style="margin-top:8px">${t("日期可以点开改成医生实际约的日子，今天页的提醒会跟着变；↺ 恢复时间表。")}${t("时间点参考美国儿科学会 Bright Futures 体检时间表。疫苗按当地（中国 / 美国等）免疫规划和医生安排，二者时间不完全相同。")}</p></div>`;
 }
@@ -513,7 +513,7 @@ function checkupHistoryHTML(all){
   return `<div class="panel">
     ${list.length ? `<div class="scroll-x"><table><thead><tr><th>${t("日期")}</th><th>${t("类型")}</th><th>${t("测量")}</th></tr></thead><tbody>
       ${list.slice(0, shown).map(e => { const m = e.src === "儿科体检" ? matchCheckup(e.ts, childOf(e)) : null;
-        return `<tr><td class="num"><button class="cellbtn" style="all:unset;cursor:pointer" data-edit="${e.id}" aria-label="${t("修改 {date} 的记录", { date: dayKey(e.ts) })}">${dayKey(e.ts)}</button><br><span class="small muted">${ageAtText(e.ts)}</span></td>
+        return `<tr><td class="num"><button class="cellbtn" style="all:unset;cursor:pointer" data-edit="${e.id}" aria-label="${t("修改 {date} 的记录", { date: dayKey(e.ts) })}">${dayKey(e.ts)}</button> <span class="small muted">${weekday(e.ts)}</span><br><span class="small muted">${ageAtText(e.ts)}</span></td>
         <td>${esc(t(e.src))}${m ? `<br><span class="small muted">${t(m.label)}</span>` : ""}${e.clinic ? `<br><span class="small muted">${esc(e.clinic)}</span>` : ""}</td>
         <td>${esc(meas(e))}${e.note ? `<br><span class="small muted">${esc(e.note)}</span>` : ""}</td></tr>`; }).join("")}
     </tbody></table></div>${moreHTML("visits", list.length, shown)}<p class="small muted" style="margin-top:6px">${t("共 {n} 次。点日期可修改。", { n: list.length })}</p>`

@@ -2,6 +2,11 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-11.2", title: { zh: "体检日期带星期；顶栏不再被盖住", en: "Checkup dates show the weekday; header no longer covered" }, items: [
+    { k: "better", zh: "儿科体检与就诊：日期后面显示星期几", en: "Checkups & visits: each date shows its weekday" },
+    { k: "better", zh: "体检时间表最后一列合成「完成 / 已去」，只留一个勾", en: "The checkup schedule's last column is now a single \"Done\" tick" },
+    { k: "fix", zh: "电脑上打开再关掉表单后，顶上的窄条不再盖住顶栏", en: "On a laptop, closing a form no longer leaves the slim bar covering the header" }
+  ] },
   { v: "2026-11-11.1", title: { zh: "体检 / 就诊可以让 AI 一次录入", en: "Log a whole checkup or visit at once with AI" }, items: [
     { k: "new", zh: "拍就诊小结、体检单或疫苗本，或者打一段话，AI 读出体征、疫苗、医生建议、维生素和里程碑", en: "Snap the visit summary, checkup sheet or vaccine card, or type a few lines; AI picks out measurements, shots, advice, vitamins and milestones" },
     { k: "new", zh: "在一张表里核对、修改、取消不要的，一次保存成好几条记录", en: "Check, edit or untick items on one page, then save them all as separate records" },

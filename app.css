@@ -162,7 +162,11 @@ p{margin:0 0 8px}
 .daypick input[type=date]{border:0;background:none;font:inherit;font-family:var(--f-num);font-weight:700;font-size:17px;color:inherit;text-align:center;padding:2px 6px;border-radius:var(--radius-sm);cursor:pointer;min-height:32px}
 .daypick input[type=date]:hover{background:var(--slate-soft)}
 /* checkup schedule: the date cell is a date input (the clinic's real appointment); ↺ goes back to the schedule */
-.ckdate{display:inline-flex;align-items:center;gap:4px}
+.ckdate{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap}
+.ckwd{white-space:nowrap}
+.ckdone{text-align:center}
+.ckdone .check{justify-content:center;min-width:44px;min-height:44px}
+.ckdone input[type=checkbox]{width:20px;height:20px}
 .ckdate input[type=date]{border:1px solid transparent;background:none;font:inherit;font-family:var(--f-num);font-size:14px;color:inherit;padding:2px 4px;border-radius:var(--radius-sm);cursor:pointer;min-height:30px;max-width:150px}
 .ckdate input[type=date]:hover,.ckdate input[type=date]:focus{border-color:var(--line);background:var(--surface)}
 .ckdate.changed input[type=date]{color:var(--slate);font-weight:700}

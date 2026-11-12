@@ -1669,4 +1669,6 @@ export default {
 "拍小结或打一段话：体征、疫苗、医生建议、维生素一次记好": "Snap the summary or type a few lines: measurements, shots, advice and vitamins in one go",
 "AI 一次录入": "AI: log it all at once",
 "AI 一次录入（连同体征和医生建议）": "AI: log it all (with measurements and advice)",
+"完成 / 已去": "Done",
+"{label} 已去": "{label}: went",
 };
