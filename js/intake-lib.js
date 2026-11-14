@@ -10,11 +10,13 @@ Return ONLY JSON with this shape (omit what is not there; never invent values):
 "vitals":{"weight_kg":n,"weight_lb":n,"weight_oz":n,"length_cm":n,"length_in":n,"head_cm":n,"head_in":n,"temp_c":n,"temp_f":n},
 "summary":"what the doctor found and advised, short and close to the original wording, in the input's language",
 "next_visit":"YYYY-MM-DD or a phrase such as 'in 2 months', or null",
-"vaccines":[{"name":"vaccine as written, e.g. DTaP, HepB, MMR, 百白破","dose":1|2|3|4|5|"booster"|null,"site":"left thigh|right thigh|left arm|right arm|oral|null"}],
+"vaccines":[{"name":"vaccine as written, e.g. DTaP, HepB, MMR, 百白破","date":"YYYY-MM-DD the dose was given, or null","dose":1|2|3|4|5|"booster"|null,"site":"left thigh|right thigh|left arm|right arm|oral|null"}],
 "meds":[{"kind":"vitamin_d|iron|probiotic|medicine","name":"name","dose":"dose and how often as written"}],
 "milestones":[{"name":"a developmental milestone the doctor noted the child can do","area":"gross_motor|fine_motor|language|social|cognitive|self_care"}]}
 Rules: "kind" is checkup for a well-child / routine visit, sick for an illness, injury or urgent visit. Weight given as "15 lb 4 oz" -> weight_lb 15 and weight_oz 4. Length = height.
-List each vaccine given at THIS visit once (combination shots such as Pediarix or Vaxelis: one entry with the product name). Do not list vaccines that are only due later.
+Visit summary: list each vaccine given at THIS visit once, with that visit's date (combination shots such as Pediarix or Vaxelis: one entry with the product name).
+Vaccine record / immunization history / 接种本 (usually a table, often one row per vaccine with a date for each dose across the columns): list EVERY dose that has a date, one entry per date, with its own "date" and its dose number (column 1 = dose 1 unless labeled otherwise); for such a record leave the top-level "date" null unless it is clearly one visit.
+Read dates carefully (MM/DD/YY in US records, YYYY.MM.DD or YYYY年M月D日 in Chinese ones). Do not list vaccines that are only due later or have no date given.
 Do not include names, dates of birth, addresses, phone numbers, insurance or ID numbers.`;
 
 const num = v => { const n = typeof v === "string" ? parseFloat(v.replace(",", ".")) : v; return typeof n === "number" && isFinite(n) && n > 0 ? n : null; };
@@ -80,8 +82,9 @@ function parseIntake(text){
   const head = num(v.head_cm) ?? (num(v.head_in) != null ? num(v.head_in) * 2.54 : null);
   const temp = num(v.temp_c) ?? (num(v.temp_f) != null ? (num(v.temp_f) - 32) * 5 / 9 : null);
   const ok = (x, lo, hi) => (x != null && x >= lo && x <= hi ? x : null);   // 读错一位小数（比如 155 kg）就丢掉，让人自己填
-  const vaccines = (Array.isArray(o.vaccines) ? o.vaccines : []).filter(x => x && (x.name || typeof x === "string")).slice(0, 12)
-    .map(x => (typeof x === "string" ? { name: vaxName(x), dose: null, site: null } : { name: vaxName(x.name), dose: vaxDose(x.dose), site: vaxSite(x.site) })).filter(x => x.name);
+  // 疫苗本一张表可能有几十针（每行一种疫苗、每格一剂），所以上限放宽到 60；每针带自己的日期
+  const vaccines = (Array.isArray(o.vaccines) ? o.vaccines : []).filter(x => x && (x.name || typeof x === "string")).slice(0, 60)
+    .map(x => (typeof x === "string" ? { name: vaxName(x), day: null, dose: null, site: null } : { name: vaxName(x.name), day: isDay(x.date) ? x.date : null, dose: vaxDose(x.dose), site: vaxSite(x.site) })).filter(x => x.name);
   const meds = (Array.isArray(o.meds) ? o.meds : []).filter(x => x && x.name).slice(0, 8).map(x => ({ cat: medCat(x.kind, x.name), name: str(x.name, 80), dose: str(x.dose, 80) }));
   const out = {
     day: isDay(o.date) ? o.date : null,
@@ -95,4 +98,12 @@ function parseIntake(text){
   return any ? out : null;
 }
 
-export { INTAKE_SYSTEM, VAX_NAMES, parseIntake, vaxName, vaxDose, vaxSite, medCat };
+/** 这一针是不是已经记过：同一天、名字（去掉空格 / 括号里的原名后）一样就算重复。had = [{ name, ts }] 已有的疫苗记录 */
+function vaxSeen(had, name, day){
+  if (!day) return false;
+  const key = s => String(s || "").replace(/（.*?）|\(.*?\)/g, "").toLowerCase().replace(/\s+/g, "");
+  const local = ts => { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+  return (had || []).some(e => e && local(e.ts) === day && key(e.name) === key(name));
+}
+
+export { INTAKE_SYSTEM, VAX_NAMES, parseIntake, vaxName, vaxDose, vaxSite, vaxSeen, medCat };

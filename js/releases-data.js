@@ -2,6 +2,10 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-14.1", title: { zh: "修好：拍疫苗本可以一次录入很多针", en: "Fixed: scan a whole vaccine record at once" }, items: [
+    { k: "fix", zh: "拍疫苗本 / 接种记录表，AI 会把表里每一针都读出来，每针用自己的接种日期", en: "Scanning a vaccine record table now reads every dose, each with its own date" },
+    { k: "better", zh: "已经记过的针默认不勾，免得记重；每针的日期都可以改", en: "Shots you already logged are unchecked so nothing is doubled; each date can be edited" }
+  ] },
   { v: "2026-11-12.3", title: { zh: "问咩咩咩可以带照片和文件", en: "Ask with photos and files" }, items: [
     { k: "new", zh: "提问框下面可以拍照、选多张图片或 PDF 一起问，每张都能删", en: "Add several photos or PDFs under the question box; remove any of them" }
   ] },
