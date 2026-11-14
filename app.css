@@ -816,6 +816,10 @@ details.more summary .small{font-weight:400}
 .ix-vitals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 10px}
 @media (min-width:640px){.ix-vitals{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .ix-vitals .field{margin:6px 0}
+/* BMI、血压、百分位：标签可能折两行，输入框按底边对齐；「同一天已经有一条」的提示 */
+.ix-vitals{align-items:end}
+.ix-more{margin:10px 0 4px}
+.ix-upd{margin:8px 0 0;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface)}
 .ix-list{display:flex;flex-direction:column;gap:8px}
 .ix-list > p{margin:0}
 .ix-row{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:var(--radius-sm);padding:8px;background:var(--surface)}

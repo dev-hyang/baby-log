@@ -1,5 +1,6 @@
 import { t } from "./i18n.js";
 import { S, ageMonths, babyAgeDays, childOf, routineSteps, stageOf } from "./state.js";
+import { extraParts } from "./intake-lib.js";
 import { fmtU } from "./units.js";
 import { $, D, dur, hm, num } from "./util.js";
 
@@ -44,6 +45,15 @@ const TYPES = {
     { k: "weight", label: "体重", type: "num", dim: "wbaby", step: .01 },
     { k: "length", label: "身长", type: "num", dim: "len", step: .1, half: 1 },
     { k: "head", label: "头围", type: "num", dim: "len", step: .1, half: 1 },
+    // 两岁以后体检单上的：BMI、血压、心率、同龄百分位（只在体检 / 看病时显示；AI 录入也会读）
+    { k: "bmi", label: "BMI", type: "num", step: .1, half: 1, show: m => isVisit(m) },
+    { k: "pulse", label: "心率（次/分）", type: "num", step: 1, half: 1, show: m => isVisit(m) },
+    { k: "bp_sys", label: "血压·高压（mmHg）", type: "num", step: 1, half: 1, show: m => isVisit(m) },
+    { k: "bp_dia", label: "血压·低压（mmHg）", type: "num", step: 1, half: 1, show: m => isVisit(m) },
+    { k: "wpct", label: "体重百分位（%）", type: "num", step: .1, half: 1, show: m => isVisit(m) },
+    { k: "lpct", label: "身高百分位（%）", type: "num", step: .1, half: 1, show: m => isVisit(m) },
+    { k: "headpct", label: "头围百分位（%）", type: "num", step: .1, half: 1, show: m => isVisit(m) },
+    { k: "bmipct", label: "BMI 百分位（%）", type: "num", step: .1, half: 1, show: m => isVisit(m) },
     { k: "note", label: "症状 / 看诊记录", type: "area", ph: "黄疸、皮疹、咳嗽、医生说了什么…" } ] },
   bmed:  { label: "宝宝用药", icon: "💧", color: "var(--sage)", fields: [
     { k: "cat", label: "类别", type: "seg", opts: ["维生素D", "铁剂", "益生菌", "药物"], def: "维生素D" },
@@ -172,7 +182,7 @@ function summary(e){
       if (e.left) p.push(t("左{n}分", { n: e.left })); if (e.right) p.push(t("右{n}分", { n: e.right })); if (e.ml) p.push(fmtU("vol", e.ml)); break;
     case "diaper": if (e.pee) p.push(t("尿")); if (e.poop) p.push(e.color ? t("{label}（{u}）", { label: t("便"), u: t(e.color) }) : t("便")); break;
     case "sleep": p.push(e.end ? t("睡到 {t} · {d}", { t: hm(e.end), d: dur(e.end - e.ts) }) : t("正在睡")); if (e.where) p.push(t(e.where)); if (e.how) p.push(t(e.how)); break;
-    case "baby": if (isVisit(e)) p.push(t(e.src)); if (e.temp) p.push(`${t("体温")} ${fmtU("temp", e.temp)}`); if (e.weight) p.push(`${t("体重")} ${fmtU("wbaby", e.weight)}`); if (e.length) p.push(`${t("身长")} ${fmtU("len", e.length)}`); if (e.head) p.push(`${t("头围")} ${fmtU("len", e.head)}`); if (!p.length) p.push(t("健康记录")); break;
+    case "baby": if (isVisit(e)) p.push(t(e.src)); if (e.temp) p.push(`${t("体温")} ${fmtU("temp", e.temp)}`); if (e.weight) p.push(`${t("体重")} ${fmtU("wbaby", e.weight)}`); if (e.length) p.push(`${t("身长")} ${fmtU("len", e.length)}`); if (e.head) p.push(`${t("头围")} ${fmtU("len", e.head)}`); for (const [l, v] of extraParts(e)) p.push(`${t(l)} ${v}`); if (!p.length) p.push(t("健康记录")); break;
     case "bmed": p.push(v(e.cat), e.name || "", e.dose || ""); break;
     case "mmed": p.push(v(e.cat), e.name || "", e.dose || ""); break;
     case "vax": p.push(e.name || t("疫苗"), v(e.dose), v(e.site), e.reaction && e.reaction !== "无" ? t("反应：{r}", { r: t(e.reaction) }) : ""); break;

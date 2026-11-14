@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { medCat, parseIntake, vaxDose, vaxName, vaxSeen, vaxSite } from "../js/intake-lib.js";
+import { extraParts, medCat, mergeInto, parseIntake, sameEntry, sameVisit, vaxDose, vaxName, vaxSeen, vaxSite } from "../js/intake-lib.js";
 
 test("a whole checkup becomes metric vitals, vaccines, meds and milestones", () => {
   const r = parseIntake("```json\n" + JSON.stringify({
@@ -45,6 +45,26 @@ test("vaxSeen: same day + same vaccine (ignoring the original name in brackets) 
   assert.equal(vaxSeen(had, "百白破 DTaP", "2020-05-06"), false);
   assert.equal(vaxSeen(had, "乙肝疫苗 HepB", "2020-03-05"), false);
   assert.equal(vaxSeen(had, "百白破 DTaP", null), false);
+});
+
+test("age 2+ checkup: BMI, blood pressure, pulse and percentiles; impossible ones dropped", () => {
+  const r = parseIntake(JSON.stringify({ kind: "checkup", vitals: { weight_kg: 16, length_cm: 100, bmi: 16.04, bp_systolic: 98, bp_diastolic: 60, pulse: 102, weight_pct: 62, length_pct: "75", head_pct: 0, bmi_pct: 140 } }));
+  assert.equal(r.bmi, 16); assert.equal(r.bp_sys, 98); assert.equal(r.bp_dia, 60); assert.equal(r.pulse, 102);
+  assert.equal(r.wpct, 62); assert.equal(r.lpct, 75); assert.equal(r.headpct, null); assert.equal(r.bmipct, null);
+  assert.deepEqual(extraParts(r), [["BMI", "16"], ["血压", "98/60"], ["心率", "102"], ["体重", "P62"], ["身高", "P75"]]);
+  assert.ok(parseIntake(JSON.stringify({ vitals: { bp_systolic: 100, bp_diastolic: 65 } })));   // vitals-only sheet still counts
+});
+
+test("re-scan: same-day visit and same items are found; merge keeps old values and the old note", () => {
+  const day = ts => new Date(ts + "T10:00:00").getTime();
+  const had = [{ id: "a", type: "baby", src: "儿科体检", ts: day("2026-10-20"), weight: 16, note: "Growing well." }, { id: "b", type: "baby", src: "自己记录", ts: day("2026-10-21"), weight: 16.1 }];
+  assert.equal(sameVisit(had, "2026-10-20").id, "a"); assert.equal(sameVisit(had, "2026-10-21"), null);
+  const m = mergeInto(had[0], { weight: 16.2, bmi: 16, note: "Growing well. BP normal." });
+  assert.equal(m.weight, 16.2); assert.equal(m.bmi, 16); assert.equal(m.note, "Growing well. BP normal."); assert.equal(m.id, "a");
+  assert.equal(mergeInto({ note: "Mom: slept late" }, { note: "Healthy" }).note, "Mom: slept late\nHealthy");
+  assert.equal(mergeInto({ note: "Healthy, keep vitamin D" }, { note: "Healthy" }).note, "Healthy, keep vitamin D");
+  assert.equal(mergeInto({ dose: "第1剂" }, { dose: "", site: null }).dose, "第1剂");
+  assert.equal(sameEntry([{ name: "Pulls to stand", ts: day("2025-01-01") }], "pulls to stand", null).name, "Pulls to stand");
 });
 
 test("normalizers", () => {

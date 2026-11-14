@@ -7,13 +7,16 @@
 const INTAKE_SYSTEM = `You read a child's pediatric visit: photos (after-visit summary, well-child checkup sheet, vaccine record, growth chart, prescription) and/or text a parent typed or pasted (any language).
 Return ONLY JSON with this shape (omit what is not there; never invent values):
 {"date":"YYYY-MM-DD|null","kind":"checkup|sick|null","clinic":"clinic or doctor name",
-"vitals":{"weight_kg":n,"weight_lb":n,"weight_oz":n,"length_cm":n,"length_in":n,"head_cm":n,"head_in":n,"temp_c":n,"temp_f":n},
+"vitals":{"weight_kg":n,"weight_lb":n,"weight_oz":n,"length_cm":n,"length_in":n,"head_cm":n,"head_in":n,"temp_c":n,"temp_f":n,
+ "bmi":n,"bp_systolic":n,"bp_diastolic":n,"pulse":n,
+ "weight_pct":n,"length_pct":n,"head_pct":n,"bmi_pct":n},
 "summary":"what the doctor found and advised, short and close to the original wording, in the input's language",
 "next_visit":"YYYY-MM-DD or a phrase such as 'in 2 months', or null",
 "vaccines":[{"name":"vaccine as written, e.g. DTaP, HepB, MMR, 百白破","date":"YYYY-MM-DD the dose was given, or null","dose":1|2|3|4|5|"booster"|null,"site":"left thigh|right thigh|left arm|right arm|oral|null"}],
 "meds":[{"kind":"vitamin_d|iron|probiotic|medicine","name":"name","dose":"dose and how often as written"}],
 "milestones":[{"name":"a developmental milestone the doctor noted the child can do","area":"gross_motor|fine_motor|language|social|cognitive|self_care"}]}
 Rules: "kind" is checkup for a well-child / routine visit, sick for an illness, injury or urgent visit. Weight given as "15 lb 4 oz" -> weight_lb 15 and weight_oz 4. Length = height.
+Blood pressure "98/60" -> bp_systolic 98, bp_diastolic 60; pulse = heart rate per minute. *_pct are the age percentiles printed next to a measurement ("75th", "P75", "75%", "75 百分位") -> 75; "<1st" -> 1, ">99th" -> 99. Only copy a percentile or BMI that is written; never compute one.
 Visit summary: list each vaccine given at THIS visit once, with that visit's date (combination shots such as Pediarix or Vaxelis: one entry with the product name).
 Vaccine record / immunization history / 接种本 (usually a table, often one row per vaccine with a date for each dose across the columns): list EVERY dose that has a date, one entry per date, with its own "date" and its dose number (column 1 = dose 1 unless labeled otherwise); for such a record leave the top-level "date" null unless it is clearly one visit.
 Read dates carefully (MM/DD/YY in US records, YYYY.MM.DD or YYYY年M月D日 in Chinese ones). Do not list vaccines that are only due later or have no date given.
@@ -71,6 +74,30 @@ function medCat(kind, name){
   return /vitamin\s*d|维生素\s*d|d-?vi-?sol/i.test(s) ? "维生素D" : /iron|ferrous|铁/i.test(s) ? "铁剂" : /probiotic|益生菌/i.test(s) ? "益生菌" : "药物";
 }
 
+/* 两岁以后体检单上常有的：BMI、血压、心率，和体重 / 身高 / 头围 / BMI 的同龄百分位（都没有单位换算）。
+   [存的字段, 模型 JSON 里的名字, 合理下限, 上限, 小数位, 表单上的名字] —— 存在「宝宝健康」记录里，小月亮和家庭学堂都显示 */
+const EXTRA = [
+  ["bmi", "bmi", 8, 60, 1, "BMI"],
+  ["bp_sys", "bp_systolic", 50, 200, 0, "血压·高压（mmHg）"],
+  ["bp_dia", "bp_diastolic", 20, 140, 0, "血压·低压（mmHg）"],
+  ["pulse", "pulse", 30, 250, 0, "心率（次/分）"],
+  ["wpct", "weight_pct", 0.1, 100, 1, "体重百分位（%）"],
+  ["lpct", "length_pct", 0.1, 100, 1, "身高百分位（%）"],
+  ["headpct", "head_pct", 0.1, 100, 1, "头围百分位（%）"],
+  ["bmipct", "bmi_pct", 0.1, 100, 1, "BMI 百分位（%）"]
+];
+const EXTRA_KEYS = EXTRA.map(x => x[0]);
+/** 一条记录上的这些数，排成几小段给列表用：[["BMI", "16.2"], ["血压", "98/60"], ["体重", "P75"]…]；名字是简体原文，调用方自己翻译 */
+function extraParts(e){
+  const p = [], has = k => e && e[k] != null && e[k] !== "";
+  if (has("bmi")) p.push(["BMI", String(e.bmi) + (has("bmipct") ? ` (P${e.bmipct})` : "")]);
+  if (has("bp_sys") || has("bp_dia")) p.push(["血压", `${has("bp_sys") ? e.bp_sys : "–"}/${has("bp_dia") ? e.bp_dia : "–"}`]);
+  if (has("pulse")) p.push(["心率", String(e.pulse)]);
+  for (const [k, l] of [["wpct", "体重"], ["lpct", "身高"], ["headpct", "头围"]]) if (has(k)) p.push([l, `P${e[k]}`]);
+  if (!has("bmi") && has("bmipct")) p.push(["BMI", `P${e.bmipct}`]);
+  return p;
+}
+
 /** 模型返回 → { day, src, clinic, temp, weight, length, head, note, next, vaccines, meds, milestones }（公制：℃、kg、cm）；读不出 JSON 返回 null */
 function parseIntake(text){
   let o; try { o = JSON.parse(String(text).replace(/^\s*```(json)?|```\s*$/g, "").trim()); } catch (e) { return null; }
@@ -91,19 +118,36 @@ function parseIntake(text){
     src: o.kind === "sick" ? "看病/急诊" : o.kind === "checkup" ? "儿科体检" : null,
     clinic: str(o.clinic, 80),
     weight: r(ok(weight, 0.5, 150), 3), length: r(ok(length, 30, 220), 1), head: r(ok(head, 25, 65), 1), temp: r(ok(temp, 34, 43), 1),
+    ...Object.fromEntries(EXTRA.map(([k, src, lo, hi, d]) => [k, r(ok(num(v[src]), lo, hi), d)])),
     note: str(o.summary, 2000), next: str(o.next_visit, 60),
     vaccines, meds, milestones: (Array.isArray(o.milestones) ? o.milestones : []).map(x => (typeof x === "string" ? { name: str(x, 80), cat: "认知" } : x && { name: str(x.name, 80), cat: MS_CAT[x.area] || "认知" })).filter(x => x && x.name).slice(0, 8)
   };
-  const any = out.weight || out.length || out.head || out.temp || out.note || vaccines.length || meds.length || out.milestones.length;
+  const any = out.weight || out.length || out.head || out.temp || EXTRA.some(([k]) => out[k] != null) || out.note || vaccines.length || meds.length || out.milestones.length;
   return any ? out : null;
 }
 
-/** 这一针是不是已经记过：同一天、名字（去掉空格 / 括号里的原名后）一样就算重复。had = [{ name, ts }] 已有的疫苗记录 */
-function vaxSeen(had, name, day){
-  if (!day) return false;
-  const key = s => String(s || "").replace(/（.*?）|\(.*?\)/g, "").toLowerCase().replace(/\s+/g, "");
-  const local = ts => { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
-  return (had || []).some(e => e && local(e.ts) === day && key(e.name) === key(name));
+/* ---- 再扫一次同一张单子：找到已经记过的那一条，更新它，不多记一条 ---- */
+const nameKey = s => String(s || "").replace(/（.*?）|\(.*?\)/g, "").toLowerCase().replace(/\s+/g, "");
+const localDay = ts => { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+/** 已有记录里的「同一条」：名字（去掉空格 / 括号里的原名后）一样；给了 day 还要同一天。had = [{ name, ts, … }] */
+function sameEntry(had, name, day){
+  if (!nameKey(name)) return null;
+  return (had || []).find(e => e && (!day || localDay(e.ts) === day) && nameKey(e.name) === nameKey(name)) || null;
+}
+/** 这一针是不是已经记过（同一天同一种） */
+const vaxSeen = (had, name, day) => !!day && !!sameEntry(had, name, day);
+/** 同一天已经有的一条就诊「宝宝健康」（体检 / 看病，不管当时选的是哪个）：had = 这个孩子的 baby 记录 */
+const sameVisit = (had, day) => (had || []).find(e => e && e.src && e.src !== "自己记录" && localDay(e.ts) === day) || null;
+/** 合并：新读到的非空值盖掉旧的，新的没有的保留旧的（以前没扫出来的 BMI、血压就这样补上） */
+function mergeInto(old, add){
+  const o = { ...old };
+  for (const [k, v] of Object.entries(add || {})) {
+    if (v == null || v === "") continue;
+    const was = String(old && old.note || "").trim(), now = String(v).trim();
+    // 医生的总结：同一段话不重复写；原来自己补过的话也不丢
+    o[k] = k !== "note" || !was || now.includes(was) ? v : was.includes(now) ? was : `${was}\n${now}`;
+  }
+  return o;
 }
 
-export { INTAKE_SYSTEM, VAX_NAMES, parseIntake, vaxName, vaxDose, vaxSite, vaxSeen, medCat };
+export { INTAKE_SYSTEM, VAX_NAMES, EXTRA, EXTRA_KEYS, extraParts, parseIntake, vaxName, vaxDose, vaxSite, vaxSeen, sameEntry, sameVisit, mergeInto, localDay, medCat };
