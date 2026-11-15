@@ -2,6 +2,9 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-14.6", title: { zh: "修复：今天页打不开", en: "Fix: Today page failed to load" }, items: [
+    { k: "fix", zh: "上一版的一个小错误让页面打不开，已修好", en: "A small mistake in the last version stopped the page from loading; fixed" }
+  ] },
   { v: "2026-11-14.5", title: { zh: "睡眠卡提示要不要叫醒；音乐卡更简洁", en: "Sleep card says when to wake; simpler music card" }, items: [
     { k: "new", zh: "宝宝睡着时，睡眠卡按年龄提示：小睡建议几点前叫醒、睡太久或太晚了可以叫醒；新生儿按上次吃奶提醒叫醒喂奶；夜里不用叫醒", en: "While the baby sleeps, the sleep card suggests by age when to wake from a nap, flags naps that run long or late, reminds you to wake a newborn to feed, and says night sleep needs no waking" },
     { k: "fix", zh: "顶部卡片里的下拉框（定时关、选声音）点开就关的问题修好了", en: "Dropdowns on the top cards (sleep timer, sound) no longer close right after opening" },

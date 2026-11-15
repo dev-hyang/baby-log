@@ -32,7 +32,8 @@ document.addEventListener("scroll", e => {
 }, true);
 // a finger or mouse button held on the track blocks the jump until it is let go
 document.addEventListener("pointerdown", e => { const tr = e.target.closest && e.target.closest(".herotrack"); if (tr) { tr._down = true; tr.closest(".herobox").classList.add("is-hold"); } }, true);
-const heroRelease = () => document.querySelectorAll(".herotrack").forEach(tr => { if (tr._down) { tr._down = false; const box = tr.closest(".herobox"); box.classList.remove("is-hold"); markHeroDash(box, S.heroIdx || 0); const a = document.activeElement; if (box.contains(a) && !a.matches("select")) a.blur();   // 下拉框不能失焦：点开它的那一下也会走到这里，失焦会把刚弹出的选项关掉 clearTimeout(tr._settle); tr._settle = setTimeout(() => heroSettle(tr), 140); } });
+// 下拉框不能失焦：点开它的那一下也会走到这里，失焦会把刚弹出的选项关掉
+const heroRelease = () => document.querySelectorAll(".herotrack").forEach(tr => { if (tr._down) { tr._down = false; const box = tr.closest(".herobox"); box.classList.remove("is-hold"); markHeroDash(box, S.heroIdx || 0); const a = document.activeElement; if (box.contains(a) && !a.matches("select")) a.blur(); clearTimeout(tr._settle); tr._settle = setTimeout(() => heroSettle(tr), 140); } });
 initHeroCycle({ next: tr => { heroSettle(tr); tr.scrollTo({ left: (heroPage(tr) + 1) * (tr.clientWidth + 10), behavior: "smooth" }); } });   // 进度条走满：下一张
 document.addEventListener("pointerup", heroRelease, true); document.addEventListener("pointercancel", heroRelease, true);
 if (!initSupabase()) initCloud();
