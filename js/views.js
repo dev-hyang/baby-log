@@ -14,6 +14,7 @@ import { SB, joinNoticeHTML, lapsed, loadTombs, memberName, memberNames } from "
 import { syncHTML } from "./backup.js";
 import { aiIcon, viewAsk } from "./ask.js";
 import { VT_KEYS, vitalsHTML } from "./vitals.js";
+import { wakeAdvice } from "./sleep-advice.js";
 import { moreHTML, pagerNav, shownOf } from "./pager.js";
 import { viewTrend } from "./trend.js";
 import { TYPES, flags, isVisit, summary, typeLabel } from "./types.js";
@@ -173,6 +174,11 @@ function renderPass(){
   if (S.tab === "log") { const s = $("#q"); if (s && document.activeElement !== s && S.logFocus) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); S.logFocus = false; } }
 }
 
+// 睡眠卡：要不要叫醒（js/sleep-advice.js，和家庭学堂同一份）；到点了用亮色小标签
+function wakeLine(sl){
+  const fd = last(e => e.type === "feed" && e.method !== "吸奶"), a = wakeAdvice({ start: sl.ts, months: ageMonths(S.childId, sl.ts), nap: sl.nap, lastFeed: fd ? fd.ts : null }, t);
+  return `<div class="wk-adv lv-${a.level}">${a.level === "ok" ? "" : `<span aria-hidden="true">⏰</span> `}${esc(a.text)}</div>`;
+}
 function heroHTML(){
   const sl = last(e => e.type === "sleep" && !e.end);
   // 睡着时：睡眠计时排第一张（刚点「开始睡」时翻到它），其他计时卡和音乐卡照样能左右滑到；白噪音在睡眠卡里只占一行（js/music.js）
@@ -180,6 +186,7 @@ function heroHTML(){
     <div class="lbl">${t("宝宝已经睡了")}</div>
     <div class="big num">${bigDur(Date.now() - sl.ts)}</div>
     <div class="meta"><span>${t("{time} 入睡", { time: hm(sl.ts) })}</span>${sl.where ? `<span>${esc(t(sl.where))}</span>` : ""}</div>
+    ${wakeLine(sl)}
     <div class="act"><button data-act="wake" data-id="${sl.id}" ${clone ? 'tabindex="-1"' : ""}>${t("醒了，记录结束")}</button></div>
     ${clone ? "" : musicMiniHTML()}</section>`;
   if (sl && S.heroSleepId !== sl.id) { S.heroSleepId = sl.id; S.heroIdx = 0; }   // 新的一觉：从睡眠卡开始

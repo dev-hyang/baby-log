@@ -744,7 +744,7 @@ details.more summary .small{font-weight:400}
 .herodash.is-run i{width:0;animation:herprog 10s linear forwards}
 .herodashes.is-off .herodash.is-run i{animation:none;width:100%}
 @keyframes herprog{from{width:0}to{width:100%}}
-.herobox.is-hold .herodash.is-run i,.herobox:has(:focus-visible) .herodash.is-run i,.herobox:has(.herogear[open]) .herodash.is-run i{animation-play-state:paused}
+.herobox.is-hold .herodash.is-run i,.herobox:has(:focus-visible) .herodash.is-run i,.herobox:has(select:focus) .herodash.is-run i,.herobox:has(.herogear[open]) .herodash.is-run i{animation-play-state:paused}
 @media (hover:hover) and (pointer:fine){.heroview:hover ~ .heroctrl .herodash.is-run i{animation-play-state:paused}}
 @media (prefers-reduced-motion:reduce){.herodash.is-run i{animation:none;width:100%}}
 .herodash:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:4px}
@@ -915,3 +915,16 @@ textarea[data-autosize]{resize:none;transition:height .08s ease-out}
 /* 孩子页的性别下拉：和小名、生日输入框同一个样子；手机上单独一行，宽一点三个并排 */
 .softform .kidrow select{box-sizing:border-box;width:100%;min-width:0;min-height:48px;padding:11px 18px;font-size:16px;border:1.5px solid var(--line);border-radius:24px;background:var(--bg);grid-column:1 / -1}
 @media (min-width:640px){.kidrow{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,.9fr)}.softform .kidrow select{grid-column:auto}}
+/* ── 11-14 音乐卡：宝宝声音一排小图标（不再用下拉框），歌只写歌名；睡眠卡「要不要叫醒」 ── */
+.bm-sel .bm-sounds{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.bm-sel .bm-sounds::-webkit-scrollbar{display:none}
+.bm-sel .bm-snd{flex:1 1 0;flex-direction:row;justify-content:center;gap:4px;min-width:0;min-height:36px;padding:4px 8px;border-radius:999px}
+.bm-sel .bm-snd > span:first-child{font-size:15px}
+.bm-sel .bm-snd-n{font-size:12px}
+.bm-sel{container-type:inline-size}
+.bm-sel .bm-sounds + .bm-sub{margin-top:4px}
+@container (max-width:460px){.bm-sel .bm-snd{flex:0 0 auto;width:48px;padding:4px 0}.bm-sel .bm-snd-n{display:none}.bm-sel .bm-sounds{justify-content:space-between}}
+.bm-sel .bm-title{font-size:16px;font-weight:700;line-height:1.35;min-height:22px}
+.hero .wk-adv{margin-top:8px;font-size:13.5px;line-height:1.4;opacity:.85}
+.hero .wk-adv.lv-soon{opacity:1;display:inline-block;padding:3px 12px;border-radius:999px;border:1px solid rgba(255,245,209,.55)}
+.hero .wk-adv.lv-wake{opacity:1;display:inline-block;padding:4px 12px;border-radius:999px;background:#FFF5D1;color:#1D2733;font-weight:700}

@@ -1665,7 +1665,8 @@ export default {
 "照片和文字会发给你自己设置的 AI 服务商来读取（提示里要求它不要读姓名、生日、地址）；小月亮不保存照片。继续吗？": "Photos and text are sent to the AI provider you set up (it's told not to read names, birthdays or addresses); Little Moon doesn't store the photos. Continue?",
 "没读出内容，换一张清楚点的照片或多写几句试试": "Couldn't read anything. Try a clearer photo or a few more words.",
 "下次：{s}": "Next: {s}",
-"读出来了，请核对": "Done. Please check it",
+"读出来了，请核对": "Done. Please check it",
+
   "{age}：低于约 {s}/{d} mmHg 一般属正常（虚线，AAP 2017 简化筛查表）；到了或超过不等于高血压，请医生按身高百分位查表判断。": "{age}: below about {s}/{d} mmHg is usually normal (dashed lines, AAP 2017 simplified screening table). At or above it is not a diagnosis; a doctor checks the full table by height percentile.",
   "{age}安静时心率常见范围 {lo}–{hi} 次/分（浅绿带，AHA PALS）；发热、哭闹、运动时会更快。": "At {age}, a resting heart rate is usually {lo}–{hi} bpm (green band, AHA PALS); it runs faster with fever, crying or exercise.",
   "{n} 个月": "{n} months",
@@ -1753,4 +1754,13 @@ export default {
 "附件里的文字": "Text from the attachments",
 "（附了 {n} 张照片 / 文件，请一起看）": "({n} photos / files attached; please look at them too)",
 "看看这些照片 / 文件，告诉我要注意什么、可以怎么做。": "Look at these photos / files and tell me what to watch for and what I can do.",
+  "新生儿已经 {d} 没吃奶了，建议叫醒喂一次": "No feed for {d}: newborns should be woken to feed",
+  "新生儿：最晚 {time} 叫醒喂奶": "Newborn: wake to feed by {time}",
+  "已经睡够 {d}，早上可以叫醒，作息更稳": "Slept {d}, enough for the night: fine to wake now and keep the rhythm",
+  "夜里的觉，不用叫醒": "Night sleep: no need to wake",
+  "快傍晚了，再睡会推迟晚上入睡，可以叫醒了": "Getting late in the day: a longer nap pushes bedtime back, time to wake",
+  "白天一觉建议不超过 {d}，可以叫醒了": "Daytime naps are best kept under {d}: time to wake",
+  "小睡：建议 {time} 前叫醒": "Nap: wake by {time}",
+  "{h} 小时 {m} 分": "{h} h {m} min",
+  "{h} 小时": "{h} h",
 };

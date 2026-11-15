@@ -169,16 +169,17 @@ function repaint(){
 }
 
 /** 整张音乐卡（clone = 循环轨道里的副本）：和家庭学堂音乐卡同一种排法——
- *  第一行：🎶 + 「宝宝声音 / 学堂的歌」+ 定时；第二行：一个明显的下拉框（选声音 / 选歌）+ 一行小字；歌有进度条；最后一行控件 + 音量。 */
+ *  第一行：🎶 + 「宝宝声音 / 学堂的歌」+ 定时；第二行：宝宝声音是一排小图标按钮，歌只写歌名（换歌用上一首 / 下一首）+ 一行小字；歌有进度条；最后一行控件 + 音量。 */
 export function musicSlideInner(clone = false){
   if (SB.family && !M.songsAt) loadSongs();
   const src = srcNow(), song = src === "song", s = song ? M.songs[M.i] : null, snd = soundOf(M.sound), live = M.audio && M.kind === src;
   const a = live && song ? M.audio : null, pos = a && a.duration ? (a.currentTime / a.duration) * 100 : 0;
   const seg = `<div class="bm-seg" role="group" aria-label="${esc(t("声音来源"))}"><button type="button" data-bm="src-sound" aria-pressed="${!song}">${t("宝宝声音")}</button><button type="button" data-bm="src-song" aria-pressed="${song}">${t("学堂的歌")}</button></div>`;
+  // 歌：只写歌名（不放下拉框），换歌用下面的 上一首 / 下一首；宝宝声音：一排小图标按钮，点哪个放哪个
   const pick = song
-    ? (M.songs.length ? `<select class="bm-pick" data-bmsong aria-label="${esc(t("选歌"))}">${M.songs.map((x, i) => `<option value="${i}" ${i === M.i ? "selected" : ""}>${esc(x.title)}</option>`).join("")}</select>`
+    ? (M.songs.length ? `<div class="bm-title" title="${esc(s?.title || "")}">${esc(s?.title || "")}</div>`
       : `<div class="bm-empty">${SB.family ? t("在家庭学堂「资源 → 音乐 → 全部歌曲」里上传 MP3，这里就能放") : t("登录家庭后，能放家庭学堂里上传的歌")}</div>`)
-    : `<select class="bm-pick" data-bmsound aria-label="${esc(t("选声音"))}">${SOUNDS.map(([k, n, ic]) => `<option value="${k}" ${M.sound === k ? "selected" : ""}>${ic} ${esc(t(n))}</option>`).join("")}</select>`;
+    : `<div class="bm-sounds" role="group" aria-label="${esc(t("选声音"))}">${SOUNDS.map(([k, n, ic]) => `<button type="button" class="bm-snd" data-bm="sound:${k}" aria-pressed="${M.sound === k}" title="${esc(t(n))}"><span aria-hidden="true">${ic}</span><span class="bm-snd-n">${esc(t(n))}</span></button>`).join("")}</div>`;
   const sub = song
     ? (M.songs.length ? `${s?.artist ? `${esc(s.artist)} · ` : ""}${M.i + 1} / ${M.songs.length}` : "")
     : (live && M.playing ? t("循环播放中，直到暂停或定时关；关屏也继续") : t("会一直循环播放；手机现场合成，离线也能放"));
@@ -248,6 +249,5 @@ document.addEventListener("change", (e) => {
   const el = e.target;
   if (el.classList?.contains("bm-bar")) { el._drag = false; if (M.audio?.duration) M.audio.currentTime = (+el.value / 100) * M.audio.duration; }
   else if (el.dataset?.bmtimer !== undefined) { setTimer(+el.value); toast(+el.value ? t("{n} 分钟后自动停（最后 10 秒慢慢变小）", { n: +el.value }) : t("已取消定时")); }
-  else if (el.dataset?.bmsong !== undefined) playSong(+el.value);
   else if (el.dataset?.bmsound !== undefined) { if (M.audio && M.kind === "sound" && M.playing) playSound(el.value); else pickSound(el.value); }
 });
