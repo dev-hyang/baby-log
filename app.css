@@ -912,3 +912,6 @@ textarea[data-autosize]{resize:none;transition:height .08s ease-out}
 /* 手机上数据表去掉「来源」一列，不出横向滚动 */
 @media (max-width:560px){.vt-src{display:none}.vt-tbl th,.vt-tbl td{padding:6px 6px}}
 .vt-grid .vt-card.panel{margin:0}
+/* 孩子页的性别下拉：和小名、生日输入框同一个样子；手机上单独一行，宽一点三个并排 */
+.softform .kidrow select{box-sizing:border-box;width:100%;min-width:0;min-height:48px;padding:11px 18px;font-size:16px;border:1.5px solid var(--line);border-radius:24px;background:var(--bg);grid-column:1 / -1}
+@media (min-width:640px){.kidrow{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,.9fr)}.softform .kidrow select{grid-column:auto}}

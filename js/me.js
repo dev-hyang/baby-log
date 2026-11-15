@@ -85,10 +85,11 @@ function membersPageHTML(){
 function kidsPageHTML(){
   const st = S.settings;
   return `<div class="softform"><h2>${t("孩子")}</h2>
-  <div class="panel"><div class="lab">${t("孩子（小名 · 出生日期）")}</div>
+  <div class="panel"><div class="lab">${t("孩子（小名 · 出生日期 · 性别）")}</div>
     <div id="kidRows">${st.children.map((c, i) => c.archived ? "" : `<div class="kidcard">
       <div class="kidhead"><span class="small muted">${t("第{n}个孩子", { n: i + 1 })}${c.birth ? ` · ${esc(ageText(c.id))}` : ""}</span>${activeKids().length > 1 ? `<button class="chip" data-act="archivekid" data-i="${i}" aria-label="${t("归档{name}", { name: esc(c.name || t("这个孩子")) })}">${t("归档")}</button>` : ""}</div>
-      <div class="kidrow"><input type="text" aria-label="${t("第{n}个孩子的小名", { n: i + 1 })}" data-kr="${i}" data-kk="name" value="${esc(c.name)}" placeholder="${t("小名")}"><input type="date" aria-label="${t("第{n}个孩子的出生日期", { n: i + 1 })}" data-kr="${i}" data-kk="birth" value="${esc(c.birth)}"></div></div>`).join("")}</div>
+      <div class="kidrow"><input type="text" aria-label="${t("第{n}个孩子的小名", { n: i + 1 })}" data-kr="${i}" data-kk="name" value="${esc(c.name)}" placeholder="${t("小名")}"><input type="date" aria-label="${t("第{n}个孩子的出生日期", { n: i + 1 })}" data-kr="${i}" data-kk="birth" value="${esc(c.birth)}">
+        <select aria-label="${t("第{n}个孩子的性别", { n: i + 1 })}" data-kr="${i}" data-kk="sex"><option value="">${t("性别（可不填）")}</option><option value="m" ${c.sex === "m" ? "selected" : ""}>${t("男孩")}</option><option value="f" ${c.sex === "f" ? "selected" : ""}>${t("女孩")}</option></select></div></div>`).join("")}</div>
     <button class="chip" data-act="addkid">${t("＋ 添加孩子")}</button>
     ${archivedKidsHTML()}
     <p class="small muted" style="margin-top:6px">${t("每个孩子的记录分开保存，点页面顶部的名字可以切换。妈妈的记录属于整个家庭，不随孩子切换。")}</p>

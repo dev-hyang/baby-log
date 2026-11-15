@@ -30,7 +30,7 @@ const isKidType = t => !MOM_TYPES.has(t);
 const HERO_KEYS = ["feed", "diaper", "potty", "meal", "companion", "outdoor", "wake", "routine"]; // see CLOCKS in stages.js
 function normalizeSettings(){
   const st = S.settings;
-  st.children = (Array.isArray(st.children) ? st.children : []).filter(c => c && typeof c.id === "string").map(c => ({ id: c.id, name: c.name || "", birth: c.birth || "", ...(c.archived ? { archived: true } : {}) }));
+  st.children = (Array.isArray(st.children) ? st.children : []).filter(c => c && typeof c.id === "string").map(c => ({ id: c.id, name: c.name || "", birth: c.birth || "", ...(c.sex === "m" || c.sex === "f" ? { sex: c.sex } : {}), ...(c.archived ? { archived: true } : {}) }));   // sex：男孩 m / 女孩 f，基本体征的血压参考线按它选
   if (!st.children.length) { const id = newId(); st.children.push({ id, name: st.babyName || "", birth: st.birth || "" }); st.legacyChild = id; }
   if (!st.legacyChild || !st.children.some(c => c.id === st.legacyChild)) st.legacyChild = st.children[0].id;
   // archived children keep their id and records but leave every picker; at least one child must stay active
@@ -194,6 +194,6 @@ function textToRoutine(txt){
   return gs;
 }
 
-const APP_VERSION = "2026-11-14.3";
+const APP_VERSION = "2026-11-14.4";
 
 export { goesToSchool, cleanRoutine, groupTone, faithOn, FAITH_STEPS, ROUTINE_TPL, routineGroups, routineSteps, routineToText, textToRoutine, LS_KEY, S, activeKids, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, inVisPass, withVisPass, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, matchCheckup, nextCheckup, APP_VERSION };

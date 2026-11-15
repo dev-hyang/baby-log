@@ -2,6 +2,10 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-14.4", title: { zh: "孩子可以设男孩 / 女孩", en: "Set each child as a boy or girl" }, items: [
+    { k: "new", zh: "我的 → 孩子：每个孩子多了「性别」，可不填", en: "Me → Children: each child has an optional sex setting" },
+    { k: "better", zh: "基本体征的血压参考线按男孩 / 女孩分开；没填时按较低的那条提醒", en: "Blood pressure reference lines follow the child's sex; without it, the lower line is used" }
+  ] },
   { v: "2026-11-14.3", title: { zh: "基本体征：对照同龄正常范围，随时问 AI", en: "Vital signs: normal ranges by age, ask AI anytime" }, items: [
     { k: "better", zh: "「体重 / 身高」改成「基本体征」，和家庭学堂一样：每项一张可收起的卡、按日期的走势线（带年份、百分位）、数据表", en: "\"Weight / height\" is now \"Vital signs\", same as Homeschool: foldable cards, dated trend lines with years and percentiles, data tables" },
     { k: "new", zh: "心率、血压图上标出这个年龄的正常范围，超出的点画成红圈；BMI 显示健康体重 / 超重等", en: "Pulse and blood pressure charts show the normal range for the child's age; points outside it are circled in red; BMI shows healthy / overweight etc." },

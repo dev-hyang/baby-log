@@ -504,7 +504,7 @@ function growSleep(){
 /* 基本体征：卡片、走势线、同龄正常范围、给 AI 的摘要都在 js/vitals.js（和家庭学堂同一份） */
 const VT_DIM = { weight: "wbaby", length: "len", head: "len" };
 export const vtCtx = () => ({ t, val: (dim, v) => toDisp(VT_DIM[dim], v), unit: dim => unitOf(VT_DIM[dim]), day: ts => dayKey(ts).replace(/-/g, "/"),
-  months: ts => ageMonths(S.childId, ts), sex: null, src: e => t(isVisit(e) ? e.src : "在家量") });
+  months: ts => ageMonths(S.childId, ts), sex: (child(S.childId) || {}).sex || null, src: e => t(isVisit(e) ? e.src : "在家量") });
 function growBody(){
   const health = vis().filter(e => e.type === "baby"), newborn = stageOf().key === "newborn";
   return `<div class="btns" style="margin-top:0"><button class="btn primary" data-add="baby">＋ ${t("体重 / 身高")}</button><button class="btn" data-ix="open" data-src="儿科体检">✦ ${t("AI 录入体检")}</button><button class="btn" data-act="ask-vitals">✦ ${t("问 AI 这些体征")}</button></div>
