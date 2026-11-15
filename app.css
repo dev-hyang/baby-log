@@ -873,3 +873,42 @@ textarea[data-autosize]{resize:none;transition:height .08s ease-out}
 /* AI 一次录入：文字框和下面的按钮之间留出距离 */
 .ix-read .att + .btns{margin-top:14px !important}
 .ask-att{margin-top:10px}
+
+/* ============ 基本体征（js/vitals.js，和家庭学堂同一套样式；改了请同步） ============ */
+.tline{margin:0}
+.tline svg{width:100%;height:auto;display:block}
+.tline .ch-tick{font-size:9px;fill:var(--muted)}
+.tline .ch-val{font-size:10px;font-weight:600;fill:var(--ink)}
+.vt-card > summary,.vt-tbl > summary{color:var(--ink)}
+/* 基本体征：每项一张可展开 / 收起的卡（卡头是最近一次的数），里面是时间走势线 + 默认收起的数据表；电脑上两列 */
+.vt-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-items:start;margin:4px 0 0}
+@media (min-width:900px){.vt-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.vt-card{padding:0;margin:0;border-left:4px solid var(--c,var(--line))}
+.vt-card > summary{position:relative;cursor:pointer;list-style:none;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;min-height:44px;padding:12px 38px 12px 14px;box-sizing:border-box}
+.vt-card > summary::-webkit-details-marker,.vt-tbl > summary::-webkit-details-marker{display:none}
+.vt-card > summary::after{content:"▸";position:absolute;right:16px;top:14px;color:var(--muted);transition:transform .15s}
+.vt-card[open] > summary::after{transform:rotate(90deg)}
+.vt-card > summary b{font-size:15px}
+.vt-v{font-size:18px;font-weight:700}
+.vt-body{padding:0 14px 12px}
+.vt-body .lib-chart{margin:0 0 4px}
+.vt-tbl{border-top:1px solid var(--line);margin-top:6px}
+.vt-tbl > summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;min-height:44px;font-size:14px}
+.vt-tbl > summary::before{content:"▸";color:var(--muted);transition:transform .15s}
+.vt-tbl[open] > summary::before{transform:rotate(90deg)}
+.vt-tbl table{font-size:14px}
+.vt-tbl th,.vt-tbl td{padding:6px 8px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--line)}
+.vt-tbl th{font-weight:600;color:var(--muted)}
+/* 手机上图缩得比较小：刻度和百分位字放大，缩完还在 11px 左右 */
+@media (max-width:640px){.tline .ch-tick{font-size:11.5px}.tline .ch-val{font-size:11.5px}}
+/* 基本体征：在不在正常范围的小标签、参考范围一行、页脚 */
+.vt-flag{display:inline-block;font-size:12px;font-weight:600;line-height:1.4;padding:1px 8px;border-radius:999px;white-space:nowrap;vertical-align:1px}
+.vt-flag.ok{background:color-mix(in srgb,var(--sage) 16%,transparent);color:var(--ink)}
+.vt-flag.bad{background:color-mix(in srgb,var(--rose) 18%,transparent);color:var(--ink)}
+.vt-ref{margin:2px 0 6px;line-height:1.5}
+.vt-foot{margin:8px 2px 0}
+
+.ask-extra{display:flex;align-items:center;gap:8px;margin:8px 0 0}
+/* 手机上数据表去掉「来源」一列，不出横向滚动 */
+@media (max-width:560px){.vt-src{display:none}.vt-tbl th,.vt-tbl td{padding:6px 6px}}
+.vt-grid .vt-card.panel{margin:0}

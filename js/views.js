@@ -9,10 +9,11 @@ import { LANGS, lang, langPref, t } from "./i18n.js";
 import { cardsHTML, faithPageHTML, familyHubHTML, heroCfgHTML, kidsPageHTML, medsPageHTML, membersPageHTML, prefsHTML, routineCfgHTML, viewMe } from "./me.js";
 import { dayNavHTML, viewMeal } from "./meal.js";
 import { activeCards, anomalyText, clockOf, doctorListHTML, heroAnomalies, heroKeys, milestoneRef, milestoneRefHTML, pottyMin, quickHTML, routineHTML, routineToday, stageCfg, stageTypes, statsHTML } from "./stages.js";
-import { APP_VERSION, CHECKUPS, S, activeKids, withVisPass, childName, goesToSchool, STAGES, routineSteps, isKidType, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
+import { APP_VERSION, CHECKUPS, S, ageMonths, activeKids, withVisPass, childName, goesToSchool, STAGES, routineSteps, isKidType, ageAtText, ageText, babyAgeDays, birthTs, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, child, childOf, matchCheckup, nextCheckup, stageOf, vis } from "./state.js";
 import { SB, joinNoticeHTML, lapsed, loadTombs, memberName, memberNames } from "./sync.js";
 import { syncHTML } from "./backup.js";
 import { aiIcon, viewAsk } from "./ask.js";
+import { VT_KEYS, vitalsHTML } from "./vitals.js";
 import { moreHTML, pagerNav, shownOf } from "./pager.js";
 import { viewTrend } from "./trend.js";
 import { TYPES, flags, isVisit, summary, typeLabel } from "./types.js";
@@ -82,7 +83,7 @@ const TAB_LABEL = { today: "今天", me: "我的", grow: "成长", mom: "妈妈"
 // titles of the sub-pages, for the breadcrumb path
 const PAGE_LABEL = { family: "家庭", "family-members": "家庭协作", "family-kids": "孩子", "family-meds": "妈妈用药间隔", "family-faith": "信仰（可选）", sync: "同步、备份与恢复", prefs: "语言、单位和显示", settings: "家庭",
   cards: "卡片", herocfg: "顶部大计时", routinecfg: "习惯清单", learn: "问答", about: "介绍", releases: "发布日志", ask: "咩咩咩",
-  "grow-milestones": "发育里程碑", "grow-foods": "新食物与反应", "grow-sleep": "睡眠", "grow-body": "体重 / 身高", "grow-checkups": "儿科体检与就诊", "grow-vax": "疫苗接种记录", "mom-charts": "体重、疼痛与心情", "mom-signs": "需要立即就医的警示信号" };
+  "grow-milestones": "发育里程碑", "grow-foods": "新食物与反应", "grow-sleep": "睡眠", "grow-body": "基本体征", "grow-checkups": "儿科体检与就诊", "grow-vax": "疫苗接种记录", "mom-charts": "体重、疼痛与心情", "mom-signs": "需要立即就医的警示信号" };
 /* 「‹ 返回」= 回到你刚才来的那一页；直接打开或刷新后没有上一页时，退到上一层。面包屑负责按层级往上跳，两者分工（和 iOS / 安卓 / 网页的常见做法一致） */
 const NAV = { last: null, stack: [], back: false };
 function trackNav(tab){ if (NAV.last && NAV.last !== tab && !NAV.back) { NAV.stack.push(NAV.last); if (NAV.stack.length > 30) NAV.stack.shift(); } NAV.back = false; NAV.last = tab; }
@@ -441,7 +442,7 @@ function viewGrow(){
     ${mrow('data-tab="grow-milestones"', t("发育里程碑"), ms ? t("已记录 {n} 个 · 附 CDC 月龄参考", { n: ms }) : t("记下第一次翻身、第一次叫妈妈 · 附 CDC 月龄参考"), "⭐")}
     ${mrow('data-tab="grow-foods"', t("新食物与反应"), foods ? t("{n} 条新食物或反应记录", { n: foods }) : t("第一次尝试的食物和过敏反应"), "🥣")}
     ${mrow('data-tab="grow-sleep"', t("睡眠"), t("最近 7 天分布 · 各月龄睡眠参考"), "🌙")}
-    ${mrow('data-tab="grow-body"', t("体重 / 身高"), lastW ? t("最近 {w} · {date}", { w: fmtU("wbaby", lastW.weight), date: dayKey(lastW.ts) }) : t("体重、身高、头围曲线"), "📏")}
+    ${mrow('data-tab="grow-body"', t("基本体征"), lastW ? t("最近 {w} · {date}", { w: fmtU("wbaby", lastW.weight), date: dayKey(lastW.ts) }) : t("体重、身高、BMI、血压、心率"), "📏")}
     ${mrow('data-tab="grow-checkups"', t("儿科体检与就诊"), nc ? t("下次 {label} · {date}", { label: t(nc.label), date: dayKey(nc.at) }) : t("提醒与历史记录"), "🩺")}
     ${mrow('data-tab="grow-vax"', t("疫苗接种记录"), vax ? t("共 {n} 次", { n: vax }) : t("还没有接种记录"), "💉")}
   </div>`;
@@ -500,16 +501,16 @@ function growSleep(){
     </tbody></table>
     <p class="small muted" style="margin-top:8px">${t("总睡眠：4个月以上为美国睡眠医学会（AASM）建议、AAP 认可；0–3 个月为美国国家睡眠基金会建议。清醒时长是常见经验范围，个体差异很大。安全睡眠：仰睡、独自睡在婴儿床、床里不放枕头被子毛绒玩具。多数专家建议约 4–6 个月后再考虑睡眠训练。")}</p></div>`;
 }
+/* 基本体征：卡片、走势线、同龄正常范围、给 AI 的摘要都在 js/vitals.js（和家庭学堂同一份） */
+const VT_DIM = { weight: "wbaby", length: "len", head: "len" };
+export const vtCtx = () => ({ t, val: (dim, v) => toDisp(VT_DIM[dim], v), unit: dim => unitOf(VT_DIM[dim]), day: ts => dayKey(ts).replace(/-/g, "/"),
+  months: ts => ageMonths(S.childId, ts), sex: null, src: e => t(isVisit(e) ? e.src : "在家量") });
 function growBody(){
-  const health = vis().filter(e => e.type === "baby").sort((a, b) => a.ts - b.ts);
-  const w = health.filter(e => num(e.weight) != null).map(e => ({ t: e.ts, v: toDisp("wbaby", e.weight) }));
-  const len = health.filter(e => num(e.length) != null).map(e => ({ t: e.ts, v: toDisp("len", e.length) }));
-  const newborn = stageOf().key === "newborn";
-  return `<h2>${t("{label}（{u}）", { label: t("体重"), u: unitOf("wbaby") })}</h2><div class="panel">${lineChart(w, { color: "var(--sky)", unit: unitOf("wbaby"), label: t("宝宝体重") })}
-    <p class="small muted">${newborn ? t("新生儿出生后几天体重下降常见；通常约 10–14 天回到出生体重。") : ""}${t("是否正常请以儿科医生对照生长曲线的判断为准。")}</p>
-    ${len.length >= 2 ? `<h3 class="small muted" style="margin-top:10px">${t("{label}（{u}）", { label: t("身高 / 身长"), u: unitOf("len") })}</h3>${lineChart(len, { color: "var(--sage)", unit: unitOf("len"), label: t("身高") })}` : ""}
-    </div>
-  ${growRecords("body", vis().filter(e => e.type === "baby" && (num(e.weight) != null || num(e.length) != null || num(e.head) != null)), { subs: [["home", t("在家量的"), e => !isVisit(e)], ["clinic", t("体检 / 看病时量的"), e => isVisit(e)]], add: `<button class="btn" data-add="baby">＋ ${t("体重 / 身高")}</button>` })}`;
+  const health = vis().filter(e => e.type === "baby"), newborn = stageOf().key === "newborn";
+  return `<div class="btns" style="margin-top:0"><button class="btn primary" data-add="baby">＋ ${t("体重 / 身高")}</button><button class="btn" data-ix="open" data-src="儿科体检">✦ ${t("AI 录入体检")}</button><button class="btn" data-act="ask-vitals">✦ ${t("问 AI 这些体征")}</button></div>
+  ${newborn ? `<p class="small muted">${t("新生儿出生后几天体重下降常见；通常约 10–14 天回到出生体重。")}</p>` : ""}
+  ${vitalsHTML(health, vtCtx())}
+  ${growRecords("body", health.filter(e => VT_KEYS.some(k => num(e[k]) != null)), { subs: [["home", t("在家量的"), e => !isVisit(e)], ["clinic", t("体检 / 看病时量的"), e => isVisit(e)]], add: "" })}`;
 }
 function growCheckups(){
   const all = vis(), done = checkupsDone();

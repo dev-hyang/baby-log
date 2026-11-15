@@ -2,6 +2,11 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-14.3", title: { zh: "基本体征：对照同龄正常范围，随时问 AI", en: "Vital signs: normal ranges by age, ask AI anytime" }, items: [
+    { k: "better", zh: "「体重 / 身高」改成「基本体征」，和家庭学堂一样：每项一张可收起的卡、按日期的走势线（带年份、百分位）、数据表", en: "\"Weight / height\" is now \"Vital signs\", same as Homeschool: foldable cards, dated trend lines with years and percentiles, data tables" },
+    { k: "new", zh: "心率、血压图上标出这个年龄的正常范围，超出的点画成红圈；BMI 显示健康体重 / 超重等", en: "Pulse and blood pressure charts show the normal range for the child's age; points outside it are circled in red; BMI shows healthy / overweight etc." },
+    { k: "new", zh: "「问 AI 这些体征」：带上各项数和同龄参考范围，直接去咩咩咩问", en: "\"Ask AI about these\" opens the AI page with the numbers and age ranges attached" }
+  ] },
   { v: "2026-11-14.2", title: { zh: "体检单多读 BMI、血压、百分位；重扫不重复", en: "Checkups: BMI, blood pressure, percentiles; no repeats on re-scan" }, items: [
     { k: "new", zh: "两岁以后的体检单：AI 会一起读出 BMI、血压、心率和体重 / 身高 / BMI 的同龄百分位", en: "For checkups after age 2, AI also reads BMI, blood pressure, pulse and the age percentiles" },
     { k: "better", zh: "同一天的单子再扫一次，会更新原来那条记录、补上新的数，不会多记一条", en: "Re-scanning a sheet from the same day updates that record with the new numbers instead of adding another" },

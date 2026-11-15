@@ -8,9 +8,11 @@ import { PROVIDERS, aiReady, aiSettings, askText, providerOf, saveAiSettings, te
 import { answerLang, t } from "./i18n.js";
 import { S, ageMonths, ageText, babyAgeDays, childName, childOf, isKidType, stageOf, vis } from "./state.js";
 import { $, D, dayKey, esc, toast } from "./util.js";
-import { render } from "./views.js";
+import { render, vtCtx } from "./views.js";
+import { vitalsContext } from "./vitals.js";
 import { attachHTML, attachPayload } from "./attach.js";
 const ATT_ASK = "ask";
+const VT_Q = "看看孩子的这些体征（体重、身高、BMI、血压、心率）：和同龄正常范围比怎么样？走势有没有要注意的？平时可以怎么做？什么情况要去看医生？";
 
 /** 咩咩图标：一只白绒绒的小羊咩咩，额头上一枚珊瑚红的字母 Y（四个应用同一只；颜色固定，深浅色主题下都一样），随文字大小缩放 */
 const aiIcon = (size = 22) => `<svg class="ai-ico" width="${size}" height="${size}" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
@@ -38,7 +40,7 @@ const TOPICS = [
 // 没 key 时可直接打开的 AI 网页（手机上会拉起已装的 App）
 const SITES = [["ChatGPT", "https://chatgpt.com/"], ["DeepSeek", "https://chat.deepseek.com/"], ["Claude", "https://claude.ai/new"], ["豆包", "https://www.doubao.com/chat/"], ["通义千问", "https://www.tongyi.com/"], ["Kimi", "https://www.kimi.com/"], ["Gemini", "https://gemini.google.com/app"]];
 
-const A = { q: "", ctx: true, busy: false, answer: null, error: null, cfg: false, draft: null };
+const A = { q: "", ctx: true, busy: false, answer: null, error: null, cfg: false, draft: null, extra: "", extraName: "" };   // extra：从别的页带过来的一段摘要（比如基本体征）
 let ctl = null;
 
 /* ---- 记录摘要：最近 7 天的统计数字，按阶段挑相关的几块 ---- */
@@ -105,7 +107,7 @@ const SYSTEM = () => `你是一位谨慎、温和的儿童健康与育儿科普�
 控制在 300 字（英文 220 词）以内，分 2–4 个短段落，可以用 - 列表；不做诊断，不给具体药物剂量；
 若问题或记录涉及危险信号（3 个月内发热 ≥38℃、呼吸困难、嗜睡难叫醒、脱水、产后大出血、胸痛、伤害自己或宝宝的念头等），第一句就明确建议立即就医。
 最后一句提醒具体情况以医生意见为准。`;
-const userText = () => `${A.ctx ? contextText() + "\n\n" : ""}问题：${A.q}`;
+const userText = () => `${A.ctx ? contextText() + "\n\n" : ""}${A.extra ? `${A.extraName}：\n${A.extra}\n\n` : ""}问题：${A.q}`;
 const promptText = () => `${SYSTEM()}\n\n${userText()}`;
 
 /** 回答做最简渲染：转义后按行分段，- / 1. 开头的行做成列表，**粗体** */
@@ -145,6 +147,7 @@ function viewAsk(){
   <div class="panel ask">
     <textarea id="askq" data-autosize rows="3" maxlength="1000" placeholder="${t("例如：夜里醒好几次正常吗？什么时候可以开始加辅食？")}">${esc(A.q)}</textarea>
     <div class="ask-att">${attachHTML(ATT_ASK, { t, esc, noText: true, hint: t("可以拍几张照片或选文件一起问（体检单、作业、孩子的画、药盒说明、冰箱里的菜…），也能选 PDF。照片不保存。") })}</div>
+    ${A.extra ? `<p class="ask-extra small"><span>📎 ${t("已附上：{name}", { name: esc(A.extraName) })}</span><button type="button" class="chip" data-act="ask-unextra" aria-label="${esc(t("不附这段摘要"))}">✕</button></p>` : ""}
     <label class="chk"><input type="checkbox" id="askctx" ${A.ctx ? "checked" : ""}> <span class="small">${t("附带最近 7 天的记录摘要（只有统计数字，不含备注和姓名）")}</span></label>
     <div class="btns">${ready ? `<button class="btn primary" data-act="ask-send" ${A.busy ? "disabled" : ""}>${A.busy ? t("思考中…") : t("发送")}</button>` : ""}
       <button class="btn ${ready ? "" : "primary"}" data-act="ask-copy">${t("复制提示词")}</button>
@@ -155,7 +158,7 @@ function viewAsk(){
   ${ready ? "" : `<div class="panel"><p class="small muted" style="margin:0 0 8px">${t("复制后打开任一 AI 粘贴（手机上会直接打开已装的 App）：")}</p><div class="ai-sites">${SITES.map(([n, u]) => `<a class="chip" href="${u}" target="_blank" rel="noopener noreferrer">${esc(t(n))}</a>`).join("")}</div></div>`}
   ${A.answer ? `<div class="panel ai-answer"><div class="ai-head">${aiIcon(20)} <b>${t("咩咩的回答")}</b><button class="chip" data-act="ask-copy-answer">${t("复制")}</button></div>${renderAnswer(A.answer)}
     <p class="small muted" style="margin:8px 0 0">${t("回答由 AI 生成，只作一般信息参考，不能代替医生诊断。")}</p></div>` : ""}
-  <details class="more"><summary>${t("会发送什么")}<span class="small muted">${t("记录摘要原文")}</span></summary><div class="panel"><pre class="ai-ctx">${esc(contextText())}</pre></div></details>`;
+  <details class="more"><summary>${t("会发送什么")}<span class="small muted">${t("记录摘要原文")}</span></summary><div class="panel"><pre class="ai-ctx">${esc(contextText())}${A.extra ? `\n\n${esc(A.extraName)}：\n${esc(A.extra)}` : ""}</pre></div></details>`;
 }
 
 /* ---- 事件（events.js 把 data-act 以 ask- 开头的都交到这里） ---- */
@@ -180,6 +183,10 @@ async function askAct(act, el){
       finally { A.busy = false; render(); }
       break; }
     case "ask-copy": if (!A.q) { A.error = t("先写一句要问的"); render(); break; } await copy(promptText(), t("提示词已复制，打开任一 AI 粘贴即可")); break;
+    case "ask-vitals":   // 成长 → 基本体征 →「问 AI 这些体征」：带上体征摘要和同龄参考范围
+      Object.assign(A, { q: t(VT_Q), extra: vitalsContext(vis().filter(e => e.type === "baby"), vtCtx()), extraName: t("基本体征摘要"), answer: null, error: null, topic: null });
+      S.tab = "ask"; render(); window.scrollTo(0, 0); break;
+    case "ask-unextra": A.extra = ""; A.extraName = ""; render(); break;
     case "ask-copy-answer": if (A.answer) await copy(A.answer, t("已复制")); break;
     case "ask-cfg": { A.cfg = !A.cfg; if (A.cfg && !A.draft) { const s = aiSettings(); A.draft = { provider: s.provider, key: s.borrowed ? "" : s.key || "", model: s.model || "", base: s.base || "" }; } render(); break; }
     case "ask-prov": if (A.draft) { A.draft.provider = el.dataset.v; render(); } break;
