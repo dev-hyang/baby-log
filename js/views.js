@@ -98,8 +98,38 @@ function crumbHTML(tab, cls = ""){
   return `<nav class="crumb ${cls}" aria-label="${t("位置")}">${backBtn(chain[chain.length - 2])}${chain.map((key, i) => { const label = t(i === 0 ? TAB_LABEL[key] || key : PAGE_LABEL[key] || key);
     return i === chain.length - 1 ? `<b aria-current="page">${label}</b>` : `<button type="button" data-tab="${key}">${label}</button>`; }).join(`<span class="sep">/</span>`)}</nav>`;
 }
+/* 网址记住当前页（#/grow-body、#/log/trend、#/grow-checkups/history）：刷新、收藏后还停在这一页。四个姊妹应用同一套做法。
+   只用 replaceState，不往浏览器历史里加条目（返回仍由「‹ 返回」/ 面包屑管）。登录回跳时 # 后面是 Supabase 的令牌，那时不动。 */
+const ROUTE_TABS = new Set(["today", "log", "grow", "mom", "me", ...Object.keys(SUB)]);
+function readRoute(hash = location.hash){
+  const m = /^#\/([\w-]+)(?:\/([\w-]+))?$/.exec(hash);
+  return m && ROUTE_TABS.has(m[1]) ? { tab: m[1], sub: m[2] || "" } : null;
+}
+function routeOf(){
+  if (S.tab === "log" && S.logView !== "meal") return "#/log/" + S.logView;
+  if (S.tab === "grow-checkups" && S.checkupView === "history") return "#/grow-checkups/history";
+  return S.tab === "today" ? "" : "#/" + S.tab;
+}
+let routeHash = null;   // 上一次写进 / 读出网址的 #；网址里的 # 和它不一样 = 外面改的（手动输入、收藏、浏览器后退），以网址为准
+function restoreRoute(){
+  routeHash = location.hash; const r = readRoute(); if (!r) return false;
+  S.tab = r.tab;
+  if (r.tab === "log") S.logView = ["trend", "list"].includes(r.sub) ? r.sub : "meal";
+  if (r.tab === "grow-checkups") S.checkupView = r.sub === "history" ? "history" : "plan";
+  return true;
+}
+function syncRoute(){
+  // 表单开着时，最上面那条历史是它自己压的，关掉时会 history.back()：这时不写，等退回去以后那次重画再写
+  const hs = history.state;
+  if ((hs && hs.sheet) || (location.hash.includes("=") && !location.hash.startsWith("#/"))) return;
+  const h = routeOf();
+  if (location.hash !== h) try { history.replaceState(history.state, "", location.pathname + location.search + h); } catch (e) {}
+  routeHash = location.hash;
+}
+function adoptRoute(){ if (routeHash === null || location.hash === routeHash || !readRoute()) return false; restoreRoute(); return true; }
+window.addEventListener("hashchange", () => { if (adoptRoute()) { render(); window.scrollTo(0, 0); } });
 // the whole render is one vis() pass: the visible records are filtered once, however many cards and lists ask for them
-function render(){ withVisPass(renderPass); }
+function render(){ if (adoptRoute()) window.scrollTo(0, 0); withVisPass(renderPass); syncRoute(); }
 /* ---- 后台重画（定时同步、实时推送、云端载入完成、备份列表读完…）保住还没保存的输入 ----
    render() 用 innerHTML 整页重建 #main，表单会按已保存的数据重画，正在填的内容就没了。后台路径改调 renderBg()：
    重画前记下 #main 里每个改过的输入（value≠defaultValue、checked≠defaultChecked、下拉选项≠defaultSelected）、
@@ -601,4 +631,4 @@ function viewLearn(){
     ${["丁香妈妈", "崔玉涛育学园", "年糕妈妈"].map(n => `<div class="medrow"><span>${n}</span><button class="chip" data-copy="${n}">${t("复制名称")}</button></div>`).join("")}</div>`;
 }
 
-export { backTo, heroSettle, heroPage, renderStatus, render, renderBg, toggleKids, mrow, SUB, heroHTML, heroRestore, bigDur, viewToday, medRow, entryRow, viewLog, viewList, lineChart, sleepBarcode, viewMom, viewGrow, milestonesHTML, foodsHTML, vaxHTML, viewLearn };
+export { restoreRoute, backTo, heroSettle, heroPage, renderStatus, render, renderBg, toggleKids, mrow, SUB, heroHTML, heroRestore, bigDur, viewToday, medRow, entryRow, viewLog, viewList, lineChart, sleepBarcode, viewMom, viewGrow, milestonesHTML, foodsHTML, vaxHTML, viewLearn };

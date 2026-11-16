@@ -2,6 +2,9 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-16.1", title: { zh: "刷新后还停在原来那一页", en: "Refresh keeps you on the same page" }, items: [
+    { k: "better", zh: "比如在 成长 → 基本体征 或 记录 → 趋势对比 刷新，还是回到那里，不再跳回今天", en: "Refreshing on, say, Growth → Vital signs or Log → Trends brings you back there instead of Today" }
+  ] },
   { v: "2026-11-15.3", title: { zh: "体检与就诊：每条都能让 AI 解读", en: "Checkups and visits: AI explanation for each" }, items: [
     { k: "new", zh: "成长 → 儿科体检与就诊，每条下面有「✦ AI 解读」：这次结果说明、医生建议是什么意思怎么做、后续注意、下次可以问医生的问题", en: "Growth → Checkups and visits: each record has \"✦ AI explanation\": what the results show, what the doctor's advice means, what to watch next, questions for next time" },
     { k: "better", zh: "解读先给你看，选「保留」才存下来；保留的收在这条记录下面，可以重新分析或清除。和家庭学堂通用", en: "You see it first and choose Keep to save it; kept ones sit under the record and can be redone or cleared. Shared with Homeschool" }

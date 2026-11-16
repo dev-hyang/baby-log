@@ -13,11 +13,12 @@ import { initCloud } from "./store.js";
 import { initProviders, runScheduled } from "./backup.js";
 import { initSupabase, syncNow } from "./sync.js";
 import { $ } from "./util.js";
-import { heroHTML, heroPage, heroRestore, heroSettle, render } from "./views.js";
+import { heroHTML, heroPage, heroRestore, heroSettle, render, restoreRoute } from "./views.js";
 
 applyLang(); loadLocal();
 // 发布日志（js/releases-ui.js，四个姊妹应用同一份）：记新版本提示出现了几次；在首屏 render 之前，今天页才能带上提示
 initReleases({ version: APP_VERSION, releases: RELEASES, lang, accent: "var(--slate)", appId: "baby-log", open: 'data-tab="releases"' });
+restoreRoute();   // 网址里记着的页（#/grow-body）：刷新后还停在这一页（js/views.js）
 render();
 initProviders();   // 从 Dropbox 授权页跳回来时把 ?code= 换成令牌（js/backup.js）
 // 每 30 秒刷新顶部计时卡（只换 .herobox）；正在用音乐卡的下拉框 / 滑块，或 ⚙ 菜单开着时这一轮先不换
