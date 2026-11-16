@@ -74,6 +74,22 @@ test("hospital and doctor are two fields; old records with one combined field st
   assert.equal(placeText({ clinic: "协和医院 王医生" }), "协和医院 王医生"); assert.equal(placeText({ doctor: " Dr. Lee " }), "Dr. Lee"); assert.equal(placeText({}), "");
 });
 
+test("tables: one row per date for measurements, every lab row with its range", () => {
+  const r = parseIntake(JSON.stringify({ rows: [
+    { date: "2024-06-14", kind: "checkup", vitals: { weight_kg: 14.1, length_cm: 96 } },
+    { date: "2025-06-11", vitals: { weight_lb: 35.3, bmi: 14.8, weight_pct: 60 } },
+    { date: "2025-06-11", vitals: { length_cm: 104 } },
+    { date: "sometime", vitals: { weight_kg: 12 } }, { date: "2023-01-01", vitals: {} }],
+    labs: [{ date: "2026-10-20", name: "Hemoglobin", value: "11.8", unit: "g/dL", ref_low: 11.5, ref_high: "15.5" }, { name: "Lead", value: "<3.3", unit: "ug/dL", ref_high: 3.5 }, { name: "Note only", value: "normal" }] }));
+  assert.equal(r.rows.length, 2);
+  assert.deepEqual([r.rows[0].day, r.rows[0].src, r.rows[0].weight, r.rows[0].length], ["2024-06-14", "儿科体检", 14.1, 96]);
+  assert.deepEqual([r.rows[1].weight, r.rows[1].length, r.rows[1].bmi, r.rows[1].wpct], [16.012, 104, 14.8, 60]);
+  assert.equal(r.labs.length, 2);
+  assert.deepEqual(r.labs[0], { day: "2026-10-20", name: "Hemoglobin", value: 11.8, unit: "g/dL", lo: 11.5, hi: 15.5 });
+  assert.deepEqual([r.labs[1].day, r.labs[1].value, r.labs[1].lo, r.labs[1].hi], [null, 3.3, null, 3.5]);
+  assert.equal(r.weight, null);   // a history table does not invent "this visit"
+});
+
 test("normalizers", () => {
   assert.equal(vaxName("乙肝"), "乙肝疫苗 HepB"); assert.equal(vaxName("Hep B"), "乙肝疫苗 HepB"); assert.equal(vaxName("MMR"), "麻腮风 MMR");
   assert.equal(vaxName("Fluoride varnish"), "Fluoride varnish");   // not a vaccine: kept as written, never turned into a flu shot

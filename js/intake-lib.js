@@ -14,11 +14,15 @@ Return ONLY JSON with this shape (omit what is not there; never invent values):
 "next_visit":"YYYY-MM-DD or a phrase such as 'in 2 months', or null",
 "vaccines":[{"name":"vaccine as written, e.g. DTaP, HepB, MMR, 百白破","date":"YYYY-MM-DD the dose was given, or null","dose":1|2|3|4|5|"booster"|null,"site":"left thigh|right thigh|left arm|right arm|oral|null"}],
 "meds":[{"kind":"vitamin_d|iron|probiotic|medicine","name":"name","dose":"dose and how often as written"}],
-"milestones":[{"name":"a developmental milestone the doctor noted the child can do","area":"gross_motor|fine_motor|language|social|cognitive|self_care"}]}
+"milestones":[{"name":"a developmental milestone the doctor noted the child can do","area":"gross_motor|fine_motor|language|social|cognitive|self_care"}],
+"rows":[{"date":"YYYY-MM-DD","kind":"checkup|sick|null","vitals":{same keys as "vitals" above}}],
+"labs":[{"date":"YYYY-MM-DD|null","name":"test name as written, e.g. Hemoglobin, Lead, Ferritin","value":n,"unit":"unit as written","ref_low":n|null,"ref_high":n|null}]}
 Rules: "kind" is checkup for a well-child / routine visit, sick for an illness, injury or urgent visit. Weight given as "15 lb 4 oz" -> weight_lb 15 and weight_oz 4. Length = height.
 Blood pressure "98/60" -> bp_systolic 98, bp_diastolic 60; pulse = heart rate per minute. *_pct are the age percentiles printed next to a measurement ("75th", "P75", "75%", "75 百分位") -> 75; "<1st" -> 1, ">99th" -> 99. Only copy a percentile or BMI that is written; never compute one.
 Visit summary: list each vaccine given at THIS visit once, with that visit's date (combination shots such as Pediarix or Vaxelis: one entry with the product name).
 Vaccine record / immunization history / 接种本 (usually a table, often one row per vaccine with a date for each dose across the columns): list EVERY dose that has a date, one entry per date, with its own "date" and its dose number (column 1 = dose 1 unless labeled otherwise); for such a record leave the top-level "date" null unless it is clearly one visit.
+Tables with several dated measurements (growth chart table, vitals history, a list of past visits): put EACH dated row in "rows" (one entry per date) and leave the top-level "vitals" for this visit only (empty if the page is only a history table).
+Lab results (blood / urine tests, lead, hemoglobin, ferritin, vitamin D…): put EVERY test row in "labs" with its own value, unit and the printed reference range ("12.0-15.5" -> ref_low 12, ref_high 15.5; "<5" -> ref_high 5); numeric results only; the date is the collection / result date.
 Read dates carefully (MM/DD/YY in US records, YYYY.MM.DD or YYYY年M月D日 in Chinese ones). Do not list vaccines that are only due later or have no date given.
 Put the place in "clinic" and the person in "doctor"; never both in one field. Do not include the child's or family's names, dates of birth, addresses, phone numbers, insurance or ID numbers.`;
 
@@ -100,31 +104,54 @@ function extraParts(e){
   return p;
 }
 
-/** 模型返回 → { day, src, clinic, doctor, temp, weight, length, head, note, next, vaccines, meds, milestones }（公制：℃、kg、cm）；读不出 JSON 返回 null */
-function parseIntake(text){
-  let o; try { o = JSON.parse(String(text).replace(/^\s*```(json)?|```\s*$/g, "").trim()); } catch (e) { return null; }
-  if (!o || typeof o !== "object") return null;
-  const v = o.vitals && typeof o.vitals === "object" ? o.vitals : {};
+const okIn = (x, lo, hi) => (x != null && x >= lo && x <= hi ? x : null);   // 读错一位小数（比如 155 kg）就丢掉，让人自己填
+/** 模型的 vitals 对象 → 公制的体征 + BMI / 血压 / 心率 / 百分位（读不出的是 null） */
+function vitalsOf(v){
+  v = v && typeof v === "object" ? v : {};
   const lb = num(v.weight_lb), oz = num(v.weight_oz) || 0;
   const weight = num(v.weight_kg) ?? (lb != null || oz ? (lb || 0) / 2.2046226 + oz / 35.27396 : null);
   const length = num(v.length_cm) ?? (num(v.length_in) != null ? num(v.length_in) * 2.54 : null);
   const head = num(v.head_cm) ?? (num(v.head_in) != null ? num(v.head_in) * 2.54 : null);
   const temp = num(v.temp_c) ?? (num(v.temp_f) != null ? (num(v.temp_f) - 32) * 5 / 9 : null);
-  const ok = (x, lo, hi) => (x != null && x >= lo && x <= hi ? x : null);   // 读错一位小数（比如 155 kg）就丢掉，让人自己填
+  return { weight: r(okIn(weight, 0.5, 150), 3), length: r(okIn(length, 30, 220), 1), head: r(okIn(head, 25, 65), 1), temp: r(okIn(temp, 34, 43), 1),
+    ...Object.fromEntries(EXTRA.map(([k, src, lo, hi, d]) => [k, r(okIn(num(v[src]), lo, hi), d)])) };
+}
+const VKEYS = ["weight", "length", "head", "temp", ...EXTRA.map(x => x[0])];
+const srcOf = k => (k === "sick" ? "看病/急诊" : k === "checkup" ? "儿科体检" : null);
+/** 化验的一个数：数字、或 "<5" 这种带比较号的（取数字） */
+const labNum = v => { if (typeof v === "number") return isFinite(v) ? v : null; const m = String(v ?? "").replace(",", ".").match(/-?\d+(\.\d+)?/); return m ? +m[0] : null; };
+
+/** 模型返回 → { day, src, clinic, doctor, temp, weight, length, head, …EXTRA, note, next, vaccines, meds, milestones,
+ *   rows: [{ day, src, weight, length, …}]（表格里每个日期一行）, labs: [{ day, name, value, unit, lo, hi }] }（公制：℃、kg、cm）；读不出 JSON 返回 null */
+function parseIntake(text){
+  let o; try { o = JSON.parse(String(text).replace(/^\s*```(json)?|```\s*$/g, "").trim()); } catch (e) { return null; }
+  if (!o || typeof o !== "object") return null;
+  const vit = vitalsOf(o.vitals);
   // 疫苗本一张表可能有几十针（每行一种疫苗、每格一剂），所以上限放宽到 60；每针带自己的日期
   const vaccines = (Array.isArray(o.vaccines) ? o.vaccines : []).filter(x => x && (x.name || typeof x === "string")).slice(0, 60)
     .map(x => (typeof x === "string" ? { name: vaxName(x), day: null, dose: null, site: null } : { name: vaxName(x.name), day: isDay(x.date) ? x.date : null, dose: vaxDose(x.dose), site: vaxSite(x.site) })).filter(x => x.name);
   const meds = (Array.isArray(o.meds) ? o.meds : []).filter(x => x && x.name).slice(0, 8).map(x => ({ cat: medCat(x.kind, x.name), name: str(x.name, 80), dose: str(x.dose, 80) }));
   const out = {
     day: isDay(o.date) ? o.date : null,
-    src: o.kind === "sick" ? "看病/急诊" : o.kind === "checkup" ? "儿科体检" : null,
-    clinic: str(o.clinic, 80), doctor: str(o.doctor, 60),
-    weight: r(ok(weight, 0.5, 150), 3), length: r(ok(length, 30, 220), 1), head: r(ok(head, 25, 65), 1), temp: r(ok(temp, 34, 43), 1),
-    ...Object.fromEntries(EXTRA.map(([k, src, lo, hi, d]) => [k, r(ok(num(v[src]), lo, hi), d)])),
+    src: srcOf(o.kind),
+    clinic: str(o.clinic, 80), doctor: str(o.doctor, 60), ...vit,
     note: str(o.summary, 2000), next: str(o.next_visit, 60),
     vaccines, meds, milestones: (Array.isArray(o.milestones) ? o.milestones : []).map(x => (typeof x === "string" ? { name: str(x, 80), cat: "认知" } : x && { name: str(x.name, 80), cat: MS_CAT[x.area] || "认知" })).filter(x => x && x.name).slice(0, 8)
   };
-  const any = out.weight || out.length || out.head || out.temp || EXTRA.some(([k]) => out[k] != null) || out.note || vaccines.length || meds.length || out.milestones.length;
+  // 表格：每个日期一行体征（同一天出现两次合成一行）；没日期、没一个数的丢掉
+  const byDay = new Map();
+  for (const x of (Array.isArray(o.rows) ? o.rows : []).slice(0, 80)) {
+    if (!x || !isDay(x.date)) continue;
+    const vv = vitalsOf(x.vitals || x); if (!VKEYS.some(k => vv[k] != null)) continue;
+    const had = byDay.get(x.date) || { day: x.date, src: null };
+    for (const k of VKEYS) if (vv[k] != null) had[k] = vv[k];
+    had.src = had.src || srcOf(x.kind);
+    byDay.set(x.date, had);
+  }
+  out.rows = [...byDay.values()].sort((a, b) => a.day.localeCompare(b.day)).slice(0, 60);
+  out.labs = (Array.isArray(o.labs) ? o.labs : []).filter(x => x && x.name && labNum(x.value) != null).slice(0, 80)
+    .map(x => ({ day: isDay(x.date) ? x.date : null, name: str(x.name, 80), value: labNum(x.value), unit: str(x.unit, 20), lo: labNum(x.ref_low), hi: labNum(x.ref_high) }));
+  const any = VKEYS.some(k => out[k] != null) || out.note || vaccines.length || meds.length || out.milestones.length || out.rows.length || out.labs.length;
   return any ? out : null;
 }
 
@@ -152,4 +179,4 @@ function mergeInto(old, add){
   return o;
 }
 
-export { INTAKE_SYSTEM, VAX_NAMES, EXTRA, EXTRA_KEYS, extraParts, placeText, parseIntake, vaxName, vaxDose, vaxSite, vaxSeen, sameEntry, sameVisit, mergeInto, localDay, medCat };
+export { INTAKE_SYSTEM, VAX_NAMES, EXTRA, EXTRA_KEYS, VKEYS, extraParts, placeText, parseIntake, vaxName, vaxDose, vaxSite, vaxSeen, sameEntry, sameVisit, mergeInto, localDay, medCat };

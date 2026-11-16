@@ -934,3 +934,9 @@ textarea[data-autosize]{resize:none;transition:height .08s ease-out}
 .ix-two.ix-where > .field:first-child{grid-column:1 / -1}
 .ix-two.ix-where > .field input{width:100%;box-sizing:border-box}
 @media (min-width:640px){.ix-two.ix-where{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr)}.ix-two.ix-where > .field:first-child{grid-column:auto}}
+/* AI 录入的表格行（多次测量 / 化验）：日期一行，几个数并排，手机上不一格一行 */
+.ix-list[data-ixlist="rows"] .ix-cells input[type=date],.ix-list[data-ixlist="labs"] .ix-cells input[type=date]{flex:1 1 100%}
+.ix-list[data-ixlist="rows"] .ix-cells input[type=number]{flex:1 1 64px;min-width:0}
+.ix-list[data-ixlist="labs"] .ix-cells input[data-ixk="name"]{flex:1 1 100%}
+.ix-list[data-ixlist="labs"] .ix-cells input[data-ixk="value"],.ix-list[data-ixlist="labs"] .ix-cells input[data-ixk="unit"],.ix-list[data-ixlist="labs"] .ix-cells input[data-ixk="lo"],.ix-list[data-ixlist="labs"] .ix-cells input[data-ixk="hi"]{flex:1 1 56px;min-width:0}
+@media (min-width:640px){.ix-list[data-ixlist="rows"] .ix-cells input[type=date],.ix-list[data-ixlist="labs"] .ix-cells input[type=date]{flex:0 1 170px}.ix-list[data-ixlist="labs"] .ix-cells input[data-ixk="name"]{flex:1 1 160px}}

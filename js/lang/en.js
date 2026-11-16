@@ -1771,4 +1771,8 @@ export default {
   "量一次体征": "Add measurements",
   "BMI · 血压 · 心率 · 百分位": "BMI · BP · pulse · percentiles",
   "体检与就诊、体检时间表、疫苗、基本体征、最近 90 天用药，带去医院用。": "Checkups and visits, the checkup schedule, vaccines, vital signs and the last 90 days of medicines, to bring to the doctor.",
+  "多次测量（表格里每个日期一条）": "Measurements by date (one record per date)",
+  "{n} 行": "{n} rows",
+  "日期不能晚于今天": "The date can't be after today",
+  "读到 {n} 项化验：小月亮不存化验，在家庭学堂「成长 → 化验」里用 AI 录入能存下来": "Read {n} lab results: Little Moon doesn't store labs; use AI entry in Homeschool's Growth → Labs to save them",
 };
