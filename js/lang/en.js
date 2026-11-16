@@ -1763,4 +1763,12 @@ export default {
   "小睡：建议 {time} 前叫醒": "Nap: wake by {time}",
   "{h} 小时 {m} 分": "{h} h {m} min",
   "{h} 小时": "{h} h",
+  "医院 / 诊所": "Hospital / clinic",
+  "医生": "Doctor",
+  "如 Dr. Lee": "e.g. Dr. Lee",
+  "医生 / 护士": "Doctor / nurse",
+  "接种机构": "Clinic",
+  "量一次体征": "Add measurements",
+  "BMI · 血压 · 心率 · 百分位": "BMI · BP · pulse · percentiles",
+  "体检与就诊、体检时间表、疫苗、基本体征、最近 90 天用药，带去医院用。": "Checkups and visits, the checkup schedule, vaccines, vital signs and the last 90 days of medicines, to bring to the doctor.",
 };

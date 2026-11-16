@@ -1,6 +1,6 @@
 import { t } from "./i18n.js";
 import { S, ageMonths, babyAgeDays, childOf, routineSteps, stageOf } from "./state.js";
-import { extraParts } from "./intake-lib.js";
+import { extraParts, placeText } from "./intake-lib.js";
 import { fmtU } from "./units.js";
 import { $, D, dur, hm, num } from "./util.js";
 
@@ -40,7 +40,8 @@ const TYPES = {
     { k: "note", label: "备注", type: "text", ph: "夜醒次数、哭闹…" } ] },
   baby:  { label: "宝宝健康", icon: "🌡", color: "var(--rose)", fields: [
     { k: "src", label: "记录来源", type: "seg", opts: ["自己记录", "儿科体检", "看病/急诊"], def: "自己记录" },
-    { k: "clinic", label: "医院 / 医生", type: "text", show: m => isVisit(m) },
+    { k: "clinic", label: "医院 / 诊所", type: "text", half: 1, show: m => isVisit(m) },
+    { k: "doctor", label: "医生", type: "text", half: 1, ph: "如 Dr. Lee", show: m => isVisit(m) },
     { k: "temp", label: "体温", type: "num", dim: "temp", step: .1 },
     { k: "weight", label: "体重", type: "num", dim: "wbaby", step: .01 },
     { k: "length", label: "身长", type: "num", dim: "len", step: .1, half: 1 },
@@ -64,7 +65,8 @@ const TYPES = {
     { k: "name", label: "疫苗名称", type: "text", list: "vaxlist", ph: "如 乙肝疫苗 HepB" },
     { k: "dose", label: "剂次", type: "seg", opts: ["第1剂", "第2剂", "第3剂", "第4剂", "第5剂", "加强"] },
     { k: "site", label: "接种部位", type: "seg", opts: ["左大腿", "右大腿", "左上臂", "右上臂", "口服"] },
-    { k: "clinic", label: "接种机构 / 医生", type: "text", half: 1 },
+    { k: "clinic", label: "接种机构", type: "text", half: 1 },
+    { k: "doctor", label: "医生 / 护士", type: "text", half: 1 },
     { k: "lot", label: "批号（选填）", type: "text", half: 1 },
     { k: "reaction", label: "接种后反应", type: "seg", opts: ["无", "局部红肿", "发热", "哭闹", "其他"] },
     { k: "note", label: "备注", type: "area", ph: "下次接种日期、医生交代的注意事项…" } ] },
@@ -182,7 +184,7 @@ function summary(e){
       if (e.left) p.push(t("左{n}分", { n: e.left })); if (e.right) p.push(t("右{n}分", { n: e.right })); if (e.ml) p.push(fmtU("vol", e.ml)); break;
     case "diaper": if (e.pee) p.push(t("尿")); if (e.poop) p.push(e.color ? t("{label}（{u}）", { label: t("便"), u: t(e.color) }) : t("便")); break;
     case "sleep": p.push(e.end ? t("睡到 {t} · {d}", { t: hm(e.end), d: dur(e.end - e.ts) }) : t("正在睡")); if (e.where) p.push(t(e.where)); if (e.how) p.push(t(e.how)); break;
-    case "baby": if (isVisit(e)) p.push(t(e.src)); if (e.temp) p.push(`${t("体温")} ${fmtU("temp", e.temp)}`); if (e.weight) p.push(`${t("体重")} ${fmtU("wbaby", e.weight)}`); if (e.length) p.push(`${t("身长")} ${fmtU("len", e.length)}`); if (e.head) p.push(`${t("头围")} ${fmtU("len", e.head)}`); for (const [l, v] of extraParts(e)) p.push(`${t(l)} ${v}`); if (!p.length) p.push(t("健康记录")); break;
+    case "baby": if (isVisit(e)) { p.push(t(e.src)); const w = placeText(e); if (w) p.push(w); } if (e.temp) p.push(`${t("体温")} ${fmtU("temp", e.temp)}`); if (e.weight) p.push(`${t("体重")} ${fmtU("wbaby", e.weight)}`); if (e.length) p.push(`${t("身长")} ${fmtU("len", e.length)}`); if (e.head) p.push(`${t("头围")} ${fmtU("len", e.head)}`); for (const [l, v] of extraParts(e)) p.push(`${t(l)} ${v}`); if (!p.length) p.push(t("健康记录")); break;
     case "bmed": p.push(v(e.cat), e.name || "", e.dose || ""); break;
     case "mmed": p.push(v(e.cat), e.name || "", e.dose || ""); break;
     case "vax": p.push(e.name || t("疫苗"), v(e.dose), v(e.site), e.reaction && e.reaction !== "无" ? t("反应：{r}", { r: t(e.reaction) }) : ""); break;

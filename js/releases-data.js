@@ -2,6 +2,10 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-15.1", title: { zh: "医院和医生分开填；「基本体征」名字统一", en: "Hospital and doctor are separate; \"Vital signs\" everywhere" }, items: [
+    { k: "better", zh: "宝宝健康（体检 / 看病）、疫苗接种和 AI 录入里，「医院 / 诊所」和「医生」分成两栏，AI 也分开读出来；旧记录照常显示", en: "Health visits, vaccines and AI entry now have separate \"Hospital / clinic\" and \"Doctor\" fields, read separately by AI; older records still show" },
+    { k: "better", zh: "基本体征页的按钮改成「＋ 量一次体征」；打印的就诊资料里「生长测量」改成「基本体征」，多了 BMI、血压、心率和百分位一栏", en: "The vital signs page button is now \"+ Add measurements\"; the printout's growth section is now \"Vital signs\" with a BMI / blood pressure / pulse / percentile column" }
+  ] },
   { v: "2026-11-14.6", title: { zh: "修复：今天页打不开", en: "Fix: Today page failed to load" }, items: [
     { k: "fix", zh: "上一版的一个小错误让页面打不开，已修好", en: "A small mistake in the last version stopped the page from loading; fixed" }
   ] },

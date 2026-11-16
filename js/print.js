@@ -1,3 +1,4 @@
+import { extraParts, placeText } from "./intake-lib.js";
 import { byTime } from "./derived.js";
 import { t } from "./i18n.js";
 import { mealRows } from "./meal.js";
@@ -69,7 +70,7 @@ function medicalPage(){
   const all = vis(), done = checkupsDone();
   const visits = all.filter(isVisit).sort((a, b) => b.ts - a.ts);
   const vax = all.filter(e => e.type === "vax" || (e.type === "bmed" && e.cat === "疫苗")).sort((a, b) => a.ts - b.ts);
-  const growth = all.filter(e => e.type === "baby" && (e.weight || e.length || e.head)).sort((a, b) => a.ts - b.ts);
+  const growth = all.filter(e => e.type === "baby" && (e.weight || e.length || e.head || extraParts(e).length)).sort((a, b) => a.ts - b.ts);
   const meds = all.filter(e => e.type === "bmed" && e.ts > Date.now() - 90 * D).sort(byTime);
   const meas = e => [e.temp && `${t("体温")} ${fmtU("temp", e.temp)}`, e.weight && `${t("体重")} ${fmtU("wbaby", e.weight)}`, e.length && `${t("身长")} ${fmtU("len", e.length)}`, e.head && `${t("头围")} ${fmtU("len", e.head)}`].filter(Boolean).join(" · ");
   const none = `<p class="pmuted">${t("暂无记录")}</p>`;
@@ -77,15 +78,15 @@ function medicalPage(){
   <table class="pkv"><tr><th>${t("孩子")}</th><td>${esc(childName())}</td></tr><tr><th>${t("出生日期")}</th><td>${esc(child().birth || "")}</td></tr><tr><th>${t("年龄")}</th><td>${esc(ageText())}</td></tr></table>
   <h3>${t("体检与就诊")}</h3>
   ${visits.length ? `<table><thead><tr><th>${t("日期")}</th><th>${t("月龄")}</th><th>${t("类型")}</th><th>${t("医院 / 医生")}</th><th>${t("测量")}</th><th>${t("备注")}</th></tr></thead><tbody>
-    ${visits.map(e => { const m = e.src === "儿科体检" ? matchCheckup(e.ts, childOf(e)) : null; return `<tr><td class="n">${dayKey(e.ts)}</td><td>${ageAtText(e.ts)}</td><td>${esc(t(e.src))}${m ? `<br><span class="pmuted">${t(m.label)}</span>` : ""}</td><td>${esc(e.clinic || "")}</td><td>${esc(meas(e))}</td><td>${esc(e.note || "")}</td></tr>`; }).join("")}</tbody></table>` : none}
+    ${visits.map(e => { const m = e.src === "儿科体检" ? matchCheckup(e.ts, childOf(e)) : null; return `<tr><td class="n">${dayKey(e.ts)}</td><td>${ageAtText(e.ts)}</td><td>${esc(t(e.src))}${m ? `<br><span class="pmuted">${t(m.label)}</span>` : ""}</td><td>${esc(placeText(e))}</td><td>${esc(meas(e))}</td><td>${esc(e.note || "")}</td></tr>`; }).join("")}</tbody></table>` : none}
   ${birthTs() ? `<h3>${t("体检时间表")}</h3><table><thead><tr><th>${t("时间点")}</th><th>${t("约在")}</th><th class="c">${t("完成")}</th></tr></thead><tbody>
     ${CHECKUPS.map(c => `<tr><td>${t(c.label)}</td><td class="n">${dayKey(checkupDate(c))}</td><td class="c">${done[c.k] ? "✓" : ""}</td></tr>`).join("")}</tbody></table>` : ""}
   <h3>${t("疫苗接种记录")}</h3>
   ${vax.length ? `<table><thead><tr><th>${t("日期")}</th><th>${t("月龄")}</th><th>${t("疫苗")}</th><th>${t("剂次")}</th><th>${t("部位")}</th><th>${t("接种机构 / 医生")}</th><th>${t("批号（选填）")}</th><th>${t("反应")}</th></tr></thead><tbody>
-    ${vax.map(e => `<tr><td class="n">${dayKey(e.ts)}</td><td>${ageAtText(e.ts)}</td><td>${esc(e.name || (e.cat ? t(e.cat) : ""))}</td><td>${esc(e.dose ? t(e.dose) : "")}</td><td>${esc(e.site ? t(e.site) : "")}</td><td>${esc(e.clinic || "")}</td><td>${esc(e.lot || "")}</td><td>${esc(e.reaction ? t(e.reaction) : "")}</td></tr>`).join("")}</tbody></table>` : none}
-  <h3>${t("生长测量")}</h3>
-  ${growth.length ? `<table><thead><tr><th>${t("日期")}</th><th>${t("月龄")}</th><th class="n">${t("体重")} (${unitOf("wbaby")})</th><th class="n">${t("身长")} (${unitOf("len")})</th><th class="n">${t("头围")} (${unitOf("len")})</th><th>${t("记录来源")}</th></tr></thead><tbody>
-    ${growth.map(e => `<tr><td class="n">${dayKey(e.ts)}</td><td>${ageAtText(e.ts)}</td><td class="n">${e.weight ? fmtU("wbaby", e.weight) : ""}</td><td class="n">${e.length ? fmtU("len", e.length) : ""}</td><td class="n">${e.head ? fmtU("len", e.head) : ""}</td><td>${esc(t(e.src || "自己记录"))}</td></tr>`).join("")}</tbody></table>` : none}
+    ${vax.map(e => `<tr><td class="n">${dayKey(e.ts)}</td><td>${ageAtText(e.ts)}</td><td>${esc(e.name || (e.cat ? t(e.cat) : ""))}</td><td>${esc(e.dose ? t(e.dose) : "")}</td><td>${esc(e.site ? t(e.site) : "")}</td><td>${esc(placeText(e))}</td><td>${esc(e.lot || "")}</td><td>${esc(e.reaction ? t(e.reaction) : "")}</td></tr>`).join("")}</tbody></table>` : none}
+  <h3>${t("基本体征")}</h3>
+  ${growth.length ? `<table><thead><tr><th>${t("日期")}</th><th>${t("月龄")}</th><th class="n">${t("体重")} (${unitOf("wbaby")})</th><th class="n">${t("身长")} (${unitOf("len")})</th><th class="n">${t("头围")} (${unitOf("len")})</th><th>${t("BMI · 血压 · 心率 · 百分位")}</th><th>${t("记录来源")}</th></tr></thead><tbody>
+    ${growth.map(e => `<tr><td class="n">${dayKey(e.ts)}</td><td>${ageAtText(e.ts)}</td><td class="n">${e.weight ? fmtU("wbaby", e.weight) : ""}</td><td class="n">${e.length ? fmtU("len", e.length) : ""}</td><td class="n">${e.head ? fmtU("len", e.head) : ""}</td><td>${esc(extraParts(e).map(([l, v]) => `${t(l)} ${v}`).join(" · "))}</td><td>${esc(t(e.src || "自己记录"))}</td></tr>`).join("")}</tbody></table>` : none}
   <h3>${t("宝宝用药（最近 90 天）")}</h3>
   ${meds.length ? `<table><thead><tr><th>${t("日期")}</th><th>${t("时间")}</th><th>${t("类别")}</th><th>${t("名称")}</th><th>${t("剂量（按医嘱/说明书）")}</th><th>${t("备注")}</th></tr></thead><tbody>
     ${meds.map(e => `<tr><td class="n">${dayKey(e.ts)}</td><td class="n">${hm(e.ts)}</td><td>${esc(e.cat ? t(e.cat) : "")}</td><td>${esc(e.name || "")}</td><td>${esc(e.dose || "")}</td><td>${esc(e.note || "")}</td></tr>`).join("")}</tbody></table>` : none}

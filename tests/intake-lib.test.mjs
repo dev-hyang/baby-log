@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { extraParts, medCat, mergeInto, parseIntake, sameEntry, sameVisit, vaxDose, vaxName, vaxSeen, vaxSite } from "../js/intake-lib.js";
+import { extraParts, medCat, placeText, mergeInto, parseIntake, sameEntry, sameVisit, vaxDose, vaxName, vaxSeen, vaxSite } from "../js/intake-lib.js";
 
 test("a whole checkup becomes metric vitals, vaccines, meds and milestones", () => {
   const r = parseIntake("```json\n" + JSON.stringify({
@@ -65,6 +65,13 @@ test("re-scan: same-day visit and same items are found; merge keeps old values a
   assert.equal(mergeInto({ note: "Healthy, keep vitamin D" }, { note: "Healthy" }).note, "Healthy, keep vitamin D");
   assert.equal(mergeInto({ dose: "第1剂" }, { dose: "", site: null }).dose, "第1剂");
   assert.equal(sameEntry([{ name: "Pulls to stand", ts: day("2025-01-01") }], "pulls to stand", null).name, "Pulls to stand");
+});
+
+test("hospital and doctor are two fields; old records with one combined field still show", () => {
+  const r = parseIntake(JSON.stringify({ kind: "checkup", clinic: "Sunny Pediatrics", doctor: "Dr. Lee", vitals: { weight_kg: 16 } }));
+  assert.equal(r.clinic, "Sunny Pediatrics"); assert.equal(r.doctor, "Dr. Lee");
+  assert.equal(placeText(r), "Sunny Pediatrics · Dr. Lee");
+  assert.equal(placeText({ clinic: "协和医院 王医生" }), "协和医院 王医生"); assert.equal(placeText({ doctor: " Dr. Lee " }), "Dr. Lee"); assert.equal(placeText({}), "");
 });
 
 test("normalizers", () => {

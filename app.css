@@ -928,3 +928,9 @@ textarea[data-autosize]{resize:none;transition:height .08s ease-out}
 .hero .wk-adv{margin-top:8px;font-size:13.5px;line-height:1.4;opacity:.85}
 .hero .wk-adv.lv-soon{opacity:1;display:inline-block;padding:3px 12px;border-radius:999px;border:1px solid rgba(255,245,209,.55)}
 .hero .wk-adv.lv-wake{opacity:1;display:inline-block;padding:4px 12px;border-radius:999px;background:#FFF5D1;color:#1D2733;font-weight:700}
+/* ── 11-15 AI 录入：时间 + 医院 / 诊所 + 医生（手机：时间一行，医院、医生并排；宽屏三个一行） ── */
+.ix-two.ix-where{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 10px}
+.ix-two.ix-where > .field{margin:8px 0;min-width:0}
+.ix-two.ix-where > .field:first-child{grid-column:1 / -1}
+.ix-two.ix-where > .field input{width:100%;box-sizing:border-box}
+@media (min-width:640px){.ix-two.ix-where{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr)}.ix-two.ix-where > .field:first-child{grid-column:auto}}

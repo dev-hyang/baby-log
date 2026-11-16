@@ -6,7 +6,7 @@
 
 const INTAKE_SYSTEM = `You read a child's pediatric visit: photos (after-visit summary, well-child checkup sheet, vaccine record, growth chart, prescription) and/or text a parent typed or pasted (any language).
 Return ONLY JSON with this shape (omit what is not there; never invent values):
-{"date":"YYYY-MM-DD|null","kind":"checkup|sick|null","clinic":"clinic or doctor name",
+{"date":"YYYY-MM-DD|null","kind":"checkup|sick|null","clinic":"hospital / clinic name only","doctor":"the doctor's or provider's name only, e.g. Dr. Lee",
 "vitals":{"weight_kg":n,"weight_lb":n,"weight_oz":n,"length_cm":n,"length_in":n,"head_cm":n,"head_in":n,"temp_c":n,"temp_f":n,
  "bmi":n,"bp_systolic":n,"bp_diastolic":n,"pulse":n,
  "weight_pct":n,"length_pct":n,"head_pct":n,"bmi_pct":n},
@@ -20,7 +20,7 @@ Blood pressure "98/60" -> bp_systolic 98, bp_diastolic 60; pulse = heart rate pe
 Visit summary: list each vaccine given at THIS visit once, with that visit's date (combination shots such as Pediarix or Vaxelis: one entry with the product name).
 Vaccine record / immunization history / 接种本 (usually a table, often one row per vaccine with a date for each dose across the columns): list EVERY dose that has a date, one entry per date, with its own "date" and its dose number (column 1 = dose 1 unless labeled otherwise); for such a record leave the top-level "date" null unless it is clearly one visit.
 Read dates carefully (MM/DD/YY in US records, YYYY.MM.DD or YYYY年M月D日 in Chinese ones). Do not list vaccines that are only due later or have no date given.
-Do not include names, dates of birth, addresses, phone numbers, insurance or ID numbers.`;
+Put the place in "clinic" and the person in "doctor"; never both in one field. Do not include the child's or family's names, dates of birth, addresses, phone numbers, insurance or ID numbers.`;
 
 const num = v => { const n = typeof v === "string" ? parseFloat(v.replace(",", ".")) : v; return typeof n === "number" && isFinite(n) && n > 0 ? n : null; };
 const r = (x, d) => (x == null ? null : Math.round(x * 10 ** d) / 10 ** d);
@@ -88,6 +88,8 @@ const EXTRA = [
 ];
 const EXTRA_KEYS = EXTRA.map(x => x[0]);
 /** 一条记录上的这些数，排成几小段给列表用：[["BMI", "16.2"], ["血压", "98/60"], ["体重", "P75"]…]；名字是简体原文，调用方自己翻译 */
+/** 在哪儿看的：医院 / 诊所 · 医生（旧记录只有 clinic 一栏，里面可能两样都写了，照原样显示） */
+const placeText = e => [e && e.clinic, e && e.doctor].map(x => String(x || "").trim()).filter(Boolean).join(" · ");
 function extraParts(e){
   const p = [], has = k => e && e[k] != null && e[k] !== "";
   if (has("bmi")) p.push(["BMI", String(e.bmi) + (has("bmipct") ? ` (P${e.bmipct})` : "")]);
@@ -98,7 +100,7 @@ function extraParts(e){
   return p;
 }
 
-/** 模型返回 → { day, src, clinic, temp, weight, length, head, note, next, vaccines, meds, milestones }（公制：℃、kg、cm）；读不出 JSON 返回 null */
+/** 模型返回 → { day, src, clinic, doctor, temp, weight, length, head, note, next, vaccines, meds, milestones }（公制：℃、kg、cm）；读不出 JSON 返回 null */
 function parseIntake(text){
   let o; try { o = JSON.parse(String(text).replace(/^\s*```(json)?|```\s*$/g, "").trim()); } catch (e) { return null; }
   if (!o || typeof o !== "object") return null;
@@ -116,7 +118,7 @@ function parseIntake(text){
   const out = {
     day: isDay(o.date) ? o.date : null,
     src: o.kind === "sick" ? "看病/急诊" : o.kind === "checkup" ? "儿科体检" : null,
-    clinic: str(o.clinic, 80),
+    clinic: str(o.clinic, 80), doctor: str(o.doctor, 60),
     weight: r(ok(weight, 0.5, 150), 3), length: r(ok(length, 30, 220), 1), head: r(ok(head, 25, 65), 1), temp: r(ok(temp, 34, 43), 1),
     ...Object.fromEntries(EXTRA.map(([k, src, lo, hi, d]) => [k, r(ok(num(v[src]), lo, hi), d)])),
     note: str(o.summary, 2000), next: str(o.next_visit, 60),
@@ -150,4 +152,4 @@ function mergeInto(old, add){
   return o;
 }
 
-export { INTAKE_SYSTEM, VAX_NAMES, EXTRA, EXTRA_KEYS, extraParts, parseIntake, vaxName, vaxDose, vaxSite, vaxSeen, sameEntry, sameVisit, mergeInto, localDay, medCat };
+export { INTAKE_SYSTEM, VAX_NAMES, EXTRA, EXTRA_KEYS, extraParts, placeText, parseIntake, vaxName, vaxDose, vaxSite, vaxSeen, sameEntry, sameVisit, mergeInto, localDay, medCat };

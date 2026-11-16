@@ -514,7 +514,7 @@ export const vtCtx = () => ({ t, val: (dim, v) => toDisp(VT_DIM[dim], v), unit: 
   months: ts => ageMonths(S.childId, ts), sex: (child(S.childId) || {}).sex || null, src: e => t(isVisit(e) ? e.src : "在家量") });
 function growBody(){
   const health = vis().filter(e => e.type === "baby"), newborn = stageOf().key === "newborn";
-  return `<div class="btns" style="margin-top:0"><button class="btn primary" data-add="baby">＋ ${t("体重 / 身高")}</button><button class="btn" data-ix="open" data-src="儿科体检">✦ ${t("AI 录入体检")}</button><button class="btn" data-act="ask-vitals">✦ ${t("问 AI 这些体征")}</button></div>
+  return `<div class="btns" style="margin-top:0"><button class="btn primary" data-add="baby">＋ ${t("量一次体征")}</button><button class="btn" data-ix="open" data-src="儿科体检">✦ ${t("AI 录入体检")}</button><button class="btn" data-act="ask-vitals">✦ ${t("问 AI 这些体征")}</button></div>
   ${newborn ? `<p class="small muted">${t("新生儿出生后几天体重下降常见；通常约 10–14 天回到出生体重。")}</p>` : ""}
   ${vitalsHTML(health, vtCtx())}
   ${growRecords("body", health.filter(e => VT_KEYS.some(k => num(e[k]) != null)), { subs: [["home", t("在家量的"), e => !isVisit(e)], ["clinic", t("体检 / 看病时量的"), e => isVisit(e)]], add: "" })}`;
