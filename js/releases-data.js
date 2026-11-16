@@ -2,6 +2,9 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-16.2", title: { zh: "修复：刷新总回到同一页", en: "Fix: refresh always returning to the same page" }, items: [
+    { k: "fix", zh: "打开过表单后刷新，之后换页再刷新总是回到同一页：现在刷新后停在当前这一页", en: "After refreshing with a form open, later refreshes kept returning to the same page; now a refresh stays on the current page" }
+  ] },
   { v: "2026-11-16.1", title: { zh: "刷新后还停在原来那一页", en: "Refresh keeps you on the same page" }, items: [
     { k: "better", zh: "比如在 成长 → 基本体征 或 记录 → 趋势对比 刷新，还是回到那里，不再跳回今天", en: "Refreshing on, say, Growth → Vital signs or Log → Trends brings you back there instead of Today" }
   ] },
