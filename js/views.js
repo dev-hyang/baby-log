@@ -15,6 +15,7 @@ import { syncHTML } from "./backup.js";
 import { aiIcon, viewAsk } from "./ask.js";
 import { VT_KEYS, vitalsHTML } from "./vitals.js";
 import { wakeAdvice } from "./sleep-advice.js";
+import { recAiHTML } from "./rec-ai.js";
 import { moreHTML, pagerNav, shownOf } from "./pager.js";
 import { viewTrend } from "./trend.js";
 import { TYPES, flags, isVisit, summary, typeLabel } from "./types.js";
@@ -457,7 +458,7 @@ function viewGrow(){
 /* ---- 成长各页的「记录」块（2026-11-12）：和记录页的时间线同一套——时间范围、分类筛选、列表 | 时间轴、按天分组、点一条修改 / 删除、继续加载 ----
    id：哪一页；all：这一页的全部记录；subs = [[值, 名字, 筛选函数]]（有的页按类别 / 来源再分）；def：默认时间范围；add：右边的「＋」按钮 */
 const GR_RANGES = [["30", "近 30 天"], ["90", "近 3 个月"], ["365", "近 1 年"], ["all", "全部"]];
-function growRecords(id, all, { subs = null, def = "all", add = "", empty = "" } = {}){
+function growRecords(id, all, { subs = null, def = "all", add = "", empty = "", ai = false } = {}){
   const F = ((S.grf ||= {})[id] ||= { range: def, sub: "all" });
   const R = { "30": 30, "90": 91, "365": 365 }[F.range];
   let list = all.filter(e => !R || e.ts >= Date.now() - R * D);
@@ -466,7 +467,10 @@ function growRecords(id, all, { subs = null, def = "all", add = "", empty = "" }
   const key = "gr-" + id, shown = shownOf(key, [S.childId, F.range, F.sub].join("|")), style = S.listStyle === "axis" ? "axis" : "rows";
   let left = shown;
   const groups = []; for (const e of list) { const k = dayKey(e.ts), g = groups[groups.length - 1]; if (g && g.k === k) g.es.push(e); else groups.push({ k, es: [e] }); }
-  const show = es => { const k = Math.min(es.length, left); left -= k; return style === "axis" ? axisHTML(es, k) : es.slice(0, k).map(entryRow).join(""); };
+  // ai：每条下面一小块 AI 解读（体检与就诊，js/rec-ai.js）
+  const show = es => { const k = Math.min(es.length, left); left -= k;
+    if (ai) return es.slice(0, k).map(e => `<div class="rec-wrap">${style === "axis" ? axisHTML([e]) : entryRow(e)}${recAiHTML(e)}</div>`).join("");
+    return style === "axis" ? axisHTML(es, k) : es.slice(0, k).map(entryRow).join(""); };
   const body = list.length
     ? groups.map(g => (left ? `<div class="day">${g.k} ${weekday(g.es[0].ts)}<span class="muted"> · ${ageAtText(g.es[0].ts)}</span></div>${show(g.es)}` : "")).join("") + moreHTML(key, list.length, shown)
     : `<div class="empty"><div class="eicon" aria-hidden="true">🗓</div>${F.range !== "all" || F.sub !== "all" ? t("这段时间、这一类没有记录。") : empty || t("还没有记录。")}</div>`;
@@ -544,7 +548,7 @@ function checkupPlanHTML(all, done){
 }
 // every baby-health record taken at a clinic, newest first: the visit history a parent flips back through
 function checkupHistoryHTML(all){
-  return growRecords("visits", all.filter(isVisit), { subs: [["checkup", t("儿科体检"), e => e.src === "儿科体检"], ["sick", t("看病/急诊"), e => e.src === "看病/急诊"]],
+  return growRecords("visits", all.filter(isVisit), { ai: true, subs: [["checkup", t("儿科体检"), e => e.src === "儿科体检"], ["sick", t("看病/急诊"), e => e.src === "看病/急诊"]],
     add: `<button class="btn" data-ix="open" data-src="儿科体检">✦ ${t("AI 录入")}</button>`, empty: t("还没有体检或就诊记录。记录宝宝健康时把来源选成“儿科体检”或“看病/急诊”，就会出现在这里。") });
 }
 function milestonesHTML(all){

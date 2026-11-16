@@ -2,6 +2,10 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-15.3", title: { zh: "体检与就诊：每条都能让 AI 解读", en: "Checkups and visits: AI explanation for each" }, items: [
+    { k: "new", zh: "成长 → 儿科体检与就诊，每条下面有「✦ AI 解读」：这次结果说明、医生建议是什么意思怎么做、后续注意、下次可以问医生的问题", en: "Growth → Checkups and visits: each record has \"✦ AI explanation\": what the results show, what the doctor's advice means, what to watch next, questions for next time" },
+    { k: "better", zh: "解读先给你看，选「保留」才存下来；保留的收在这条记录下面，可以重新分析或清除。和家庭学堂通用", en: "You see it first and choose Keep to save it; kept ones sit under the record and can be redone or cleared. Shared with Homeschool" }
+  ] },
   { v: "2026-11-15.2", title: { zh: "AI 录入能一次读整张生长表", en: "AI entry reads whole growth tables" }, items: [
     { k: "new", zh: "拍生长表或历次体征表：每个日期一行读出来（体重、身长、头围，还有 BMI、血压等），核对后一次存成多条；那天已经记过的默认不勾，勾上就补进那一条", en: "Photograph a growth or vitals table: each date becomes a row (weight, length, head, plus BMI, blood pressure, etc.); review and save them all at once; dates already recorded start unticked and update that record if ticked" }
   ] },

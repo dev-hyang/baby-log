@@ -940,3 +940,25 @@ textarea[data-autosize]{resize:none;transition:height .08s ease-out}
 .ix-list[data-ixlist="labs"] .ix-cells input[data-ixk="name"]{flex:1 1 100%}
 .ix-list[data-ixlist="labs"] .ix-cells input[data-ixk="value"],.ix-list[data-ixlist="labs"] .ix-cells input[data-ixk="unit"],.ix-list[data-ixlist="labs"] .ix-cells input[data-ixk="lo"],.ix-list[data-ixlist="labs"] .ix-cells input[data-ixk="hi"]{flex:1 1 56px;min-width:0}
 @media (min-width:640px){.ix-list[data-ixlist="rows"] .ix-cells input[type=date],.ix-list[data-ixlist="labs"] .ix-cells input[type=date]{flex:0 1 170px}.ix-list[data-ixlist="labs"] .ix-cells input[data-ixk="name"]{flex:1 1 160px}}
+/* ── 11-15 体检与就诊每条下面的 AI 解读（js/rec-ai.js，和家庭学堂同一个样子） ── */
+.rec-wrap{border-bottom:1px solid var(--line)}
+.rec-wrap:last-child{border-bottom:0}
+.rec-wrap > .entry,.rec-wrap > .axis{border-bottom:0}
+div.rec-ai{margin:0 0 10px 12px}
+.rec-ai-btn{min-height:36px;padding:4px 12px;font-size:13.5px}
+.gb-ai{margin:0 0 10px 12px;border-left:3px solid var(--slate);border-radius:0 12px 12px 0;background:var(--slate-soft)}
+.gb-ai > summary{list-style:none;cursor:pointer;min-height:40px;display:flex;align-items:center;gap:8px;padding:6px 12px;font-weight:600;color:var(--slate)}
+.gb-ai > summary::-webkit-details-marker{display:none}
+.gb-ai > summary::after{content:"▸";margin-left:auto;color:var(--muted);transition:transform .15s}
+.gb-ai[open] > summary::after{transform:rotate(90deg)}
+.gb-ai > summary:focus-visible{outline:3px solid var(--slate);outline-offset:1px}
+.gb-ai-in{padding:0 12px 10px;font-size:14.5px;line-height:1.55}
+.gb-ai-in p{margin:0 0 8px}
+.gb-ai-in b{display:block;margin:10px 0 2px;font-size:13.5px}
+.gb-ai-in ul{margin:0;padding-left:20px}
+.gb-ai-in li{margin:2px 0}
+.gb-ai-in .btns{margin-top:10px}
+.panel.gb-ai-in{padding:14px 16px}
+@media (max-width:440px){div.rec-ai,.gb-ai{margin-left:6px}}
+@media (min-width:441px){div.rec-ai,.rec-wrap > .gb-ai{margin-left:86px}}
+.gb-ai-in .btns .btn{min-height:40px;height:auto;padding:6px 16px;font-size:14px;border-radius:999px}
