@@ -4,12 +4,13 @@
    translation yet still renders. Record *values* (喂奶方式 "亲喂", 大便颜色 "黄" …) are stored in the
    canonical simplified form on every device and only translated for display, which keeps family
    members on different languages looking at the same data. Per-device setting, like units and theme. */
+import { importFresh } from "./lazy-reload.js";
 const LANG_KEY = "xiaoyueliang.v1.lang";
 const LANGS = [["auto", "自动"], ["zh-CN", "简体中文"], ["zh-TW", "繁體中文"], ["en", "English"]];
 // English / 繁體 dictionaries (145KB + 118KB) are separate chunks: loaded by loadDict() only when the UI language needs one.
 // Simplified Chinese (the default) needs none, so it never downloads them.
 const DICT = {};
-const DICT_LOADERS = { en: () => import("./lang/en.js"), "zh-TW": () => import("./lang/zh-TW.js") };
+const DICT_LOADERS = { en: () => importFresh(() => import("./lang/en.js")), "zh-TW": () => importFresh(() => import("./lang/zh-TW.js")) };
 const loading = {};
 /** Resolves when the dictionary for `code` is ready (nothing to load for zh-CN). On failure the UI falls back to the Chinese keys; the next call retries. */
 function loadDict(code){

@@ -3,11 +3,12 @@
 import { APP_VERSION } from "./state.js";
 import { initReleases } from "./releases-ui.js";
 import { lang } from "./i18n.js";
+import { importFresh } from "./lazy-reload.js";
 
 let ready = false, loading = null;
 const releasesReady = () => ready;
 function loadReleases(){
-  return (loading ||= import("./releases-data.js").then(({ RELEASES }) => {
+  return (loading ||= importFresh(() => import("./releases-data.js")).then(({ RELEASES }) => {
     initReleases({ version: APP_VERSION, releases: RELEASES, lang, accent: "var(--slate)", appId: "baby-log", open: 'data-tab="releases"' });
     ready = true;
   }).catch(() => { loading = null; }));
