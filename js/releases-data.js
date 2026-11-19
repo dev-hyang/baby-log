@@ -2,6 +2,10 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-19.2", title: { zh: "表单里的输入框、下拉、日期一样高；加入共用的徽标、铃铛、提示样式", en: "Form fields share one height; shared badge, bell and hint styles added" }, items: [
+    { k: "better", zh: "表单里的输入框、下拉、日期原来高度差一两个像素，现在一样高", en: "Inputs, dropdowns and dates in forms were a pixel or two apart in height; they now match" },
+    { k: "better", zh: "加入一套和其他应用共用的徽标、提醒铃铛（带数字 / 红点角标）、问号提示的样式，颜色用本站自己的色板；现在的页面还没用上，外观不变", en: "Added the badge, notification bell (with count / dot) and hint styles shared with the other apps, in this app's own colors; existing pages don't use them yet, so nothing looks different" }
+  ] },
   { v: "2026-11-19.1", title: { zh: "修复：发新版后旧页面切换语言偶尔失败", en: "Fix: switching language on an already-open page could fail after an update" }, items: [
     { k: "fix", zh: "应用更新后，之前就开着的页面切换英文 / 繁體偶尔下载失败；现在会自动刷新一次换成新版，不用手动刷新", en: "After an update, a page that was already open could fail to switch to English / Traditional Chinese; it now refreshes itself once to get the new version" }
   ] },
