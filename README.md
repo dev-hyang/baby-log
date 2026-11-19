@@ -1,11 +1,11 @@
 # baby-log
 
-小月亮 · 母婴记录。纯静态网页，无构建步骤，直接托管在 GitHub Pages。界面支持简体中文、繁體中文、English（设置里切换，按设备保存）。
+小月亮 · 母婴记录。纯静态网页，源码是原生 ES 模块，发布前用 esbuild 打包成 `dist/`（见「开发与构建」），托管在 GitHub Pages。界面支持简体中文、繁體中文、English（设置里切换，按设备保存）。
 
 ## 文件结构
 
 ```
-index.html      页面骨架；只引入 app.css 和 js/app.js（静态文字用 data-i18n 标记）
+index.html      页面骨架；只引入 app.css 和 dist/app.js（js/app.js 打包后的文件；静态文字用 data-i18n 标记）
 app.css         全部样式（含深色模式；字体随 <html lang> 切换）
 js/
   app.js        入口：套用语言、加载本地数据、首屏渲染、定时器、云端初始化
@@ -70,9 +70,17 @@ js/
 - 迁移 029（`029_backup_bedtime_health.sql`）把睡前安然 `hs_bedtime_*` 和家人健康 `hl_*` 加进了家主全家备份 / 恢复；没执行时备份照样带上这些表（按家主自己能看到的读），恢复只导家主自己记的，并提示执行 029。
 - 打印四种页面：按餐表格（记录页当前显示的那一天，横版）、趋势对比（按天最近 7 天 / 按周最近 8 周，横版）、时间线（当前筛选和搜索，最近 30 天）、就医记录（体检与就诊、体检时间表、疫苗、生长测量、最近 90 天宝宝用药）。黑白表格，不依赖主题色。
 
+## 开发与构建（2026-11-18 起）
+
+- 源码在 `js/`（原生 ES 模块），**改完源码要运行 `npm run build`**，把 `dist/` 和 `index.html`（里面的 modulepreload 清单由构建脚本维护）和源码**一起提交**。`index.html` 加载的是 `dist/app.js`。GitHub Pages 的设置不变：从 main 分支根目录发布。
+- 第一次需要在 `baby-log/` 里运行 `npm install`（只装 esbuild，在项目文件夹里，`node_modules/` 不提交）。
+- `npm run check:dist`：检查 `dist/` 是不是最新（用源码重新打一遍逐文件比较），忘了打包会报错。
+- `npm run build:dev`：不压缩、带 sourcemap，调试用（调试完要再运行 `npm run build` 恢复发布版）。
+- 为什么要打包：启动时原来要下载四十多个小文件，打包后合成几个；新增 / 改名 `js/` 下的文件不用改 `index.html`，只有入口不再是 `js/app.js` 才需要改构建脚本。
+
 ## 版本号 / 发布
 
-- 每次 push 都要升版本号 `YYYY-MM-DD.N`（N = 当天第几次 push，从 1 起）：改 `js/state.js` 的 `APP_VERSION`，以及 `index.html` 里 `app.css?v=` 和 `js/app.js?v=` 两处。页头右上角显示版本号，方便确认新版本已经上线。
+- 每次 push 都要升版本号 `YYYY-MM-DD.N`（N = 当天第几次 push，从 1 起）：改 `js/state.js` 的 `APP_VERSION`，以及 `index.html` 里 `app.css?v=` 和 `dist/app.js?v=` 两处（改完源码别忘了 `npm run build`）。页头右上角显示版本号，方便确认新版本已经上线。
 - 同时在 `js/releases-data.js` 的 `RELEASES` 最上面加一条同版本号的记录：`title`（一句话简介）+ `items`（1–4 条要点，`k` 为 new 新功能 / better 改进 / fix 修复），中英文都写，写给家长看：短、口语、不用技术词。
 - 这些记录显示在「我的 → 发布日志」（页头的版本号、我的 / 介绍页底部的版本号也能点进去）；新版本第一次打开起，今天页顶上会出现「新版本」提示，最多 5 次，点开或按 ✕ 后不再出现。没有对应版本的记录就不会提示。
 
