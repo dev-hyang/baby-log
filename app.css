@@ -219,9 +219,6 @@ table.meal tfoot td.t{background:var(--honey-soft)}
 .medrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
 .medrow:last-child{border-bottom:0}
 .medrow > .btn,.medrow > .chip{flex:none;white-space:nowrap}
-.pill{font-size:12px;border-radius:999px;padding:3px 10px;white-space:nowrap}
-.pill.ok{background:var(--sage-soft);color:var(--sage)}
-.pill.wait{background:var(--honey-soft);color:var(--ink)}
 
 /* stage track */
 .stages{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:6px}

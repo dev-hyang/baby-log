@@ -2,6 +2,9 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-19.4", title: { zh: "状态小标签统一成共用的徽标样式", en: "Status labels now use the shared badge style" }, items: [
+    { k: "better", zh: "“家主”“已过医嘱间隔”“X 后可再服”这几个小标签换成和其他应用一致的徽标样式（字略粗、颜色统一）", en: "The Owner, Past the dosing interval and Next dose in X labels now use the same badge style as the other apps (slightly bolder, consistent colors)" }
+  ] },
   { v: "2026-11-19.3", title: { zh: "修复：深色主题下「已选 n 个」这类浅底数字角标的字看不清", en: "Fix: soft count badges unreadable in the dark theme" }, items: [
     { k: "fix", zh: "手动选深色主题时，「已选 n 个」这类浅底数字角标变成深字配深底、几乎看不见，现在恢复清楚", en: "With the dark theme picked manually, soft count badges (like '3 selected') showed dark text on a dark fill; they are readable again" }
   ] },

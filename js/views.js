@@ -307,7 +307,7 @@ function viewToday(){
 }
 function medRow(m){
   let pill = "";
-  if (m.next) pill = m.next > Date.now() ? `<span class="pill wait">${t("{time} 后可再服", { time: hm(m.next) })}</span>` : `<span class="pill ok">${t("已过医嘱间隔")}</span>`;
+  if (m.next) pill = m.next > Date.now() ? `<span class="ui-badge" data-tone="caution">${t("{time} 后可再服", { time: hm(m.next) })}</span>` : `<span class="ui-badge" data-tone="ok">${t("已过医嘱间隔")}</span>`;
   return `<div class="medrow"><div><b>${esc(t(m.name))}</b><div class="small muted">${t("上次 {time} · {ago}前 · 24小时内 {n} 次", { time: hm(m.at), ago: dur(Date.now() - m.at), n: m.count24 })}</div></div>${pill}</div>`;
 }
 // the "list | axis" switch, shared by the timeline on the Log page and the Today list

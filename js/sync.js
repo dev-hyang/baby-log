@@ -449,7 +449,7 @@ function familyHTML(){
     const btns = [];
     if (owner || uid === me) btns.push(btn("rename", t("改称呼")));
     if (owner && uid !== me) btns.push(m.role === "owner" ? btn("demote", t("转为成员")) : btn("promote", t("设为家主")), btn("remove", t("移除"), ' style="color:var(--rose)"'));
-    return `<div class="medrow"><div><b>${esc(m.name)}</b>${uid === me ? ` <span class="small muted">${t("（你）")}</span>` : ""}${m.role === "owner" ? ` <span class="pill ok">${t("家主")}</span>` : ""}</div>
+    return `<div class="medrow"><div><b>${esc(m.name)}</b>${uid === me ? ` <span class="small muted">${t("（你）")}</span>` : ""}${m.role === "owner" ? ` <span class="ui-badge" data-tone="ok">${t("家主")}</span>` : ""}</div>
       ${btns.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${btns.join("")}</div>` : ""}</div>`;
   }).join("");
   const exp = SB.family.invite_expires_at; // undefined before migration 022: say nothing about expiry
