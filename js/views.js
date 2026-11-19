@@ -1,9 +1,10 @@
 import { updateMiniBar } from "./minibar.js";
+import * as appSwitcherMod from "./shared/app-switcher.js";
+import * as langSwitcherMod from "./shared/lang-switcher.js";
 import { heroCtrlHTML } from "./herocycle.js";
 import { musicMiniHTML, musicSlideInner } from "./music.js";
 import { aboutHTML } from "./about.js";
 import { releaseBadgeHTML, releasePageHTML } from "./releases-ui.js";
-import { APPS, THIS_APP } from "./apps.js";
 import { byTime, last, medStatus, suggestSide, within } from "./derived.js";
 import { LANGS, lang, langPref, t } from "./i18n.js";
 import { cardsHTML, faithPageHTML, familyHubHTML, heroCfgHTML, kidsPageHTML, medsPageHTML, membersPageHTML, prefsHTML, routineCfgHTML, viewMe } from "./me.js";
@@ -38,31 +39,20 @@ function renderStatus(){
   renderLangSwitch();
 }
 // App switcher (shared by the four sister apps): a grid button in the top-right, popover on wide screens, bottom sheet on phones.
-// The title stays the child switcher. The component lives in home-pantry/shared; if it can't load (offline first visit), the old
-// ‹ previous / next › badges are shown instead so switching still works.
-const SWITCHER_URL = "https://dev-hyang.github.io/home-pantry/shared/app-switcher.js";
-let switcherMod = null, switcherTried = false;
+// The title stays the child switcher. The component is this app's own copy in js/shared/ (master: home-pantry/shared/).
+const switcherMod = appSwitcherMod;
 // Language switcher (shared by the four sister apps): globe button + list instead of side-by-side buttons, so more languages fit later.
-const LANG_URL = "https://dev-hyang.github.io/home-pantry/shared/lang-switcher.js";
-let langMod = null, langTried = false;
+const langMod = langSwitcherMod;
 function renderLangSwitch(){
   const host = $("#langsw"); if (!host) return;
-  if (langMod) {
-    const cur = lang(), short = { "zh-CN": "简", "zh-TW": "繁", en: "EN" }[cur], pref = langPref();
-    langMod.mountLangSwitcher({ host, current: pref, ui: cur === "en" ? "en" : cur === "zh-TW" ? "tw" : "zh",
-      languages: LANGS.map(([code, name]) => code === "auto" ? { code, name: t("自动"), short, sub: { "zh-CN": "简体中文", "zh-TW": "繁體中文", en: "English" }[cur] } : { code, name }),
-      onSelect: code => document.dispatchEvent(new CustomEvent("eco-set-lang", { detail: code })) });
-    return;
-  }
-  if (!langTried) { langTried = true; import(LANG_URL).then(m => { langMod = m; renderLangSwitch(); }).catch(() => {}); }
+  const cur = lang(), short = { "zh-CN": "简", "zh-TW": "繁", en: "EN" }[cur], pref = langPref();
+  langMod.mountLangSwitcher({ host, current: pref, ui: cur === "en" ? "en" : cur === "zh-TW" ? "tw" : "zh",
+    languages: LANGS.map(([code, name]) => code === "auto" ? { code, name: t("自动"), short, sub: { "zh-CN": "简体中文", "zh-TW": "繁體中文", en: "English" }[cur] } : { code, name }),
+    onSelect: code => document.dispatchEvent(new CustomEvent("eco-set-lang", { detail: code })) });
 }
 function renderAppSwitch(){
   const host = $("#apps"), cur = lang();
-  if (switcherMod) { switcherMod.mountAppSwitcher({ host, current: "baby-log", lang: cur }); return; }
-  const i = APPS.findIndex(a => a.key === THIS_APP), n = APPS.length, prev = APPS[(i - 1 + n) % n], next = APPS[(i + 1) % n];
-  const badge = (a, label) => `<a class="badge" href="${a.url}" title="${esc(t("切到{name}", { name: t(a.name) }))}" aria-label="${esc(t("切到{name}", { name: t(a.name) }))}">${label}</a>`;
-  host.innerHTML = badge(prev, `‹ ${esc(t(prev.short))}`) + badge(next, `${esc(t(next.short))} ›`);
-  if (!switcherTried) { switcherTried = true; import(SWITCHER_URL).then(m => { switcherMod = m; renderAppSwitch(); }).catch(() => {}); }
+  switcherMod.mountAppSwitcher({ host, current: "baby-log", lang: cur });
 }
 
 function toggleKids(open = $("#kids").hidden){
