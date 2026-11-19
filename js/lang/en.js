@@ -1794,4 +1794,5 @@ export default {
   "已保留": "Kept",
   "清除这条 AI 解读？": "Clear this AI explanation?",
   "已清除": "Cleared",
+  "加载中…": "Loading…",
 };

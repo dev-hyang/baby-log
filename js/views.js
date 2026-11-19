@@ -5,6 +5,7 @@ import { heroCtrlHTML } from "./herocycle.js";
 import { musicMiniHTML, musicSlideInner } from "./music.js";
 import { aboutHTML } from "./about.js";
 import { releaseBadgeHTML, releasePageHTML } from "./releases-ui.js";
+import { loadReleases, releasesReady } from "./releases-lazy.js";
 import { byTime, last, medStatus, suggestSide, within } from "./derived.js";
 import { LANGS, lang, langPref, t } from "./i18n.js";
 import { cardsHTML, faithPageHTML, familyHubHTML, heroCfgHTML, kidsPageHTML, medsPageHTML, membersPageHTML, prefsHTML, routineCfgHTML, viewMe } from "./me.js";
@@ -63,10 +64,16 @@ function toggleKids(open = $("#kids").hidden){
 // one entry row of a hub page (我的 / 成长 / 妈妈): icon, title, one-line description, ›
 const mrow = (attr, title, desc, icon) => `<button class="mrow" ${attr}><span class="mi" aria-hidden="true">${icon}</span><span class="mt"><b>${title}</b>${desc ? `<small>${desc}</small>` : ""}</span><span class="mch" aria-hidden="true">›</span></button>`;
 // sub-pages reached from a hub: the hub's bottom tab stays highlighted and a "‹ hub" chip sits on top
+// 发布日志数据按需加载：没加载好时先显示「加载中…」，加载完（还停在这一页）再画一次
+function releasesPage(){
+  if (releasesReady()) return releasePageHTML();
+  loadReleases().then(() => { if (S.tab === "releases") render(); });
+  return `<p class="muted">${t("加载中…")}</p>`;
+}
 const SUB = {
   family: ["me", () => familyHubHTML()], "family-members": ["family", () => membersPageHTML()], "family-kids": ["family", () => kidsPageHTML()], "family-meds": ["family", () => medsPageHTML()], "family-faith": ["family", () => faithPageHTML()],
   sync: ["me", () => syncHTML()], prefs: ["me", () => prefsHTML()], settings: ["me", () => familyHubHTML()], // settings: old links
-  cards: ["me", () => cardsHTML()], herocfg: ["today", () => heroCfgHTML()], routinecfg: ["today", () => routineCfgHTML()], learn: ["me", () => viewLearn()], about: ["me", () => aboutHTML()], releases: ["me", () => releasePageHTML()], ask: ["me", () => viewAsk()],
+  cards: ["me", () => cardsHTML()], herocfg: ["today", () => heroCfgHTML()], routinecfg: ["today", () => routineCfgHTML()], learn: ["me", () => viewLearn()], about: ["me", () => aboutHTML()], releases: ["me", () => releasesPage()], ask: ["me", () => viewAsk()],
   "grow-milestones": ["grow", () => growMilestones()], "grow-foods": ["grow", () => growFoods()], "grow-sleep": ["grow", () => growSleep()],
   "grow-body": ["grow", () => growBody()], "grow-checkups": ["grow", () => growCheckups()], "grow-vax": ["grow", () => growVax()],
   "mom-charts": ["mom", () => momCharts()], "mom-signs": ["mom", () => momSigns()]

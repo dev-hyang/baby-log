@@ -1,5 +1,3 @@
-import EN from "./lang/en.js";
-import TW from "./lang/zh-TW.js";
 
 /* ============ language ============
    Simplified Chinese is the source text and doubles as the dictionary key, so a string that has no
@@ -8,7 +6,16 @@ import TW from "./lang/zh-TW.js";
    members on different languages looking at the same data. Per-device setting, like units and theme. */
 const LANG_KEY = "xiaoyueliang.v1.lang";
 const LANGS = [["auto", "自动"], ["zh-CN", "简体中文"], ["zh-TW", "繁體中文"], ["en", "English"]];
-const DICT = { en: EN, "zh-TW": TW };
+// English / 繁體 dictionaries (145KB + 118KB) are separate chunks: loaded by loadDict() only when the UI language needs one.
+// Simplified Chinese (the default) needs none, so it never downloads them.
+const DICT = {};
+const DICT_LOADERS = { en: () => import("./lang/en.js"), "zh-TW": () => import("./lang/zh-TW.js") };
+const loading = {};
+/** Resolves when the dictionary for `code` is ready (nothing to load for zh-CN). On failure the UI falls back to the Chinese keys; the next call retries. */
+function loadDict(code){
+  if (!DICT_LOADERS[code] || DICT[code]) return Promise.resolve();
+  return (loading[code] ||= DICT_LOADERS[code]().then(m => { DICT[code] = m.default; }).catch(() => { loading[code] = null; }));
+}
 
 // Installs that predate the language setting keep Chinese instead of jumping to the phone's language
 try { if (!localStorage.getItem(LANG_KEY) && localStorage.getItem("xiaoyueliang.v1")) localStorage.setItem(LANG_KEY, "zh-CN"); } catch (e) {}
@@ -20,8 +27,9 @@ function detect(){
   return "en";
 }
 let cur = null;
-function lang(){ if (!cur) { const p = langPref(); cur = (p === "zh-CN" || DICT[p]) ? p : detect(); } return cur; }
-function setLang(pref){ try { localStorage.setItem(LANG_KEY, pref); } catch (e) {} cur = null; applyLang(); }
+function lang(){ if (!cur) { const p = langPref(); cur = (p === "zh-CN" || DICT_LOADERS[p]) ? p : detect(); } return cur; }
+// Awaits the dictionary before switching, so callers can render() right after without a flash of Chinese
+async function setLang(pref){ try { localStorage.setItem(LANG_KEY, pref); } catch (e) {} cur = null; await loadDict(lang()); applyLang(); }
 // t("已保存 {n} 条", { n: 3 }); a key that is missing from the dictionary falls back to the key itself
 function t(key, params){
   const d = DICT[lang()];
@@ -39,4 +47,4 @@ function applyLang(){
 // the model answers in the language of the interface
 const answerLang = () => ({ en: "English", "zh-TW": "繁體中文" })[lang()] || "简体中文";
 
-export { LANG_KEY, LANGS, langPref, lang, setLang, t, applyLang, answerLang };
+export { LANG_KEY, LANGS, langPref, lang, loadDict, setLang, t, applyLang, answerLang };

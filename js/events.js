@@ -135,7 +135,7 @@ document.addEventListener("click", async ev => {
   }
   if (t0.dataset.unitsSet) { try { localStorage.setItem(UNIT_KEY, t0.dataset.unitsSet); } catch (e) {} readSettingsInputs(); render(); toast(t("单位已切换为{u}", { u: isUS() ? t("美制") : t("公制") })); return; }
   if (t0.dataset.pagesizeSet) { setPageSize(t0.dataset.pagesizeSet); readSettingsInputs(); render(); const again = document.querySelector(`[data-pagesize-set="${t0.dataset.pagesizeSet}"]`); again && again.focus(); return; }
-  if (t0.dataset.langSet) { readSettingsInputs(); setLang(t0.dataset.langSet); render(); return; }
+  if (t0.dataset.langSet) { readSettingsInputs(); await setLang(t0.dataset.langSet); render(); return; }
   if (t0.dataset.themeSet !== undefined) { const v = t0.dataset.themeSet; if (v) document.documentElement.dataset.theme = v; else delete document.documentElement.dataset.theme; try { localStorage.setItem(LS_KEY + ".theme", v); } catch (e) {} readSettingsInputs(); render(); return; }
   if (t0.dataset.act && t0.dataset.act.startsWith("bk-")) { await bkAct(t0.dataset.act, t0); return; }   // 备份与恢复（js/backup.js）
   if (t0.dataset.act && t0.dataset.act.startsWith("ask-")) { await askAct(t0.dataset.act, t0); return; }  // 咩咩咩（js/ask.js）
@@ -332,4 +332,4 @@ initSwipeRows({ kinds: ["entry"], del: () => t("删除"), release: () => t("松�
   await removeEntry(id); toast(t("已删除"));
 } });
 // language chosen from the header switcher (shared component)
-document.addEventListener("eco-set-lang", e => { readSettingsInputs(); setLang(e.detail); render(); });
+document.addEventListener("eco-set-lang", async e => { readSettingsInputs(); await setLang(e.detail); render(); });

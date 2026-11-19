@@ -5,19 +5,18 @@ import { initHeroCycle, markHeroDash } from "./herocycle.js";
 import "./events.js"; // registers the global click / change / input handlers
 import "./attach.js";   // AI 附件区 + 会自己长高的文字框（姊妹应用同一份）
 import "./intake.js"; // AI 一次录入体检 / 就诊（自己的 data-ix 点击处理）
-import { applyLang, lang } from "./i18n.js";
-import { APP_VERSION, S, loadLocal } from "./state.js";
-import { initReleases } from "./releases-ui.js";
-import { RELEASES } from "./releases-data.js";
+import { applyLang, lang, loadDict } from "./i18n.js";
+import { S, loadLocal } from "./state.js";
+import { loadReleases, releaseBadgePossible } from "./releases-lazy.js";
 import { initCloud } from "./store.js";
 import { initProviders, runScheduled } from "./backup.js";
 import { initSupabase, syncNow } from "./sync.js";
 import { $ } from "./util.js";
 import { heroHTML, heroPage, heroRestore, heroSettle, render, restoreRoute } from "./views.js";
 
+// 首屏渲染前先等好要用的数据：English / 繁體的词典（简体不用下载）、还会出现的「新版本」提示的发布日志数据；这样不会先闪一下中文 / 没有提示
+await Promise.all([loadDict(lang()), releaseBadgePossible() ? loadReleases() : null]);
 applyLang(); loadLocal();
-// 发布日志（js/releases-ui.js，四个姊妹应用同一份）：记新版本提示出现了几次；在首屏 render 之前，今天页才能带上提示
-initReleases({ version: APP_VERSION, releases: RELEASES, lang, accent: "var(--slate)", appId: "baby-log", open: 'data-tab="releases"' });
 restoreRoute();   // 网址里记着的页（#/grow-body）：刷新后还停在这一页（js/views.js）
 render();
 initProviders();   // 从 Dropbox 授权页跳回来时把 ?code= 换成令牌（js/backup.js）
