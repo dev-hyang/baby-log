@@ -472,22 +472,11 @@ const newFoods = all => all.filter(e => e.type === "food" && (e.newFood || (e.re
 function viewGrow(){
   const ad = babyAgeDays();
   const cur = ad == null ? -1 : STAGES.findIndex(s => ad < s.untilDays);
-  const all = vis();
-  const ms = all.filter(e => e.type === "milestone").length, foods = newFoods(all).length, vax = vaxList(all).length;
-  const lastW = all.filter(e => e.type === "baby" && num(e.weight) != null).sort(byTime)[0];
-  const nc = nextCheckup(), ref = milestoneRef();
-  return `<h2>${t("成长阶段")}</h2>
+  return `${growNav(null)}
+  <details class="more" open><summary>${t("成长阶段")}</summary>
   <div class="stages">${STAGES.map((s, i) => `<div class="stage ${i === cur ? "now" : ""}"><b>${t(s.name)}</b>${t(s.range)}<ul>${s.items.map(x => `<li>${t(x)}</li>`).join("")}</ul></div>`).join("")}</div>
   <p class="small muted" style="margin-top:6px">${cur >= 0 ? t("现在是「{stage}」，首页的快捷按钮、统计和趋势指标会按阶段变化。", { stage: t(STAGES[cur].name) }) : t("在设置里填写宝宝生日后，会自动定位到当前阶段。")}</p>
-  <div class="panel mlist" style="margin-top:14px">
-    ${mrow('data-ix="open" data-src="儿科体检"', `✦ ${t("AI 一次录入体检 / 就诊")}`, t("拍小结或打一段话：体征、疫苗、医生建议、维生素一次记好"), "📷")}
-    ${mrow('data-tab="grow-milestones"', t("发育里程碑"), ms ? t("已记录 {n} 个 · 附 CDC 月龄参考", { n: ms }) : t("记下第一次翻身、第一次叫妈妈 · 附 CDC 月龄参考"), "⭐")}
-    ${mrow('data-tab="grow-foods"', t("新食物与反应"), foods ? t("{n} 条新食物或反应记录", { n: foods }) : t("第一次尝试的食物和过敏反应"), "🥣")}
-    ${mrow('data-tab="grow-sleep"', t("睡眠"), t("最近 7 天分布 · 各月龄睡眠参考"), "🌙")}
-    ${mrow('data-tab="grow-body"', t("基本体征"), lastW ? t("最近 {w} · {date}", { w: fmtU("wbaby", lastW.weight), date: dayKey(lastW.ts) }) : t("体重、身高、BMI、血压、心率"), "📏")}
-    ${mrow('data-tab="grow-checkups"', t("儿科体检与就诊"), nc ? t("下次 {label} · {date}", { label: t(nc.label), date: dayKey(nc.at) }) : t("提醒与历史记录"), "🩺")}
-    ${mrow('data-tab="grow-vax"', t("疫苗接种记录"), vax ? t("共 {n} 次", { n: vax }) : t("还没有接种记录"), "💉")}
-  </div>`;
+  </details>`;
 }
 function growMilestones(){
   const all = vis(), ms = all.filter(e => e.type === "milestone"), cats = TYPES.milestone.fields.find(f => f.k === "cat").opts;

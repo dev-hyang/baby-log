@@ -2,6 +2,9 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-20.5", title: { zh: "成长首页：导航卡片放最上面", en: "Growth home: navigation cards on top" }, items: [
+    { k: "better", zh: "成长首页顶上换成一排导航卡片，原来的目录列表（含“AI 一次录入体检 / 就诊”）去掉；成长阶段挪到下面，可以折叠，默认展开", en: "The Growth home now opens with navigation cards instead of the topic list (including the AI checkup entry row); the stage section moved below and can be collapsed, open by default" }
+  ] },
   { v: "2026-11-20.4", title: { zh: "页内切换统一成导航小卡片", en: "In-page switches are now navigation cards" }, items: [
     { k: "better", zh: "记录页的三个视图（按餐表格 / 趋势对比 / 时间线）、儿科体检与就诊的“提醒 / 历史记录”，改成和爱家小助手一样的带图标导航小卡片，当前这一项深色高亮", en: "The Log page views (meal table / trends / timeline) and the checkup Reminders / History switch are now icon navigation cards, like in Home Pantry, with the current one highlighted" },
     { k: "new", zh: "成长的各个主题页（里程碑、新食物、睡眠、体征、体检与就诊、疫苗）顶上多了一排导航卡片，不用退回成长首页就能互相跳转", en: "Every Growth topic page now has a row of navigation cards on top, so you can jump between milestones, foods, sleep, vitals, checkups and vaccines without going back" }
