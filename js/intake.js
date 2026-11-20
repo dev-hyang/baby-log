@@ -55,7 +55,7 @@ function draw(){
     <div class="btns" style="margin-top:0"><button type="button" class="btn primary" data-ix="read" ${X.busy ? "disabled" : ""}>${X.busy ? t("正在读取…") : `✦ ${t("让 AI 读出来")}`}</button>${X.read ? "" : `<button type="button" class="btn" data-ix="manual">${t("不用 AI，直接填")}</button>`}</div>
     <p class="small muted" style="margin:6px 0 0">${aiReady() ? t("照片只在浏览器里压缩后发给你自己设置的 AI，不保存；不发孩子的名字。读出来的内容请核对。") : t("还没填 API key，去 设置 → AI 助手")}</p></div>`;
   const form = !X.read ? "" : `
-    <div class="field"><div class="lab" id="ix_src">${t("记录来源")}</div><div class="seg" role="group" aria-labelledby="ix_src">${["儿科体检", "看病/急诊"].map(o => `<button type="button" data-ix="src" data-v="${o}" aria-pressed="${X.src === o}">${t(o)}</button>`).join("")}</div></div>
+    <div class="field"><label for="ix_src">${t("记录来源")}</label><select id="ix_src" data-ixsrc>${["儿科体检", "看病/急诊"].map(o => `<option value="${o}"${X.src === o ? " selected" : ""}>${t(o)}</option>`).join("")}</select></div>
     <div class="ix-two ix-where"><div class="field"><label for="ix_ts">${t("时间")}</label><input id="ix_ts" type="datetime-local" data-ixf="ts" max="${nowMax}" value="${toInput(X.ts)}"></div>
       <div class="field"><label for="ix_clinic">${t("医院 / 诊所")}</label><input id="ix_clinic" type="text" data-ixf="clinic" autocomplete="off" value="${esc(X.clinic)}"></div><div class="field"><label for="ix_doctor">${t("医生")}</label><input id="ix_doctor" type="text" data-ixf="doctor" autocomplete="off" placeholder="${esc(t("如 Dr. Lee"))}" value="${esc(X.doctor || "")}"></div></div>
     ${upd ? `<p class="small muted ix-upd" role="status">${t("这一天已经有一条体检 / 就诊记录：保存时会更新那一条，补上新读到的数，不会多记一条。")}</p>` : ""}
@@ -193,6 +193,7 @@ document.addEventListener("click", async ev => {
 });
 // 勾选 / 改了数字：保存按钮上的条数跟着变（不重画整张表，光标不跳）
 document.addEventListener("change", ev => {
+  if (X && ev.target.matches && ev.target.matches("select[data-ixsrc]")) { readIx(); X.src = ev.target.value; draw(); return; }
   if (!X || !ev.target.closest || !ev.target.closest("#sheetIn") || !$("#sheetIn [data-ix=save]")) return;
   readIx(); const n = count(), btn = $("#sheetIn [data-ix=save]");
   btn.disabled = !n; btn.textContent = n ? t("保存 {n} 条", { n }) : t("还没有要保存的");

@@ -2,6 +2,9 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-20.3", title: { zh: "记录表单里的选项改成统一的下拉", en: "Choices in the record forms are now dropdowns" }, items: [
+    { k: "better", zh: "记录表单里原来一排排的选项按钮（喂奶方式、大便颜色、来源、谁能看到、记录给哪个孩子等）统一改成下拉，和其他输入框一样高、一样整齐；不想填的项可以选“—”清空", en: "The rows of option buttons in the record forms (feeding method, stool color, source, who can see it, which child, and so on) are now dropdowns, the same height as the other fields; pick — to leave one empty" }
+  ] },
   { v: "2026-11-20.2", title: { zh: "新增、补录都收进右下角的圆形「＋」", en: "Add and back-fill actions now live in the round + button" }, items: [
     { k: "better", zh: "记录页和成长各页（睡眠、体征、体检与就诊、里程碑、新食物、疫苗）的“＋ 补记 / 睡眠 / 里程碑 / 接种 / AI 录入”按钮，统一收进右下角的圆形「＋」，点开选要记什么；页面上不再散着一排按钮", en: "The add / back-fill / AI log buttons on the Log page and every Growth page are now in one round + button at the bottom right; tap it to choose what to record" }
   ] },

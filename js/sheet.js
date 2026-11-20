@@ -43,6 +43,7 @@ const head = title => `<div class="sheet-head"><h3 id="sheetTitle">${title}</h3>
 const VAX_LIST = ["乙肝疫苗 HepB", "卡介苗 BCG", "脊灰疫苗 IPV/OPV", "百白破 DTaP", "Hib 疫苗", "肺炎球菌疫苗 PCV", "轮状病毒疫苗 RV", "麻腮风 MMR", "水痘疫苗 VAR", "甲肝疫苗 HepA", "乙脑疫苗 JE", "流脑疫苗 MenA/MenAC", "流感疫苗 Flu", "新冠疫苗 COVID-19", "RSV 单抗 nirsevimab"];
 const MED_LIST = ["布洛芬", "泰诺（对乙酰氨基酚）", "复合维生素", "铁剂", "钙片"];
 const FOOD_LIST = ["高铁米粉", "南瓜泥", "红薯泥", "胡萝卜泥", "土豆泥", "苹果泥", "香蕉", "牛油果", "蛋黄", "鸡蛋", "豆腐", "鱼肉", "鸡肉", "牛肉", "猪肝", "酸奶", "粥", "面条", "花生酱（稀）", "西兰花", "菠菜", "草莓", "橙子"];
+const selHTML = (id, label, k, opts, v, { blank = true } = {}) => `<label for="${id}">${label}</label><select id="${id}" data-segsel="${k}"${blank ? "" : " data-req"}>${blank ? `<option value="">—</option>` : ""}${opts.map(([o, l]) => `<option value="${esc(o)}"${v === o ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
 const datalist = (id, items) => `<datalist id="${id}">${items.map(v => `<option value="${esc(v)}">`).join("")}</datalist>`;
 
 /* ============ form sheet ============ */
@@ -64,7 +65,7 @@ function drawForm(focusKey){
     if (f.type === "seg") {
       let opts = typeof f.opts === "function" ? f.opts(draft) : f.opts;
       if (v && !opts.includes(v)) opts = [...opts, v]; // an older record whose option no longer fits the age list stays visible
-      inner = `<div class="lab" id="${id}">${label}</div><div class="seg" role="group" aria-labelledby="${id}">${opts.map(o => `<button type="button" data-seg="${f.k}" data-v="${esc(o)}" aria-pressed="${v === o}">${esc(t(o))}</button>`).join("")}</div>`;
+      inner = selHTML(id, label, f.k, opts.map(o => [o, t(o)]), v);
     }
     else if (f.type === "check") inner = `<label class="check"><input type="checkbox" data-f="${f.k}" ${v ? "checked" : ""}>${label}</label>`;
     else if (f.type === "num" && f.dim === "wbaby" && isUS()) {
@@ -100,7 +101,7 @@ function drawForm(focusKey){
     ${datalist("vaxlist", VAX_LIST.map(v => t(v)))}${datalist("medlist", MED_LIST.map(v => t(v)))}${datalist("foodlist", FOOD_LIST.map(v => t(v)))}${datalist("milestonelist", milestoneNames())}
     ${visHTML()}
     <div class="btns"><button class="btn primary" data-act="save">${t("保存")}</button>${isNew ? "" : `<button class="btn danger" data-act="del">${t("删除")}</button>`}</div>`;
-  if (focusKey) { const el = $("#sheetIn").querySelector(`[data-seg="${focusKey}"][aria-pressed="true"]`); el && el.focus(); }
+  if (focusKey) { const el = $("#sheetIn").querySelector(`[data-segsel="${focusKey}"]`); el && el.focus(); }
 }
 /* Who can see the record (family mode with migration 012 only). New records start from the type's default
    (the private-by-default types, see types.js) or the last choice made for that type on this device; only the
@@ -117,8 +118,7 @@ const VIS_HINT = { private: "只有你能看到，家主也看不到。", shared
 function visHTML(){
   if (!visSupported() || (draft.cby && SB.user && draft.cby !== SB.user.id)) return "";
   const cur = draft.vis || "family", others = otherMembers();
-  return `<div class="field"><div class="lab" id="f_vis">${t("谁能看到")}</div>
-    <div class="seg" role="group" aria-labelledby="f_vis">${VIS_OPTS.map(([v, l]) => `<button type="button" data-seg="vis" data-v="${v}" aria-pressed="${cur === v}">${t(l)}</button>`).join("")}</div>
+  return `<div class="field">${selHTML("f_vis", t("谁能看到"), "vis", VIS_OPTS.map(([v, l]) => [v, t(l)]), cur, { blank: false })}
     ${cur === "shared" ? (others.length
       ? `<div class="seg" role="group" aria-label="${t("选择家人")}" style="margin-top:8px">${others.map(m => `<button type="button" data-with="${esc(m.id)}" aria-pressed="${(draft.with || []).includes(m.id)}">${esc(m.name)}</button>`).join("")}</div>`
       : `<p class="small muted" style="margin:8px 0 0">${t("家里还没有其他成员。")}</p>`) : ""}
@@ -146,7 +146,7 @@ function whoHTML(isNew){
     const sel = new Set([cur, ...(draft.also || [])]);
     return `<div class="field"><div class="lab" id="f_child">${t("哪个孩子（可多选，一起做的活动会各记一条）")}</div><div class="seg" role="group" aria-labelledby="f_child">${kids.map(c => `<button type="button" data-who="${esc(c.id)}" aria-pressed="${sel.has(c.id)}">${esc(c.name || t("宝宝"))}</button>`).join("")}</div></div>`;
   }
-  if (draft._pick) return `<div class="field"><div class="lab" id="f_child">${t("记录给哪个孩子")}</div><div class="seg" role="group" aria-labelledby="f_child">${kids.map(c => `<button type="button" data-seg="child" data-v="${esc(c.id)}" aria-pressed="${cur === c.id}">${esc(c.name || t("宝宝"))}</button>`).join("")}</div></div>`;
+  if (draft._pick) return `<div class="field">${selHTML("f_child", t("记录给哪个孩子"), "child", kids.map(c => [c.id, c.name || t("宝宝")]), cur, { blank: false })}</div>`;
   return `<div class="field who"><span class="small muted">${t("记录给")}</span><b>${esc(childName(cur))}</b><button type="button" class="chip" data-act="who-change">${t("换一个孩子")}</button></div>`;
 }
 function readDraftInputs(){

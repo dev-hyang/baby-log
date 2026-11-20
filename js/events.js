@@ -120,7 +120,6 @@ document.addEventListener("click", async ev => {
   if (t0.dataset.kidsel) { setChild(t0.dataset.kidsel); S.mealDay = null; S.heroIdx = 0; S.heroEdit = 0; render(); $("#bname").focus(); return; }
   if (t0.dataset.pending) { await sbPending(t0.dataset.pending, t0.dataset.uid); return; }
   if (t0.dataset.member) { await sbMember(t0.dataset.member, t0.dataset.uid); return; }
-  if (t0.dataset.seg) { readDraftInputs(); const k = t0.dataset.seg; draft[k] = (draft[k] === t0.dataset.v && k !== "child" && k !== "vis") ? null : t0.dataset.v; drawForm(k); return; }
   if (t0.dataset.with) { // family members a record is shared with
     readDraftInputs(); const w = new Set(draft.with || []);
     if (w.has(t0.dataset.with)) w.delete(t0.dataset.with); else w.add(t0.dataset.with);
@@ -242,6 +241,8 @@ document.addEventListener("change", async ev => {
     cd[S.childId] = mine; S.settings.checkupDates = cd; await saveSettings(); toast(v ? t("体检日期已改为 {date}", { date: v }) : t("已恢复时间表日期")); return;
   }
   if (ev.target.id === "importFile" && ev.target.files[0]) { await importJSON(ev.target.files[0]); ev.target.value = ""; return; }
+  // 表单里的选项（原来的一排按钮）统一是下拉；空选项 = 不填（js/sheet.js selHTML）
+  if (draft && ev.target.dataset.segsel) { readDraftInputs(); const k = ev.target.dataset.segsel; draft[k] = ev.target.value || null; drawForm(k); return; }
   if (draft && ev.target.closest("#sheetIn") && ev.target.type === "checkbox") { readDraftInputs(); drawForm(); }
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#kids").hidden) { toggleKids(false); $("#bname").focus(); } });
