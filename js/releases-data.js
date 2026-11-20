@@ -2,6 +2,10 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-20.4", title: { zh: "页内切换统一成导航小卡片", en: "In-page switches are now navigation cards" }, items: [
+    { k: "better", zh: "记录页的三个视图（按餐表格 / 趋势对比 / 时间线）、儿科体检与就诊的“提醒 / 历史记录”，改成和爱家小助手一样的带图标导航小卡片，当前这一项深色高亮", en: "The Log page views (meal table / trends / timeline) and the checkup Reminders / History switch are now icon navigation cards, like in Home Pantry, with the current one highlighted" },
+    { k: "new", zh: "成长的各个主题页（里程碑、新食物、睡眠、体征、体检与就诊、疫苗）顶上多了一排导航卡片，不用退回成长首页就能互相跳转", en: "Every Growth topic page now has a row of navigation cards on top, so you can jump between milestones, foods, sleep, vitals, checkups and vaccines without going back" }
+  ] },
   { v: "2026-11-20.3", title: { zh: "记录表单里的选项改成统一的下拉", en: "Choices in the record forms are now dropdowns" }, items: [
     { k: "better", zh: "记录表单里原来一排排的选项按钮（喂奶方式、大便颜色、来源、谁能看到、记录给哪个孩子等）统一改成下拉，和其他输入框一样高、一样整齐；不想填的项可以选“—”清空", en: "The rows of option buttons in the record forms (feeding method, stool color, source, who can see it, which child, and so on) are now dropdowns, the same height as the other fields; pick — to leave one empty" }
   ] },

@@ -986,3 +986,20 @@ div.rec-ai{margin:0 0 10px 12px}
 .fab-menu-list button:last-child{border-bottom:0}
 .fab-menu-list button:hover,.fab-menu-list button:focus-visible{background:var(--bg)}
 @media print{.fab-menu,.fab-solo{display:none!important}}
+
+/* ---- 导航小卡片组（js/pnav.js；照爱家小助手的 .pnav-card）：记录页视图、体检提醒 / 历史、成长各页互相跳转 ---- */
+.pnav{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;margin:12px 0 16px;padding:8px;border-radius:14px;background:var(--slate-soft)}
+.pnav-card{position:relative;display:flex;align-items:center;gap:8px;min-height:48px;padding:8px 12px;border-radius:10px;background:var(--surface);border:1px solid var(--line);color:var(--ink);font:inherit;font-size:14px;font-weight:600;text-align:left;cursor:pointer}
+.pnav-card:hover{border-color:var(--slate)}
+.pnav-card[aria-current="page"]{background:var(--slate);border-color:var(--slate);color:#fff}
+:root[data-theme="dark"] .pnav-card[aria-current="page"]{color:#131921}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .pnav-card[aria-current="page"]{color:#131921}}
+.pnav-ico{font-size:18px;line-height:1}
+.pnav-lbl{flex:1;min-width:0}
+@media (max-width:640px){
+  .pnav{display:flex;flex-wrap:wrap;gap:6px;padding:6px}
+  .pnav-card{flex:1 1 calc(50% - 6px);min-width:0;flex-direction:column;justify-content:center;gap:2px;min-height:58px;padding:6px 4px;font-size:13px;text-align:center}
+  .pnav-lbl{flex:none;max-width:100%;line-height:1.2}
+  .pnav[data-n="3"] .pnav-card,.pnav[data-n="5"] .pnav-card,.pnav[data-n="6"] .pnav-card{flex-basis:calc(33.333% - 6px)}
+}
+@media print{.pnav{display:none!important}}

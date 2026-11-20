@@ -20,6 +20,7 @@ import { wakeAdvice } from "./sleep-advice.js";
 import { recAiHTML } from "./rec-ai.js";
 import { growRecords } from "./grow-records.js";
 import { fabMenu } from "./fab-menu.js";
+import { growNav, pnavHTML } from "./pnav.js";
 import { fbarHTML, hit, onFbar } from "./filterbar.js";
 import { moreHTML, pagerNav, shownOf } from "./pager.js";
 import { viewTrend } from "./trend.js";
@@ -77,8 +78,8 @@ const SUB = {
   family: ["me", () => familyHubHTML()], "family-members": ["family", () => membersPageHTML()], "family-kids": ["family", () => kidsPageHTML()], "family-meds": ["family", () => medsPageHTML()], "family-faith": ["family", () => faithPageHTML()],
   sync: ["me", () => syncHTML()], prefs: ["me", () => prefsHTML()], settings: ["me", () => familyHubHTML()], // settings: old links
   cards: ["me", () => cardsHTML()], herocfg: ["today", () => heroCfgHTML()], routinecfg: ["today", () => routineCfgHTML()], learn: ["me", () => viewLearn()], about: ["me", () => aboutHTML()], releases: ["me", () => releasesPage()], ask: ["me", () => viewAsk()],
-  "grow-milestones": ["grow", () => growMilestones()], "grow-foods": ["grow", () => growFoods()], "grow-sleep": ["grow", () => growSleep()],
-  "grow-body": ["grow", () => growBody()], "grow-checkups": ["grow", () => growCheckups()], "grow-vax": ["grow", () => growVax()],
+  "grow-milestones": ["grow", () => growNav("grow-milestones") + growMilestones()], "grow-foods": ["grow", () => growNav("grow-foods") + growFoods()], "grow-sleep": ["grow", () => growNav("grow-sleep") + growSleep()],
+  "grow-body": ["grow", () => growNav("grow-body") + growBody()], "grow-checkups": ["grow", () => growNav("grow-checkups") + growCheckups()], "grow-vax": ["grow", () => growNav("grow-vax") + growVax()],
   "mom-charts": ["mom", () => momCharts()], "mom-signs": ["mom", () => momSigns()]
 };
 const TAB_LABEL = { today: "今天", me: "我的", grow: "成长", mom: "妈妈" };
@@ -341,8 +342,8 @@ function entryRow(e){
 }
 
 function viewLog(){
-  const views = [["meal", t("按餐表格")], ["trend", t("趋势对比")], ["list", t("时间线")]];
-  const sw = `<div class="vtabs" role="group" aria-label="${t("记录视图")}">${views.map(([k, l]) => `<button data-logview="${k}" aria-pressed="${S.logView === k}">${l}</button>`).join("")}</div>`;
+  const views = [["meal", "🍼", t("按餐表格")], ["trend", "📈", t("趋势对比")], ["list", "🗓", t("时间线")]];
+  const sw = pnavHTML(views.map(([k, icon, label]) => ({ icon, label, attrs: `data-logview="${k}"` })), Math.max(0, views.findIndex(v => v[0] === S.logView)), t("记录视图"));
   if (S.logView === "meal") return sw + viewMeal();
   if (S.logView === "trend") return sw + viewTrend();
   return sw + viewList();
@@ -534,9 +535,7 @@ function growBody(){
 function growCheckups(){
   const all = vis(), done = checkupsDone();
   return `<h2>${t("儿科体检与就诊")}</h2>
-  <div class="chips" role="group" aria-label="${t("体检视图")}" style="margin-top:0">
-    <button class="chip" data-ckview="plan" aria-pressed="${S.checkupView !== "history"}">${t("提醒")}</button>
-    <button class="chip" data-ckview="history" aria-pressed="${S.checkupView === "history"}">${t("历史记录")}</button></div>
+  ${pnavHTML([{ icon: "⏰", label: t("提醒"), attrs: 'data-ckview="plan"' }, { icon: "📋", label: t("历史记录"), attrs: 'data-ckview="history"' }], S.checkupView === "history" ? 1 : 0, t("体检视图"))}
   ${S.checkupView === "history" ? checkupHistoryHTML(all) : checkupPlanHTML(all, done)}${fabMenu([{ label: t("记录体检 / 就诊"), attrs: `data-add="baby" data-preset='{"src":"儿科体检"}'` }, { label: t("AI 录入"), icon: "✦", attrs: 'data-ix="open" data-src="儿科体检"' }])}`;
 }
 function growVax(){ return vaxHTML(); }

@@ -799,6 +799,7 @@ export default {
 "没有符合条件的记录，换个关键词试试。": "No matching records. Try another keyword.",
 "搜索备注、名称、日期": "Search notes, names, dates",
 "清除筛选": "Clear filters",
+"成长主题": "Growth topics",
 "补记一条": "Add a past record",
 "记录体检 / 就诊": "Log a checkup / visit",
 "排序": "Sort",
