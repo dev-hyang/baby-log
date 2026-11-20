@@ -19,6 +19,7 @@ import { VT_KEYS, vitalsHTML } from "./vitals.js";
 import { wakeAdvice } from "./sleep-advice.js";
 import { recAiHTML } from "./rec-ai.js";
 import { growRecords } from "./grow-records.js";
+import { fabMenu } from "./fab-menu.js";
 import { fbarHTML, hit, onFbar } from "./filterbar.js";
 import { moreHTML, pagerNav, shownOf } from "./pager.js";
 import { viewTrend } from "./trend.js";
@@ -373,10 +374,10 @@ function viewList(){
   return `${dayNavHTML(d0)}
   ${bar}
   ${q ? `<p class="small muted" style="margin:-4px 0 8px">${t("搜索时显示所有日期的结果。")}</p>` : ""}
-  <div class="btns" style="margin-top:0"><button class="btn" data-act="addpick">${t("＋ 补记一条")}</button></div>
+
   <div class="listbar"><span class="small muted">${q ? "" : t("{n} 条", { n: list.length })}</span>
     ${listStyleSwitch()}</div>
-  ${body}`;
+  ${body}${fabMenu([{ label: t("补记一条"), attrs: 'data-act="addpick"' }])}`;
 }
 
 /* ---- charts ---- */
@@ -492,20 +493,20 @@ function growMilestones(){
   const counts = cats.map(c => [c, ms.filter(e => e.cat === c).length]).filter(([, n]) => n);
   return `<h2>${t("发育里程碑")}</h2>
   ${counts.length ? `<div class="grsum">${counts.map(([c, n]) => `<span class="grsum-i"><b class="num">${n}</b>${esc(t(c))}</span>`).join("")}</div>` : ""}
-  ${growRecords("ms", ms, { subs: cats.map(c => [c, t(c), e => e.cat === c]), add: `<button class="btn" data-add="milestone">＋ ${t("里程碑")}</button>`, empty: t("还没有记录里程碑。第一次翻身、第一次叫妈妈，记下日期以后很难忘。") })}
-  <h2>${t("各月龄参考（CDC）")}</h2><div class="panel">${milestoneRefHTML()}</div>`;
+  ${growRecords("ms", ms, { subs: cats.map(c => [c, t(c), e => e.cat === c]), empty: t("还没有记录里程碑。第一次翻身、第一次叫妈妈，记下日期以后很难忘。") })}
+  <h2>${t("各月龄参考（CDC）")}</h2><div class="panel">${milestoneRefHTML()}</div>${fabMenu([{ label: t("里程碑"), attrs: 'data-add="milestone"' }])}`;
 }
 function growFoods(){
   const list = newFoods(vis());
   return `<h2>${t("新食物与反应")}</h2>
-  ${growRecords("foods", list, { subs: [["new", t("第一次尝试的"), e => e.newFood], ["react", t("有反应的"), e => e.reaction && e.reaction !== "无"]], add: `<button class="btn" data-add="food" data-preset='{"newFood":true}'>＋ ${t("新食物")}</button>`, empty: t("还没有新食物记录。记录饮食时勾上“第一次尝试的新食物”或填写反应，就会出现在这里。") })}
-  <p class="small muted">${t("只列出勾了“第一次尝试”或有反应的记录。新食物建议一次只加一种、连续观察 2–3 天，以医生建议为准。")}</p>`;
+  ${growRecords("foods", list, { subs: [["new", t("第一次尝试的"), e => e.newFood], ["react", t("有反应的"), e => e.reaction && e.reaction !== "无"]], empty: t("还没有新食物记录。记录饮食时勾上“第一次尝试的新食物”或填写反应，就会出现在这里。") })}
+  <p class="small muted">${t("只列出勾了“第一次尝试”或有反应的记录。新食物建议一次只加一种、连续观察 2–3 天，以医生建议为准。")}</p>${fabMenu([{ label: t("新食物"), attrs: `data-add="food" data-preset='{"newFood":true}'` }])}`;
 }
 function growSleep(){
   return `<h2>${t("最近 7 天睡眠")}</h2>
   <div class="panel">${sleepBarcode()}
     <p class="small muted" style="margin-top:8px">${t("每一行是一天，从 0 点到 24 点。看得出白天和夜里的睡眠慢慢分开，就是作息在形成。")}</p></div>
-  ${growRecords("sleep", vis().filter(e => e.type === "sleep"), { def: "30", add: `<button class="btn" data-add="sleep">＋ ${t("睡眠")}</button>` })}
+  ${growRecords("sleep", vis().filter(e => e.type === "sleep"), { def: "30" })}
   <h2>${t("睡眠参考")}</h2>
   <div class="panel scroll-x"><table>
     <thead><tr><th>${t("月龄")}</th><th>${t("24小时总睡眠")}</th><th>${t("常见清醒时长")}</th></tr></thead>
@@ -517,7 +518,7 @@ function growSleep(){
       <tr><td>${t("6–12 岁")}</td><td>${t("9–12 小时")}</td><td>–</td></tr>
       <tr><td>${t("13–18 岁")}</td><td>${t("8–10 小时")}</td><td>–</td></tr>
     </tbody></table>
-    <p class="small muted" style="margin-top:8px">${t("总睡眠：4个月以上为美国睡眠医学会（AASM）建议、AAP 认可；0–3 个月为美国国家睡眠基金会建议。清醒时长是常见经验范围，个体差异很大。安全睡眠：仰睡、独自睡在婴儿床、床里不放枕头被子毛绒玩具。多数专家建议约 4–6 个月后再考虑睡眠训练。")}</p></div>`;
+    <p class="small muted" style="margin-top:8px">${t("总睡眠：4个月以上为美国睡眠医学会（AASM）建议、AAP 认可；0–3 个月为美国国家睡眠基金会建议。清醒时长是常见经验范围，个体差异很大。安全睡眠：仰睡、独自睡在婴儿床、床里不放枕头被子毛绒玩具。多数专家建议约 4–6 个月后再考虑睡眠训练。")}</p></div>${fabMenu([{ label: t("睡眠"), attrs: 'data-add="sleep"' }])}`;
 }
 /* 基本体征：卡片、走势线、同龄正常范围、给 AI 的摘要都在 js/vitals.js（和家庭学堂同一份） */
 const VT_DIM = { weight: "wbaby", length: "len", head: "len" };
@@ -525,10 +526,10 @@ export const vtCtx = () => ({ t, val: (dim, v) => toDisp(VT_DIM[dim], v), unit: 
   months: ts => ageMonths(S.childId, ts), sex: (child(S.childId) || {}).sex || null, src: e => t(isVisit(e) ? e.src : "在家量") });
 function growBody(){
   const health = vis().filter(e => e.type === "baby"), newborn = stageOf().key === "newborn";
-  return `<div class="btns" style="margin-top:0"><button class="btn primary" data-add="baby">＋ ${t("量一次体征")}</button><button class="btn" data-ix="open" data-src="儿科体检">✦ ${t("AI 录入体检")}</button><button class="btn" data-act="ask-vitals">✦ ${t("问 AI 这些体征")}</button></div>
+  return `<div class="btns" style="margin-top:0"><button class="btn" data-act="ask-vitals">✦ ${t("问 AI 这些体征")}</button></div>
   ${newborn ? `<p class="small muted">${t("新生儿出生后几天体重下降常见；通常约 10–14 天回到出生体重。")}</p>` : ""}
   ${vitalsHTML(health, vtCtx())}
-  ${growRecords("body", health.filter(e => VT_KEYS.some(k => num(e[k]) != null)), { subs: [["home", t("在家量的"), e => !isVisit(e)], ["clinic", t("体检 / 看病时量的"), e => isVisit(e)]], add: "" })}`;
+  ${growRecords("body", health.filter(e => VT_KEYS.some(k => num(e[k]) != null)), { subs: [["home", t("在家量的"), e => !isVisit(e)], ["clinic", t("体检 / 看病时量的"), e => isVisit(e)]] })}${fabMenu([{ label: t("量一次体征"), attrs: 'data-add="baby"' }, { label: t("AI 录入体检"), icon: "✦", attrs: 'data-ix="open" data-src="儿科体检"' }])}`;
 }
 function growCheckups(){
   const all = vis(), done = checkupsDone();
@@ -536,7 +537,7 @@ function growCheckups(){
   <div class="chips" role="group" aria-label="${t("体检视图")}" style="margin-top:0">
     <button class="chip" data-ckview="plan" aria-pressed="${S.checkupView !== "history"}">${t("提醒")}</button>
     <button class="chip" data-ckview="history" aria-pressed="${S.checkupView === "history"}">${t("历史记录")}</button></div>
-  ${S.checkupView === "history" ? checkupHistoryHTML(all) : checkupPlanHTML(all, done)}`;
+  ${S.checkupView === "history" ? checkupHistoryHTML(all) : checkupPlanHTML(all, done)}${fabMenu([{ label: t("记录体检 / 就诊"), attrs: `data-add="baby" data-preset='{"src":"儿科体检"}'` }, { label: t("AI 录入"), icon: "✦", attrs: 'data-ix="open" data-src="儿科体检"' }])}`;
 }
 function growVax(){ return vaxHTML(); }
 // the Bright Futures schedule, with the actual visit date next to any checkpoint that already has a clinic record
@@ -556,7 +557,7 @@ function checkupPlanHTML(all, done){
 // every baby-health record taken at a clinic, newest first: the visit history a parent flips back through
 function checkupHistoryHTML(all){
   return growRecords("visits", all.filter(isVisit), { ai: true, subs: [["checkup", t("儿科体检"), e => e.src === "儿科体检"], ["sick", t("看病/急诊"), e => e.src === "看病/急诊"]],
-    add: `<button class="btn" data-ix="open" data-src="儿科体检">✦ ${t("AI 录入")}</button>`, empty: t("还没有体检或就诊记录。记录宝宝健康时把来源选成“儿科体检”或“看病/急诊”，就会出现在这里。") });
+    empty: t("还没有体检或就诊记录。记录宝宝健康时把来源选成“儿科体检”或“看病/急诊”，就会出现在这里。") });
 }
 function milestonesHTML(all){
   const list = all.filter(e => e.type === "milestone").sort((a, b) => a.ts - b.ts), shown = shownOf("milestones", S.childId);
@@ -576,9 +577,8 @@ function foodsHTML(all){
 function vaxHTML(){
   const list = vaxList(vis()), names = [...new Set(list.map(e => e.name).filter(Boolean))];
   return `<h2>${t("疫苗接种记录")}</h2>
-  ${growRecords("vax", list, { subs: names.length > 1 ? names.map(n => [n, t(n), e => e.name === n]) : null, add: `<button class="btn" data-add="vax">＋ ${t("接种")}</button>`, empty: t("还没有接种记录。打完疫苗后记一笔，看儿科或办入学时翻出来很方便。") })}
-  <div class="btns"><button class="btn" data-ix="open" data-src="儿科体检">✦ ${t("AI 一次录入（连同体征和医生建议）")}</button></div>
-  <p class="small muted" style="margin-top:8px">${t("这里是家庭自己的备份，正式凭证仍以接种本、医院系统或学校要求的官方记录为准。")}</p>`;
+  ${growRecords("vax", list, { subs: names.length > 1 ? names.map(n => [n, t(n), e => e.name === n]) : null, empty: t("还没有接种记录。打完疫苗后记一笔，看儿科或办入学时翻出来很方便。") })}
+  <p class="small muted" style="margin-top:8px">${t("这里是家庭自己的备份，正式凭证仍以接种本、医院系统或学校要求的官方记录为准。")}</p>${fabMenu([{ label: t("接种"), attrs: 'data-add="vax"' }, { label: t("AI 一次录入（连同体征和医生建议）"), icon: "✦", attrs: 'data-ix="open" data-src="儿科体检"' }])}`;
 }
 
 function viewLearn(){

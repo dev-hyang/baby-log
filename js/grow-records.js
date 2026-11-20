@@ -1,6 +1,6 @@
 /* ---- 成长各页的「记录」块（2026-11-12；2026-11-20 起用统一筛选条 js/filterbar.js）----
    和记录页的时间线同一套：搜索 + 时间范围 + 分类（+ 清除筛选）、列表 | 时间轴、按天分组、点一条修改 / 删除、继续加载。
-   id：哪一页；all：这一页的全部记录；subs = [[值, 名字, 筛选函数]]（有的页按类别 / 来源再分）；def：默认时间范围；add：「＋」按钮的 HTML */
+   id：哪一页；all：这一页的全部记录；subs = [[值, 名字, 筛选函数]]（有的页按类别 / 来源再分）；def：默认时间范围；新增按钮在各页自己的右下角「＋」菜单（js/fab-menu.js） */
 import { fbarHTML, hit, onFbar } from "./filterbar.js";
 import { t } from "./i18n.js";
 import { moreHTML, shownOf } from "./pager.js";
@@ -13,7 +13,7 @@ import { axisHTML, entryRow, listStyleSwitch, render } from "./views.js";
 const GR_RANGES = [["30", "近 30 天"], ["90", "近 3 个月"], ["365", "近 1 年"], ["all", "全部"]];
 const RANGE_DAYS = { "30": 30, "90": 91, "365": 365 };
 
-export function growRecords(id, all, { subs = null, def = "all", add = "", empty = "", ai = false } = {}){
+export function growRecords(id, all, { subs = null, def = "all", empty = "", ai = false } = {}){
   const F = ((S.grf ||= {})[id] ||= { range: def, sub: "all" });
   F.q ??= "";
   const R = RANGE_DAYS[F.range], q = F.q.trim();
@@ -45,7 +45,7 @@ export function growRecords(id, all, { subs = null, def = "all", add = "", empty
     changed: filtered
   });
   return `<section class="grrec"><div class="listbar"><h2 style="margin:0">${t("记录")} <span class="small muted">${t("{n} 条", { n: list.length })}</span></h2>${listStyleSwitch()}</div>
-    ${bar}${add ? `<div class="grfilter">${add}</div>` : ""}
+    ${bar}
     <div class="grlist">${body}</div>
     ${list.length ? `<p class="small muted" style="margin-top:8px">${t("点一条可以修改或删除。")}</p>` : ""}</section>`;
 }

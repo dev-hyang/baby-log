@@ -973,5 +973,16 @@ div.rec-ai{margin:0 0 10px 12px}
 .clear-filters[hidden]{display:none!important}
 .toolbar .clear-filters{order:9}
 @media (max-width:440px){.toolbar input[type=search],.toolbar select{font-size:16px}.toolbar input[type=search]{flex-basis:150px}.toolbar.tb-on .tb-toggle{min-height:44px}.clear-filters{padding:0 2px}#main .toolbar.tb-on{z-index:9}#main .toolbar.tb-on .tb-panel.tb-up{top:auto;bottom:100%}}
-.grfilter{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 6px}
 .grfilter .btn{flex:none;min-height:44px;padding:0 14px;white-space:nowrap}
+
+/* ---- 右下角圆形「＋」+ 菜单（js/fab-menu.js）：记录页、成长各页的新增 / 补录都放这里 ---- */
+.fab-menu,.fab-solo{position:fixed;z-index:11;right:max(16px,calc(50vw - 344px));bottom:calc(88px + env(safe-area-inset-bottom,0px))}
+.fab-menu>summary,.fab-solo{list-style:none;display:grid;place-items:center;width:56px;height:56px;padding:0;border:0;border-radius:50%;background:var(--honey);color:#1D2733;font-size:30px;line-height:1;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.25);user-select:none}
+.fab-menu>summary::-webkit-details-marker{display:none}
+.fab-menu[open]>summary{transform:rotate(45deg)}
+.fab-menu>summary:focus-visible,.fab-solo:focus-visible{outline:3px solid var(--slate);outline-offset:3px}
+.fab-menu-list{position:absolute;right:0;bottom:68px;min-width:230px;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 6px 20px rgba(0,0,0,.22);overflow:hidden}
+.fab-menu-list button{display:block;width:100%;min-height:48px;padding:12px 16px;border:0;border-bottom:1px solid var(--line);background:none;color:var(--ink);font:inherit;font-weight:600;text-align:left;cursor:pointer}
+.fab-menu-list button:last-child{border-bottom:0}
+.fab-menu-list button:hover,.fab-menu-list button:focus-visible{background:var(--bg)}
+@media print{.fab-menu,.fab-solo{display:none!important}}

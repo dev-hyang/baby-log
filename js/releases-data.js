@@ -2,6 +2,9 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-20.2", title: { zh: "新增、补录都收进右下角的圆形「＋」", en: "Add and back-fill actions now live in the round + button" }, items: [
+    { k: "better", zh: "记录页和成长各页（睡眠、体征、体检与就诊、里程碑、新食物、疫苗）的“＋ 补记 / 睡眠 / 里程碑 / 接种 / AI 录入”按钮，统一收进右下角的圆形「＋」，点开选要记什么；页面上不再散着一排按钮", en: "The add / back-fill / AI log buttons on the Log page and every Growth page are now in one round + button at the bottom right; tap it to choose what to record" }
+  ] },
   { v: "2026-11-20.1", title: { zh: "记录页和成长各页：统一的搜索框和筛选条", en: "Log and Growth pages: one shared search box and filter bar" }, items: [
     { k: "better", zh: "记录页的时间线、成长各页的记录（睡眠、体征、体检与就诊、里程碑、新食物、疫苗）都用同一条「搜索 + 筛选」栏：电脑上一行排开，手机上收成「搜索 + 筛选 (n)」，点开选条件", en: "The Log timeline and the records on every Growth page (sleep, vitals, checkups and visits, milestones, new foods, vaccines) now share one search + filter bar: one row on a laptop, a Search + Filters (n) row on a phone" },
     { k: "new", zh: "成长各页的记录现在也能搜索（备注、名称、日期）；改过筛选后出现「清除筛选」，一下恢复默认", en: "Growth page records can now be searched (notes, names, dates); a Clear filters button appears once a filter is changed" }
