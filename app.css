@@ -867,12 +867,6 @@ details.more summary .small{font-weight:400}
 textarea[data-autosize]{resize:none;transition:height .08s ease-out}
 /* 成长各页的「记录」块（views.js growRecords）：和记录页同一个时间线，上面一行时间范围 + 分类 + 「＋」 */
 .grrec{margin:18px 0 6px}
-.grfilter{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 4px}
-.grfilter .grr{grid-template-columns:repeat(4,auto)}
-.grfilter .grr button{padding:0 12px;white-space:nowrap}
-.grfilter .filtersel{flex:1 1 140px;min-width:0;width:auto;min-height:42px}
-.grfilter .btn{flex:none;min-height:42px;padding:0 14px;white-space:nowrap}
-@media (max-width:640px){.grfilter .grr{display:grid;width:100%;grid-template-columns:repeat(4,1fr)}.grfilter .grr button{padding:0 4px;font-size:13px}}
 .grsum{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 4px}
 .grsum-i{display:inline-flex;align-items:baseline;gap:6px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:14px}
 .grsum-i b{font-size:16px}
@@ -968,3 +962,16 @@ div.rec-ai{margin:0 0 10px 12px}
 @media (max-width:440px){div.rec-ai,.gb-ai{margin-left:6px}}
 @media (min-width:441px){div.rec-ai,.rec-wrap > .gb-ai{margin-left:86px}}
 .gb-ai-in .btns .btn{min-height:40px;height:auto;padding:6px 16px;font-size:14px;border-radius:999px}
+
+/* ---- 统一的搜索 + 筛选条（js/filterbar.js；手机上由 js/compact-filters.js 收成「搜索 + 筛选 (n)」）。记录页、成长各页同一套 ---- */
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0;--eco-tb-bg:var(--bg)}
+.panel .toolbar{--eco-tb-bg:var(--surface)}
+.toolbar input[type=search]{flex:1 1 220px;min-width:0;box-sizing:border-box;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);font:inherit;font-size:15px}
+.toolbar select{flex:0 1 auto;width:auto;max-width:100%;min-width:0;box-sizing:border-box;min-height:44px;padding:8px 32px 8px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background-color:var(--surface);color:var(--ink);font:inherit;font-size:15px;text-overflow:ellipsis;cursor:pointer;-webkit-appearance:none;appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 17px) 52%,calc(100% - 12px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.toolbar select:focus-visible,.toolbar input[type=search]:focus-visible,.clear-filters:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
+.clear-filters{flex:0 0 auto;min-height:44px;padding:0 6px;border:0;background:transparent;color:var(--slate);font:inherit;font-size:14px;font-weight:700;white-space:nowrap;cursor:pointer}
+.clear-filters[hidden]{display:none!important}
+.toolbar .clear-filters{order:9}
+@media (max-width:440px){.toolbar input[type=search],.toolbar select{font-size:16px}.toolbar input[type=search]{flex-basis:150px}.toolbar.tb-on .tb-toggle{min-height:44px}.clear-filters{padding:0 2px}#main .toolbar.tb-on{z-index:9}#main .toolbar.tb-on .tb-panel.tb-up{top:auto;bottom:100%}}
+.grfilter{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 6px}
+.grfilter .btn{flex:none;min-height:44px;padding:0 14px;white-space:nowrap}

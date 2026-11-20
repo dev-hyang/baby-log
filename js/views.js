@@ -18,6 +18,8 @@ import { aiIcon, viewAsk } from "./ask.js";
 import { VT_KEYS, vitalsHTML } from "./vitals.js";
 import { wakeAdvice } from "./sleep-advice.js";
 import { recAiHTML } from "./rec-ai.js";
+import { growRecords } from "./grow-records.js";
+import { fbarHTML, hit, onFbar } from "./filterbar.js";
 import { moreHTML, pagerNav, shownOf } from "./pager.js";
 import { viewTrend } from "./trend.js";
 import { TYPES, flags, isVisit, summary, typeLabel } from "./types.js";
@@ -201,7 +203,6 @@ function renderPass(){
   $("#main").innerHTML = (sub ? crumbHTML(S.tab) : "") + v(); mainKey = pageKey();
   updateMiniBar($("#bname").textContent, sub ? crumbHTML(S.tab, "mini") : "", t("回到顶部"));
   heroRestore();
-  if (S.tab === "log") { const s = $("#q"); if (s && document.activeElement !== s && S.logFocus) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); S.logFocus = false; } }
 }
 
 // 睡眠卡：要不要叫醒（js/sleep-advice.js，和家庭学堂同一份）；到点了用亮色小标签
@@ -352,7 +353,7 @@ function viewList(){
   let list = vis().slice().sort(byTime);
   if (!q) list = list.filter(e => e.ts >= d0 && e.ts < d0 + D);
   if (S.filter !== "all") list = list.filter(e => S.filter === "momall" ? ["mmed", "mbody"].includes(e.type) : e.type === S.filter);
-  if (q) list = list.filter(e => (typeLabel(e.type) + " " + summary(e) + " " + (e.note || "") + " " + dayKey(e.ts)).toLowerCase().includes(q));
+  if (q) list = list.filter(e => hit(q, typeLabel(e.type), summary(e), e.note, dayKey(e.ts)));
   const groups = {};
   for (const e of list) (groups[dayKey(e.ts)] ||= []).push(e);
   // the stage's types first, then any other type this child has records of, so history stays reachable after a stage change or a hidden card
@@ -367,10 +368,12 @@ function viewList(){
     ? `<div class="empty"><div class="eicon" aria-hidden="true">${q ? "🔍" : "🗓"}</div>${q ? t("没有符合条件的记录，换个关键词试试。") : S.filter !== "all" ? t("这一天没有这类记录。") : t("这一天没有记录。")}</div>`
     : (q ? Object.entries(groups).map(([d, es]) => left ? `<div class="day">${d} ${weekday(es[0].ts)} · ${t("{n} 条", { n: es.length })}</div>${show(es)}` : "").join("")
     : show(list)) + moreHTML("timeline", list.length, shown);
+  onFbar("log", { set(k, v) { if (k === "q") S.q = v; else S.filter = v; render(); }, clear() { S.q = ""; S.filter = "all"; render(); } });
+  const bar = fbarHTML("log", { q: { value: S.q, ph: t("搜索备注、药名、日期（如 2026-10-11）") }, selects: [{ k: "type", label: t("类型"), v: S.filter, opts: chips }], changed: !!q || S.filter !== "all" });
   return `${dayNavHTML(d0)}
-  <input id="q" class="search" type="search" value="${esc(S.q)}" placeholder="${t("搜索备注、药名、日期（如 2026-10-11）")}" aria-label="${t("搜索备注、药名、日期（如 2026-10-11）")}" autocomplete="off">
-  ${q ? `<p class="small muted" style="margin:6px 0 0">${t("搜索时显示所有日期的结果。")}</p>` : ""}
-  <div class="filterrow"><select id="logFilter" class="filtersel" data-logfilter aria-label="${t("类型")}">${chips.map(([k, l]) => `<option value="${k}"${S.filter === k ? " selected" : ""}>${l}</option>`).join("")}</select><button class="btn" data-act="addpick">${t("＋ 补记一条")}</button></div>
+  ${bar}
+  ${q ? `<p class="small muted" style="margin:-4px 0 8px">${t("搜索时显示所有日期的结果。")}</p>` : ""}
+  <div class="btns" style="margin-top:0"><button class="btn" data-act="addpick">${t("＋ 补记一条")}</button></div>
   <div class="listbar"><span class="small muted">${q ? "" : t("{n} 条", { n: list.length })}</span>
     ${listStyleSwitch()}</div>
   ${body}`;
@@ -483,31 +486,6 @@ function viewGrow(){
     ${mrow('data-tab="grow-checkups"', t("儿科体检与就诊"), nc ? t("下次 {label} · {date}", { label: t(nc.label), date: dayKey(nc.at) }) : t("提醒与历史记录"), "🩺")}
     ${mrow('data-tab="grow-vax"', t("疫苗接种记录"), vax ? t("共 {n} 次", { n: vax }) : t("还没有接种记录"), "💉")}
   </div>`;
-}
-/* ---- 成长各页的「记录」块（2026-11-12）：和记录页的时间线同一套——时间范围、分类筛选、列表 | 时间轴、按天分组、点一条修改 / 删除、继续加载 ----
-   id：哪一页；all：这一页的全部记录；subs = [[值, 名字, 筛选函数]]（有的页按类别 / 来源再分）；def：默认时间范围；add：右边的「＋」按钮 */
-const GR_RANGES = [["30", "近 30 天"], ["90", "近 3 个月"], ["365", "近 1 年"], ["all", "全部"]];
-function growRecords(id, all, { subs = null, def = "all", add = "", empty = "", ai = false } = {}){
-  const F = ((S.grf ||= {})[id] ||= { range: def, sub: "all" });
-  const R = { "30": 30, "90": 91, "365": 365 }[F.range];
-  let list = all.filter(e => !R || e.ts >= Date.now() - R * D);
-  if (subs && F.sub !== "all") { const sb = subs.find(x => x[0] === F.sub); if (sb) list = list.filter(sb[2]); else F.sub = "all"; }
-  list = list.slice().sort((a, b) => b.ts - a.ts);
-  const key = "gr-" + id, shown = shownOf(key, [S.childId, F.range, F.sub].join("|")), style = S.listStyle === "axis" ? "axis" : "rows";
-  let left = shown;
-  const groups = []; for (const e of list) { const k = dayKey(e.ts), g = groups[groups.length - 1]; if (g && g.k === k) g.es.push(e); else groups.push({ k, es: [e] }); }
-  // ai：每条下面一小块 AI 解读（体检与就诊，js/rec-ai.js）
-  const show = es => { const k = Math.min(es.length, left); left -= k;
-    if (ai) return es.slice(0, k).map(e => `<div class="rec-wrap">${style === "axis" ? axisHTML([e]) : entryRow(e)}${recAiHTML(e)}</div>`).join("");
-    return style === "axis" ? axisHTML(es, k) : es.slice(0, k).map(entryRow).join(""); };
-  const body = list.length
-    ? groups.map(g => (left ? `<div class="day">${g.k} ${weekday(g.es[0].ts)}<span class="muted"> · ${ageAtText(g.es[0].ts)}</span></div>${show(g.es)}` : "")).join("") + moreHTML(key, list.length, shown)
-    : `<div class="empty"><div class="eicon" aria-hidden="true">🗓</div>${F.range !== "all" || F.sub !== "all" ? t("这段时间、这一类没有记录。") : empty || t("还没有记录。")}</div>`;
-  return `<section class="grrec"><div class="listbar"><h2 style="margin:0">${t("记录")} <span class="small muted">${t("{n} 条", { n: list.length })}</span></h2>${listStyleSwitch()}</div>
-    <div class="grfilter"><div class="segmini grr" role="group" aria-label="${t("时间范围")}">${GR_RANGES.map(([k, l]) => `<button data-grr="${id}" data-v="${k}" aria-pressed="${F.range === k}">${t(l)}</button>`).join("")}</div>
-      ${subs ? `<select class="filtersel" data-grs="${id}" aria-label="${t("类型")}"><option value="all">${t("全部")}</option>${subs.map(([k, l]) => `<option value="${esc(k)}"${F.sub === k ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>` : ""}${add}</div>
-    <div class="grlist">${body}</div>
-    ${list.length ? `<p class="small muted" style="margin-top:8px">${t("点一条可以修改或删除。")}</p>` : ""}</section>`;
 }
 function growMilestones(){
   const all = vis(), ms = all.filter(e => e.type === "milestone"), cats = TYPES.milestone.fields.find(f => f.k === "cat").opts;
@@ -630,4 +608,4 @@ function viewLearn(){
     ${["丁香妈妈", "崔玉涛育学园", "年糕妈妈"].map(n => `<div class="medrow"><span>${n}</span><button class="chip" data-copy="${n}">${t("复制名称")}</button></div>`).join("")}</div>`;
 }
 
-export { restoreRoute, backTo, heroSettle, heroPage, renderStatus, render, renderBg, toggleKids, mrow, SUB, heroHTML, heroRestore, bigDur, viewToday, medRow, entryRow, viewLog, viewList, lineChart, sleepBarcode, viewMom, viewGrow, milestonesHTML, foodsHTML, vaxHTML, viewLearn };
+export { axisHTML, listStyleSwitch, restoreRoute, backTo, heroSettle, heroPage, renderStatus, render, renderBg, toggleKids, mrow, SUB, heroHTML, heroRestore, bigDur, viewToday, medRow, entryRow, viewLog, viewList, lineChart, sleepBarcode, viewMom, viewGrow, milestonesHTML, foodsHTML, vaxHTML, viewLearn };

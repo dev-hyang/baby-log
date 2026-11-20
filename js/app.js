@@ -12,11 +12,15 @@ import { initCloud } from "./store.js";
 import { initProviders, runScheduled } from "./backup.js";
 import { initSupabase, syncNow } from "./sync.js";
 import { $ } from "./util.js";
+import { initCompactFilters } from "./compact-filters.js";
+import "./filterbar.js";   // 统一的搜索 + 筛选条（记录页、成长各页）
 import { heroHTML, heroPage, heroRestore, heroSettle, render, restoreRoute } from "./views.js";
 
 // 首屏渲染前先等好要用的数据：English / 繁體的词典（简体不用下载）、还会出现的「新版本」提示的发布日志数据；这样不会先闪一下中文 / 没有提示
 await Promise.all([loadDict(lang()), releaseBadgePossible() ? loadReleases() : null]);
 applyLang(); loadLocal();
+// 筛选条手机上收成「搜索 + 筛选 (n)」一行（爱家小助手 shared/compact-filters.js 同一份）
+initCompactFilters({ root: $("#main"), ui: () => ({ "zh-TW": "tw", en: "en" }[lang()] || "zh") });
 restoreRoute();   // 网址里记着的页（#/grow-body）：刷新后还停在这一页（js/views.js）
 render();
 initProviders();   // 从 Dropbox 授权页跳回来时把 ?code= 换成令牌（js/backup.js）

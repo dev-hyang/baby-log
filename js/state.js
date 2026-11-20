@@ -10,8 +10,7 @@ const S = {
   mode: "local", col: null, prof: null, sample: null,
   tab: "today", filter: "all", q: "",
   logView: "meal", mealDay: null, gran: "day", span: 14, mealSort: { k: "t", dir: -1 }, listStyle: (() => { try { return localStorage.getItem("baby.listStyle") === "axis" ? "axis" : "rows"; } catch (e) { return "rows"; } })(), metric: null, checkupView: "plan",
-  flashId: null, // the entry just saved on Today, highlighted for a moment
-  logFocus: false // re-focus the search box after the log view re-renders on typing
+  flashId: null // the entry just saved on Today, highlighted for a moment
 };
 function loadLocal(){
   try { const o = JSON.parse(localStorage.getItem(LS_KEY) || "null");
@@ -194,6 +193,6 @@ function textToRoutine(txt){
   return gs;
 }
 
-const APP_VERSION = "2026-11-19.4";
+const APP_VERSION = "2026-11-20.1";
 
 export { goesToSchool, cleanRoutine, groupTone, faithOn, FAITH_STEPS, ROUTINE_TPL, routineGroups, routineSteps, routineToText, textToRoutine, LS_KEY, S, activeKids, loadLocal, CHILD_KEY, MOM_TYPES, isKidType, normalizeSettings, child, childName, childOf, setChild, vis, inVisPass, withVisPass, kidCount, saveLocal, birthTs, babyAgeDays, ageText, STAGES, stageOf, ageMonths, ageAtText, CHECKUPS, checkupDate, checkupDefaultDate, checkupOverride, checkupsDone, matchCheckup, nextCheckup, APP_VERSION };

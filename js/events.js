@@ -30,7 +30,6 @@ document.addEventListener("click", async ev => {
   if (t0.id === "bname") { toggleKids(); return; }
   if (t0.dataset.act === "nav-back") { goTab(backTo(t0.dataset.parent)); return; }   // 返回：上一页，没有就上一层
   if (t0.dataset.tab) { if (t0.dataset.slot !== undefined) S.heroEdit = +t0.dataset.slot; goTab(t0.dataset.tab); return; } // the card's gear opens the editor on that card
-  if (t0.dataset.grr) { ((S.grf ||= {})[t0.dataset.grr] ||= { sub: "all" }).range = t0.dataset.v; render(); const again = document.querySelector(`[data-grr="${t0.dataset.grr}"][data-v="${t0.dataset.v}"]`); again && again.focus(); return; }   // 成长各页的记录：时间范围
   if (t0.dataset.add) { openForm(t0.dataset.add, null, t0.dataset.preset ? JSON.parse(t0.dataset.preset) : {}); return; }
   if (t0.dataset.edit) { const e = S.entries.find(x => x.id === t0.dataset.edit); e && openForm(e.type, e); return; }
   if (t0.dataset.liststyle) { S.listStyle = t0.dataset.liststyle; try { localStorage.setItem("baby.listStyle", S.listStyle); } catch (e) { /* only a convenience */ } render(); const again = document.querySelector(`[data-liststyle="${S.listStyle}"]`); again && again.focus(); return; } // timeline: list rows or vertical axis
@@ -229,9 +228,7 @@ document.addEventListener("click", async ev => {
 });
 document.addEventListener("change", async ev => {
   if (await bkChange(ev)) return;   // 备份设置 / 选了备份文件
-  // drop-downs: timeline type, trend range and trend metric
-  if (ev.target.dataset.grs !== undefined) { ((S.grf ||= {})[ev.target.dataset.grs] ||= { range: "all" }).sub = ev.target.value; render(); const again = document.querySelector(`[data-grs="${ev.target.dataset.grs}"]`); again && again.focus(); return; }   // 成长各页的记录：分类
-  if (ev.target.dataset.logfilter !== undefined) { S.filter = ev.target.value; render(); const again = document.querySelector("[data-logfilter]"); again && again.focus(); return; }
+  // drop-downs: trend range and trend metric
   if (ev.target.dataset.trendrange !== undefined) { const [g, n] = ev.target.value.split(":"); S.gran = g === "week" ? "week" : "day"; S.span = +n || (S.gran === "week" ? 8 : 14); render(); const again = document.querySelector("[data-trendrange]"); again && again.focus(); return; }
   if (ev.target.dataset.trendmetric !== undefined) { S.metric = ev.target.value; render(); const again = document.querySelector("[data-trendmetric]"); again && again.focus(); return; }
   // date picker in the meal table / timeline: jump straight to that day (never past today)
@@ -248,15 +245,8 @@ document.addEventListener("change", async ev => {
   if (draft && ev.target.closest("#sheetIn") && ev.target.type === "checkbox") { readDraftInputs(); drawForm(); }
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#kids").hidden) { toggleKids(false); $("#bname").focus(); } });
-// timeline search: re-render once typing pauses (~200 ms) instead of on every key. The box itself keeps the text and caret
-// meanwhile; render() puts the focus back afterwards only if it is still in the box
-let qTimer = 0;
+// 滑块旁边的数字跟着变（记录页 / 成长各页的搜索框由 js/filterbar.js 自己处理）
 document.addEventListener("input", ev => {
-  if (ev.target.id === "q") {
-    S.q = ev.target.value; S.logFocus = true; clearTimeout(qTimer); // logFocus: a sync render inside the pause keeps the box focused too
-    qTimer = setTimeout(() => { const box = $("#q"); if (S.tab !== "log" || !box) { S.logFocus = false; return; } S.logFocus = document.activeElement === box; render(); }, 200);
-    return;
-  }
   if (ev.target.type === "range") { const o = ev.target.parentElement.querySelector("output"); if (o) o.textContent = ev.target.value; }
 });
 
