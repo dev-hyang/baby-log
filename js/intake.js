@@ -1,6 +1,6 @@
 import { aiReady, askText } from "./ai.js";
 import { t } from "./i18n.js";
-import { EXTRA, EXTRA_KEYS, INTAKE_SYSTEM, VAX_NAMES, extraParts, mergeInto, parseIntake, sameEntry, sameVisit } from "./intake-lib.js";
+import { EXTRA, EXTRA_KEYS, INTAKE_SYSTEM, VAX_NAMES, extraParts, mergeInto, parseIntake, sameEntry, sameVisit, vaxForm } from "./intake-lib.js";
 import { attachHTML, attachHas, attachPayload, attachReset } from "./attach.js";
 import { closeSheet, head, showSheet } from "./sheet.js";
 import { LS_KEY, S, ageMonths, childName, childOf, matchCheckup } from "./state.js";
@@ -125,8 +125,7 @@ async function aiRead(){
     // 疫苗本：每一针带自己的日期。已经记过的（同一天同一种针 / 同一天同一种药 / 同一个里程碑）和还没到日子的默认不勾，免得记重；
     // 勾上的话保存时更新那一条（补上剂次、部位等），也不会多一条
     const today = dayKey(Date.now()), visit = dayKey(X.ts);
-    X.vaccines.push(...r.vaccines.map(v => { const seen = !!sameEntry(mine("vax"), v.name, v.day || visit), later = !!v.day && v.day > today;
-      return { on: !seen && !later, seen, name: v.name, day: later ? "" : v.day || "", dose: v.dose || "", site: v.site || "" }; }));
+    X.vaccines.push(...vaxForm([...mine("vax"), ...X.vaccines.filter(x => x.name).map(x => ({ name: x.name, ts: new Date((x.day || visit) + "T12:00:00").getTime(), dose: x.dose }))], r.vaccines, visit, today));
     X.meds.push(...r.meds.map(m => { const seen = !!sameEntry(mine("bmed"), m.name, visit); return { on: !seen, seen, cat: m.cat, name: m.name, dose: m.dose }; }));
     X.milestones.push(...r.milestones.map(m => { const seen = !!sameEntry(mine("milestone"), m.name, null); return { on: !seen, seen, cat: m.cat, name: m.name }; }));
     // 表格：每个日期一行体征；那天已经有记录的默认不勾（勾上 = 补进那一条）

@@ -19,7 +19,7 @@ Return ONLY JSON with this shape (omit what is not there; never invent values):
 "labs":[{"date":"YYYY-MM-DD|null","name":"test name as written, e.g. Hemoglobin, Lead, Ferritin","value":n,"unit":"unit as written","ref_low":n|null,"ref_high":n|null}]}
 Rules: "kind" is checkup for a well-child / routine visit, sick for an illness, injury or urgent visit. Weight given as "15 lb 4 oz" -> weight_lb 15 and weight_oz 4. Length = height.
 Blood pressure "98/60" -> bp_systolic 98, bp_diastolic 60; pulse = heart rate per minute. *_pct are the age percentiles printed next to a measurement ("75th", "P75", "75%", "75 百分位") -> 75; "<1st" -> 1, ">99th" -> 99. Only copy a percentile or BMI that is written; never compute one.
-Visit summary: list each vaccine given at THIS visit once, with that visit's date (combination shots such as Pediarix or Vaxelis: one entry with the product name).
+Visit summary: list each vaccine given at THIS visit once, with that visit's date (combination shots such as Pediarix or Vaxelis: one entry with the product name). Visit summaries often re-print the whole immunization history ("Immunizations administered", "Previously given", "Vaccines up to date"): list a vaccine only if its date is this visit's date or the page clearly says it was given today; skip the re-printed past doses (they are already recorded elsewhere). Each dose once: never repeat the same vaccine and date.
 Vaccine record / immunization history / 接种本 (usually a table, often one row per vaccine with a date for each dose across the columns): list EVERY dose that has a date, one entry per date, with its own "date" and its dose number (column 1 = dose 1 unless labeled otherwise); for such a record leave the top-level "date" null unless it is clearly one visit.
 Tables with several dated measurements (growth chart table, vitals history, a list of past visits): put EACH dated row in "rows" (one entry per date) and leave the top-level "vitals" for this visit only (empty if the page is only a history table).
 Lab results (blood / urine tests, lead, hemoglobin, ferritin, vitamin D…): put EVERY test row in "labs" with its own value, unit and the printed reference range ("12.0-15.5" -> ref_low 12, ref_high 15.5; "<5" -> ref_high 5); numeric results only; the date is the collection / result date.
@@ -163,6 +163,28 @@ function sameEntry(had, name, day){
   if (!nameKey(name)) return null;
   return (had || []).find(e => e && (!day || localDay(e.ts) === day) && nameKey(e.name) === nameKey(name)) || null;
 }
+const dayMs = d => new Date(d + "T12:00:00").getTime();
+/** 这一针在已有记录里的「同一针」：① 同一天同一种；② 写了第几剂的（加强针除外）：同一种、同一剂次已记过（就诊小结常把以前打过的整张列一遍，日期可能读偏、也可能没写）；
+ *  ③ 日期读偏一点：有日期的前后 3 天、没写日期也没写剂次的前后 14 天内同一种。had = [{ name, ts, dose }]；没有返回 null */
+function findVax(had, v, visitDay){
+  const day = v.day || visitDay, hit = sameEntry(had, v.name, day);
+  if (hit) return hit;
+  const k = nameKey(v.name); if (!k) return null;
+  const same = (had || []).filter(e => e && nameKey(e.name) === k);
+  if (/^第\d剂$/.test(v.dose || "")) { const m = same.find(e => e.dose === v.dose); if (m) return m; }
+  const win = v.day ? 3 : v.dose ? 0 : 14;
+  return day && win ? same.find(e => Math.abs(dayMs(localDay(e.ts)) - dayMs(day)) <= win * 86400000) || null : null;
+}
+/** 读出来的疫苗 → 表单里的几行：已经记过的（含这次读到的重复项）、还没到日子的默认不勾；已记过的把日期对到那一条，勾上保存时更新它、不多记一条 */
+function vaxForm(had, vaccines, visitDay, today){
+  const pool = [...(had || [])], out = [];
+  for (const v of vaccines) {
+    const old = findVax(pool, v, visitDay), later = !!v.day && v.day > today;
+    out.push({ on: !old && !later, seen: !!old, name: v.name, day: later ? "" : old ? localDay(old.ts) : v.day || "", dose: v.dose || "", site: v.site || "" });
+    if (!old && !later) pool.push({ name: v.name, ts: dayMs(v.day || visitDay), dose: v.dose });
+  }
+  return out;
+}
 /** 这一针是不是已经记过（同一天同一种） */
 const vaxSeen = (had, name, day) => !!day && !!sameEntry(had, name, day);
 /** 同一天已经有的一条就诊「宝宝健康」（体检 / 看病，不管当时选的是哪个）：had = 这个孩子的 baby 记录 */
@@ -179,4 +201,4 @@ function mergeInto(old, add){
   return o;
 }
 
-export { INTAKE_SYSTEM, VAX_NAMES, EXTRA, EXTRA_KEYS, VKEYS, extraParts, placeText, parseIntake, vaxName, vaxDose, vaxSite, vaxSeen, sameEntry, sameVisit, mergeInto, localDay, medCat };
+export { INTAKE_SYSTEM, VAX_NAMES, EXTRA, EXTRA_KEYS, VKEYS, extraParts, placeText, parseIntake, vaxName, vaxDose, vaxSite, vaxSeen, findVax, vaxForm, sameEntry, sameVisit, mergeInto, localDay, medCat };

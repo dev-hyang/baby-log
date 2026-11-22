@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { extraParts, medCat, placeText, mergeInto, parseIntake, sameEntry, sameVisit, vaxDose, vaxName, vaxSeen, vaxSite } from "../js/intake-lib.js";
+import { extraParts, medCat, placeText, mergeInto, parseIntake, sameEntry, sameVisit, vaxDose, vaxForm, vaxName, vaxSeen, vaxSite } from "../js/intake-lib.js";
 
 test("a whole checkup becomes metric vitals, vaccines, meds and milestones", () => {
   const r = parseIntake("```json\n" + JSON.stringify({
@@ -103,4 +103,20 @@ test("junk and empty replies", () => {
   assert.equal(parseIntake("not json"), null);
   assert.equal(parseIntake("{}"), null);
   assert.equal(parseIntake(JSON.stringify({ date: "yesterday", vitals: {} })), null);
+});
+
+test("vaxForm: a visit summary re-printing past shots does not make duplicates", () => {
+  const ts = d => new Date(d + "T09:00:00").getTime();
+  const had = [{ name: "百白破 DTaP", ts: ts("2026-01-10"), dose: "第1剂" }, { name: "流感疫苗 Flu", ts: ts("2025-10-02"), dose: null }];
+  const list = vaxForm(had, [
+    { name: "百白破 DTaP", day: "2026-01-12", dose: "第1剂", site: null },   // date misread by 2 days
+    { name: "百白破 DTaP（Pediarix）", day: null, dose: "第1剂", site: null }, // undated, same dose already recorded
+    { name: "流感疫苗 Flu", day: null, dose: null, site: null },              // undated, nothing within 14 days of the visit
+    { name: "乙肝疫苗 HepB", day: "2026-11-01", dose: "第2剂", site: null },
+    { name: "乙肝疫苗 HepB", day: "2026-11-01", dose: "第2剂", site: null },   // read twice in the same page
+    { name: "水痘疫苗 VAR", day: "2027-01-01", dose: null, site: null }       // not due yet
+  ], "2026-11-20", "2026-11-22");
+  assert.deepEqual(list.map(x => [x.on, x.seen]), [[false, true], [false, true], [true, false], [true, false], [false, true], [false, false]]);
+  assert.equal(list[0].day, "2026-01-10");   // points at the existing entry so saving updates it
+  assert.equal(list[5].day, "");
 });
