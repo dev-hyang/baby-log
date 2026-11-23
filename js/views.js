@@ -228,13 +228,13 @@ function heroHTML(){
   // a card that has run well past the child's usual rhythm moves to the front (worst first) and changes colour; the saved order is untouched
   const own = heroKeys(), an = heroAnomalies(), bad = new Map(an.map(a => [a.k, a]));
   const order = [...an.map(a => own.indexOf(a.k)), ...own.map((_, i) => i).filter(i => !bad.has(own[i]))], keys = [...(sl ? ["asleep"] : []), ...order.map(i => own[i]), "music"], n = keys.length;   // 睡着时第一张是睡眠计时；最后一张是音乐卡（js/music.js）
-  const slotOf = (j) => order[j - (sl ? 1 : 0)];   // 计时卡在「编辑顶部卡片」里的位置
   const sig = an.map(a => a.k).join(","); // a card newly running long: bring the track back to the front so it is seen
   if (sig !== S.heroAnomSig) { if (!sl && an.some(a => !(S.heroAnomSig || "").split(",").includes(a.k))) S.heroIdx = 0; S.heroAnomSig = sig; }
   const cur = Math.min(S.heroIdx || 0, n - 1);
   const slide = (k, j, clone) => { if (k === "asleep") return sleepSlide(clone); if (k === "music") return `<section class="hero musichero" ${clone ? 'aria-hidden="true" inert' : `aria-label="${j + 1}/${n}"`}>${musicSlideInner(clone)}</section>`;
-    const a = bad.get(k); return `<section class="hero${a ? " alert " + a.level : ""}" ${clone ? 'aria-hidden="true"' : `aria-label="${j + 1}/${n}"`}><div class="moon"></div>
-    <button class="gear" data-tab="herocfg" data-slot="${slotOf(j)}" aria-label="${t("编辑顶部卡片")}" ${clone ? 'tabindex="-1"' : ""}>⚙</button>${a ? `<div class="heroalert" ${clone ? "" : 'role="status"'}><i class="tri" aria-hidden="true">⚠️</i><span>${esc(anomalyText(a))}</span></div>` : ""}${bigClock(k)}</section>`; };
+    const a = bad.get(k), c = k === "routine" ? null : clockOf(k), tap = c && c.add;   // 整张卡片可点：直接打开记录表单（js/events.js）；「开始睡」那张仍是按钮
+    const tapAttrs = tap ? ` data-add="${c.add}"${c.preset ? ` data-preset="${esc(JSON.stringify(c.preset))}"` : ""}${clone ? "" : ` role="button" tabindex="0" aria-label="${esc(t("记录{x}", { x: t(c.noun) }))}"`}` : "";
+    return `<section class="hero${a ? " alert " + a.level : ""}${tap ? " tappable" : ""}" ${clone ? 'aria-hidden="true"' : tap ? "" : `aria-label="${j + 1}/${n}"`}${tapAttrs}><div class="moon"></div>${tap ? `<span class="tapadd" aria-hidden="true">＋</span>` : ""}${a ?`<div class="heroalert" ${clone ? "" : 'role="status"'}><i class="tri" aria-hidden="true">⚠️</i><span>${esc(anomalyText(a))}</span></div>` : ""}${bigClock(k)}</section>`; };
   const loop = n > 1, COPIES = 5; // five copies of the list side by side; the middle one is the real one (see heroSettle in js/app.js)
   const slides = loop ? Array.from({ length: COPIES }, (_, c) => keys.map((k, j) => slide(k, j, c !== 2)).join("")).join("") : slide(keys[0], 0);
   // 卡片下面一行：‹ 进度短划线 › ⚙（js/herocycle.js，每 10 秒自动换，可调）
@@ -266,8 +266,7 @@ function bigClock(k){
       <div class="meta">${wake ? `<span>${t("{time} 起床", { time: hm(wake.ts) })}</span>` : ""}${next ? `<span>${t("下一步：{step}", { step: `<span class="side">${esc(t(next))}</span>` })}</span>` : `<span>${t("今天的习惯都做到了")}</span>`}${own ? `<span>${t("{n} 步自己做到", { n: own })}</span>` : ""}</div>`;
   }
   const c = clockOf(k), e = c.find();
-  const rec = c.act ? `<button class="rec" data-act="${c.act}">${esc(t(c.noun))}</button>`
-    : `<button class="rec" data-add="${c.add}"${c.preset ? ` data-preset="${esc(JSON.stringify(c.preset))}"` : ""}>${t("记录{x}", { x: esc(t(c.noun)) })}</button>`;
+  const rec = c.act ? `<button class="rec" data-act="${c.act}">${esc(t(c.noun))}</button>` : "";   // 有表单的卡片整张可点，不再放按钮
   if (!e) return `<div class="lbl">${esc(t(c.label))}</div><div class="big num">--<small>:</small>--</div><div class="meta"><span>${esc(t(c.empty))}</span>${rec}</div>`;
   const gap = Date.now() - e.ts, side = k === "feed" ? suggestSide(e) : null, every = pottyMin();
   const pill = k !== "potty" ? "" : gap >= every * 60e3 ? `<span class="side">${t("该去试试了")}</span>` : `<span>${t("{n} 分钟后提醒去试试", { n: Math.ceil(every - gap / 60e3) })}</span>`;

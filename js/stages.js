@@ -91,12 +91,12 @@ const POTTY_DEFAULT_MIN = 90;
 // the "since last" cards the top of Today can show (plus the routine's progress, which is not a clock).
 // add / preset: the record button next to the status; act: a one-tap action instead; sum: the line after the time
 const CLOCKS = {
-  feed:      { label: "距上次喂奶", noun: "喂奶", empty: "点下面的按钮记录第一次喂奶", add: "feed", find: () => last(e => e.type === "feed" && e.method !== "吸奶") },
-  diaper:    { label: "距上次换尿布", noun: "换尿布", empty: "点下面的按钮记录第一次换尿布", add: "diaper", find: () => last(e => e.type === "diaper") },
-  potty:     { label: "距上次如厕", noun: "如厕", empty: "点下面的按钮记录第一次如厕", add: "potty", find: () => last(e => e.type === "potty") },
-  meal:      { label: "距上次吃饭", noun: "吃饭", empty: "点下面的按钮记录今天第一顿", add: "food", find: () => last(e => e.type === "food") },
-  companion: { label: "距上次陪伴", noun: "陪伴", empty: "点下面的按钮记录一次陪伴", add: "companion", find: () => last(e => e.type === "companion") },
-  outdoor:   { label: "距上次户外", noun: "户外", empty: "点下面的按钮记录一次户外", add: "activity", preset: { kind: "户外" }, find: () => last(e => e.type === "activity" && e.kind === "户外") },
+  feed:      { label: "距上次喂奶", noun: "喂奶", empty: "点这张卡片记录第一次喂奶", add: "feed", find: () => last(e => e.type === "feed" && e.method !== "吸奶") },
+  diaper:    { label: "距上次换尿布", noun: "换尿布", empty: "点这张卡片记录第一次换尿布", add: "diaper", find: () => last(e => e.type === "diaper") },
+  potty:     { label: "距上次如厕", noun: "如厕", empty: "点这张卡片记录第一次如厕", add: "potty", find: () => last(e => e.type === "potty") },
+  meal:      { label: "距上次吃饭", noun: "吃饭", empty: "点这张卡片记录今天第一顿", add: "food", find: () => last(e => e.type === "food") },
+  companion: { label: "距上次陪伴", noun: "陪伴", empty: "点这张卡片记录一次陪伴", add: "companion", find: () => last(e => e.type === "companion") },
+  outdoor:   { label: "距上次户外", noun: "户外", empty: "点这张卡片记录一次户外", add: "activity", preset: { kind: "户外" }, find: () => last(e => e.type === "activity" && e.kind === "户外") },
   wake:      { label: "距上次睡醒", noun: "开始睡", empty: "还没有睡眠记录", act: "sleepnow",
                find: () => { const e = last(x => x.type === "sleep" && x.end); return e && { ...e, ts: e.end, slept: e.end - e.ts }; },
                sum: e => t("睡了 {d}", { d: dur(e.slept) }) }

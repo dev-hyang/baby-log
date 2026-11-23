@@ -2,6 +2,10 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-23.1", title: { zh: "顶部计时卡：整张卡片点一下就能记录", en: "Top timer cards: tap the card to log" }, items: [
+    { k: "better", zh: "喂奶、换尿布等计时卡不用再找小按钮：点卡片任何地方就打开记录表单，右上角的「＋」是提示", en: "Feed, diaper and other timer cards no longer have a small button: tap anywhere on the card to open the record form (the + in the corner is the hint)" },
+    { k: "better", zh: "去掉了卡片右上角的齿轮；顶部卡片的设置仍在「我的 → 顶部大计时」", en: "Removed the gear from the card corner; card settings are still under Me → Top timer" }
+  ] },
   { v: "2026-11-22.1", title: { zh: "AI 录入疫苗：更不容易记重", en: "AI intake: fewer duplicate vaccine records" }, items: [
     { k: "fix", zh: "就诊小结里把以前打过的疫苗又列了一遍时，已经记过的（同一种、同一剂次，日期差几天也算）默认不勾，不会再记一份", en: "When a visit summary re-lists shots already given, vaccines you have already recorded (same vaccine and dose, even if the date is a few days off) are left unticked" },
     { k: "better", zh: "让 AI 只读这次就诊当天打的针，跳过重新印出来的接种历史；同一张单子里重复读到的针也只留一条", en: "The AI now reads only shots given at this visit and skips the re-printed history; repeats within one page are kept once" }

@@ -26,7 +26,7 @@ function goTab(tab){ closeSheet(); S.tab = tab; render(); window.scrollTo(0, 0);
 document.addEventListener("click", async ev => {
   // the child menu closes on any click outside it; a click on an item falls through to its handler below
   if (!$("#kids").hidden && !ev.target.closest("#bname")) toggleKids(false);
-  const t0 = ev.target.closest("button,[data-checkup]"); if (!t0) return;
+  const t0 = ev.target.closest("button,[data-checkup],.hero[data-add]"); if (!t0) return;   // 顶部计时卡整张可点
   if (t0.id === "bname") { toggleKids(); return; }
   if (t0.dataset.act === "nav-back") { goTab(backTo(t0.dataset.parent)); return; }   // 返回：上一页，没有就上一层
   if (t0.dataset.tab) { if (t0.dataset.slot !== undefined) S.heroEdit = +t0.dataset.slot; goTab(t0.dataset.tab); return; } // the card's gear opens the editor on that card
@@ -245,6 +245,7 @@ document.addEventListener("change", async ev => {
   if (draft && ev.target.dataset.segsel) { readDraftInputs(); const k = ev.target.dataset.segsel; draft[k] = ev.target.value || null; drawForm(k); return; }
   if (draft && ev.target.closest("#sheetIn") && ev.target.type === "checkbox") { readDraftInputs(); drawForm(); }
 });
+document.addEventListener("keydown", e => { const h = e.target.closest?.('.hero[role="button"]'); if (h && h === e.target && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); h.click(); } });   // 键盘：回车 / 空格 = 点卡片
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#kids").hidden) { toggleKids(false); $("#bname").focus(); } });
 // 滑块旁边的数字跟着变（记录页 / 成长各页的搜索框由 js/filterbar.js 自己处理）
 document.addEventListener("input", ev => {

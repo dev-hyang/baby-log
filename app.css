@@ -104,7 +104,11 @@ p{margin:0 0 8px}
 }
 .herodots button[aria-current="true"]::after{background:var(--ink)}
 .gear{width:36px;height:36px;border:0;border-radius:50%;background:rgba(29,39,51,.12);color:inherit;font-size:18px;line-height:1;cursor:pointer;flex:none}
-.hero .gear{position:absolute;top:12px;right:12px;z-index:1}
+/* 整张可点的计时卡：右上角一个「＋」提示，点哪里都打开记录表单 */
+.hero.tappable{cursor:pointer;-webkit-tap-highlight-color:transparent;transition:filter .12s}
+.hero.tappable:active{filter:brightness(.95)}
+.hero.tappable:focus-visible{outline:3px solid #1D2733;outline-offset:-3px}
+.hero .tapadd{position:absolute;top:12px;right:12px;z-index:1;display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:rgba(29,39,51,.12);font-size:20px;line-height:1;pointer-events:none}
 .hero .rec{background:#1D2733;color:#FFF5D1;border:0;border-radius:999px;padding:2px 12px;font-weight:700;font-size:inherit;cursor:pointer}
 .panel.routine .phead{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .panel.routine .phead h2{margin:0}
