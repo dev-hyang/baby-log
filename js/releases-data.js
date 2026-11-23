@@ -4,7 +4,8 @@
 export const RELEASES = [
   { v: "2026-11-23.3", title: { zh: "换尿布可以记尿布疹，并提示要不要抹药", en: "Diaper changes can note diaper rash, with a cream reminder" }, items: [
     { k: "new", zh: "换尿布表单新增「尿布疹」（默认无，可选轻微 / 中等 / 严重），有疹子时还能勾「涂了药膏」", en: "The diaper form has a new Diaper rash field (none by default; mild, moderate or severe) and a Cream applied tick" },
-    { k: "new", zh: "顶部换尿布卡片会根据上次记录的尿布疹程度，提示这次要不要抹药膏；严重时提醒必要时联系儿科医生；上次涂过药膏的，提示这次继续涂", en: "The diaper card now suggests whether to apply cream based on the last rash level, says when to call the pediatrician for severe rash, and reminds you to keep applying if cream was used last time" }
+    { k: "new", zh: "顶部换尿布卡片会根据上次记录的尿布疹程度，提示这次要不要抹药膏；严重时提醒必要时联系儿科医生；上次涂过药膏的，提示这次继续涂", en: "The diaper card now suggests whether to apply cream based on the last rash level, says when to call the pediatrician for severe rash, and reminds you to keep applying if cream was used last time" },
+    { k: "better", zh: "换尿布勾选「便」后，大便颜色默认选「黄」，下拉里去掉了「—」空选项", en: "Ticking Poop in the diaper form now defaults the color to Yellow, and the — empty choice is gone from that dropdown" }
   ] },
   { v: "2026-11-23.1", title: { zh: "顶部计时卡：整张卡片点一下就能记录", en: "Top timer cards: tap the card to log" }, items: [
     { k: "better", zh: "喂奶、换尿布等计时卡不用再找小按钮：点卡片任何地方就打开记录表单，右上角的「＋」是提示", en: "Feed, diaper and other timer cards no longer have a small button: tap anywhere on the card to open the record form (the + in the corner is the hint)" },

@@ -59,13 +59,14 @@ function openForm(type, existing, preset){
 function drawForm(focusKey){
   const T = TYPES[draft.type], isNew = !S.entries.some(e => e.id === draft.id);
   const nowMax = toInput(Date.now()); // records are things that already happened: the pickers grey out anything later than now
+  if (draft.type === "diaper" && draft.poop && !draft.color) draft.color = "黄"; // ticking 便 defaults the color to yellow
   const fieldsHTML = T.fields.filter(f => !f.show || f.show(draft)).map(f => {
     const v = draft[f.k], id = "f_" + f.k, label = t(f.label), ph = esc(f.ph ? t(f.ph) : "");
     let inner = "";
     if (f.type === "seg") {
       let opts = typeof f.opts === "function" ? f.opts(draft) : f.opts;
       if (v && !opts.includes(v)) opts = [...opts, v]; // an older record whose option no longer fits the age list stays visible
-      inner = selHTML(id, label, f.k, opts.map(o => [o, t(o)]), v);
+      inner = selHTML(id, label, f.k, opts.map(o => [o, t(o)]), v, { blank: !f.req });
     }
     else if (f.type === "check") inner = `<label class="check"><input type="checkbox" data-f="${f.k}" ${v ? "checked" : ""}>${label}</label>`;
     else if (f.type === "num" && f.dim === "wbaby" && isUS()) {

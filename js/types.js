@@ -31,7 +31,7 @@ const TYPES = {
   diaper:{ label: "尿布", icon: DIAPER_ICON, color: "var(--sky)", fields: [
     { k: "pee", label: "尿", type: "check", def: true },
     { k: "poop", label: "便", type: "check" },
-    { k: "color", label: "大便颜色", type: "seg", opts: ["黄", "绿", "褐", "黑（胎便）", "白/灰白", "带血"], show: m => m.poop },
+    { k: "color", label: "大便颜色", type: "seg", opts: ["黄", "绿", "褐", "黑（胎便）", "白/灰白", "带血"], req: true, show: m => m.poop },
     { k: "rash", label: "尿布疹", type: "seg", opts: ["无", "轻微", "中等", "严重"], def: "无" },
     { k: "cream", label: "涂了药膏", type: "check", show: m => !!m.rash && m.rash !== "无" },
     { k: "note", label: "备注", type: "text", ph: "性状：稀、糊状、有奶瓣…" } ] },
