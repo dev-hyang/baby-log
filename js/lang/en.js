@@ -1813,4 +1813,6 @@ export default {
 "上次有轻微尿布疹：这次可以薄薄涂一层护臀膏": "Mild diaper rash last time: a thin layer of diaper cream is a good idea",
 "上次尿布疹中等：这次建议涂护臀膏，并让屁股多透透气": "Moderate diaper rash last time: apply diaper cream and give the bottom some air time",
 "上次尿布疹严重：这次建议涂药膏；如果破皮、起水泡或 3 天没好转，请联系儿科医生": "Severe diaper rash last time: apply ointment; if the skin breaks, blisters, or it hasn't improved in 3 days, contact the pediatrician",
+"上次尿布疹严重、已涂药膏：这次继续涂药膏；如果破皮、起水泡或 3 天没好转，请联系儿科医生": "Severe diaper rash and cream applied last time: keep applying ointment; if the skin breaks, blisters, or it hasn't improved in 3 days, contact the pediatrician",
+"上次已涂药膏：这次继续涂，直到尿布疹消退": "Cream applied last time: keep applying until the rash clears",
 };

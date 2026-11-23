@@ -2,9 +2,9 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
-  { v: "2026-11-23.2", title: { zh: "换尿布可以记尿布疹，并提示要不要抹药", en: "Diaper changes can note diaper rash, with a cream reminder" }, items: [
+  { v: "2026-11-23.3", title: { zh: "换尿布可以记尿布疹，并提示要不要抹药", en: "Diaper changes can note diaper rash, with a cream reminder" }, items: [
     { k: "new", zh: "换尿布表单新增「尿布疹」（默认无，可选轻微 / 中等 / 严重），有疹子时还能勾「涂了药膏」", en: "The diaper form has a new Diaper rash field (none by default; mild, moderate or severe) and a Cream applied tick" },
-    { k: "new", zh: "顶部换尿布卡片会根据上次记录的尿布疹程度，提示这次要不要抹药膏；严重时提醒必要时联系儿科医生", en: "The diaper card now suggests whether to apply cream based on the last rash level, and for severe rash says when to call the pediatrician" }
+    { k: "new", zh: "顶部换尿布卡片会根据上次记录的尿布疹程度，提示这次要不要抹药膏；严重时提醒必要时联系儿科医生；上次涂过药膏的，提示这次继续涂", en: "The diaper card now suggests whether to apply cream based on the last rash level, says when to call the pediatrician for severe rash, and reminds you to keep applying if cream was used last time" }
   ] },
   { v: "2026-11-23.1", title: { zh: "顶部计时卡：整张卡片点一下就能记录", en: "Top timer cards: tap the card to log" }, items: [
     { k: "better", zh: "喂奶、换尿布等计时卡不用再找小按钮：点卡片任何地方就打开记录表单，右上角的「＋」是提示", en: "Feed, diaper and other timer cards no longer have a small button: tap anywhere on the card to open the record form (the + in the corner is the hint)" },
