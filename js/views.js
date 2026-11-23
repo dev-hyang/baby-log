@@ -24,6 +24,7 @@ import { growNav, pnavHTML } from "./pnav.js";
 import { fbarHTML, hit, onFbar } from "./filterbar.js";
 import { moreHTML, pagerNav, shownOf } from "./pager.js";
 import { viewTrend } from "./trend.js";
+import { rashAdvice } from "./rash-advice.js";
 import { TYPES, flags, isVisit, summary, typeLabel } from "./types.js";
 import { fmtU, isUS, toDisp, trim, unitOf } from "./units.js";
 import { $, D, H, dayKey, dur, esc, hm, num, startOfDay, weekday } from "./util.js";
@@ -269,7 +270,9 @@ function bigClock(k){
   const rec = c.act ? `<button class="rec" data-act="${c.act}">${esc(t(c.noun))}</button>` : "";   // 有表单的卡片整张可点，不再放按钮
   if (!e) return `<div class="lbl">${esc(t(c.label))}</div><div class="big num">--<small>:</small>--</div><div class="meta"><span>${esc(t(c.empty))}</span>${rec}</div>`;
   const gap = Date.now() - e.ts, side = k === "feed" ? suggestSide(e) : null, every = pottyMin();
-  const pill = k !== "potty" ? "" : gap >= every * 60e3 ? `<span class="side">${t("该去试试了")}</span>` : `<span>${t("{n} 分钟后提醒去试试", { n: Math.ceil(every - gap / 60e3) })}</span>`;
+  const rash = k === "diaper" ? rashAdvice(e, t) : null;   // 上次有尿布疹：建议这次抹药膏（js/rash-advice.js）
+  const rashPill = rash ? `<span class="rashadv lv-${rash.level}"><span aria-hidden="true">🧴</span> ${esc(rash.text)}</span>` : "";
+  const pill = k === "diaper" ? rashPill : k !== "potty" ? "" : gap >= every * 60e3 ? `<span class="side">${t("该去试试了")}</span>` : `<span>${t("{n} 分钟后提醒去试试", { n: Math.ceil(every - gap / 60e3) })}</span>`;
   return `<div class="lbl">${esc(t(c.label))}</div><div class="big num">${bigDur(gap)}</div>
     <div class="meta"><span>${hm(e.ts)} · ${esc(c.sum ? c.sum(e) : summary(e))}</span>${side ? `<span>${t("这次建议先喂 {side}", { side: `<span class="side">${t(side)}</span>` })}</span>` : ""}${pill}${rec}</div>`;
 }

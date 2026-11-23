@@ -104,6 +104,9 @@ p{margin:0 0 8px}
 }
 .herodots button[aria-current="true"]::after{background:var(--ink)}
 .gear{width:36px;height:36px;border:0;border-radius:50%;background:rgba(29,39,51,.12);color:inherit;font-size:18px;line-height:1;cursor:pointer;flex:none}
+/* 换尿布卡：上次有尿布疹时建议抹药膏（轻微=浅色标签，中等 / 严重=深色标签） */
+.hero .rashadv{display:inline-block;max-width:100%;padding:3px 12px;border-radius:999px;border:1px solid rgba(29,39,51,.45);font-size:13.5px;line-height:1.4}
+.hero .rashadv.lv-mid,.hero .rashadv.lv-severe{background:#1D2733;color:#FFF5D1;border-color:#1D2733;font-weight:700}
 /* 整张可点的计时卡：右上角一个「＋」提示，点哪里都打开记录表单 */
 .hero.tappable{cursor:pointer;-webkit-tap-highlight-color:transparent;transition:filter .12s}
 .hero.tappable:active{filter:brightness(.95)}

@@ -32,6 +32,8 @@ const TYPES = {
     { k: "pee", label: "尿", type: "check", def: true },
     { k: "poop", label: "便", type: "check" },
     { k: "color", label: "大便颜色", type: "seg", opts: ["黄", "绿", "褐", "黑（胎便）", "白/灰白", "带血"], show: m => m.poop },
+    { k: "rash", label: "尿布疹", type: "seg", opts: ["无", "轻微", "中等", "严重"], def: "无" },
+    { k: "cream", label: "涂了药膏", type: "check", show: m => !!m.rash && m.rash !== "无" },
     { k: "note", label: "备注", type: "text", ph: "性状：稀、糊状、有奶瓣…" } ] },
   sleep: { label: "睡眠", icon: "🌙", color: "var(--slate)", fields: [
     { k: "end", label: "醒来时间（还在睡就留空）", type: "datetime" },
@@ -182,7 +184,7 @@ function summary(e){
     case "feed":
       p.push(v(e.method) || t("喂奶"));
       if (e.left) p.push(t("左{n}分", { n: e.left })); if (e.right) p.push(t("右{n}分", { n: e.right })); if (e.ml) p.push(fmtU("vol", e.ml)); break;
-    case "diaper": if (e.pee) p.push(t("尿")); if (e.poop) p.push(e.color ? t("{label}（{u}）", { label: t("便"), u: t(e.color) }) : t("便")); break;
+    case "diaper": if (e.pee) p.push(t("尿")); if (e.poop) p.push(e.color ? t("{label}（{u}）", { label: t("便"), u: t(e.color) }) : t("便")); if (e.rash && e.rash !== "无") p.push(t("尿布疹：{r}", { r: t(e.rash) }) + (e.cream ? t("（已涂药膏）") : "")); break;
     case "sleep": p.push(e.end ? t("睡到 {t} · {d}", { t: hm(e.end), d: dur(e.end - e.ts) }) : t("正在睡")); if (e.where) p.push(t(e.where)); if (e.how) p.push(t(e.how)); break;
     case "baby": if (isVisit(e)) { p.push(t(e.src)); const w = placeText(e); if (w) p.push(w); } if (e.temp) p.push(`${t("体温")} ${fmtU("temp", e.temp)}`); if (e.weight) p.push(`${t("体重")} ${fmtU("wbaby", e.weight)}`); if (e.length) p.push(`${t("身长")} ${fmtU("len", e.length)}`); if (e.head) p.push(`${t("头围")} ${fmtU("len", e.head)}`); for (const [l, v] of extraParts(e)) p.push(`${t(l)} ${v}`); if (!p.length) p.push(t("健康记录")); break;
     case "bmed": p.push(v(e.cat), e.name || "", e.dose || ""); break;
@@ -212,6 +214,7 @@ function flags(e){
   if (e.type === "diaper" && e.poop && e.color === "白/灰白") f.push(t("灰白色大便可能提示肝胆问题，请尽快就医"));
   if (e.type === "diaper" && e.poop && e.color === "带血") f.push(t("大便带血：请联系儿科医生"));
   if (e.type === "diaper" && e.poop && e.color === "黑（胎便）" && ageDays != null && ageDays > 5) f.push(t("出生5天后仍为黑色大便：请咨询医生"));
+  if (e.type === "diaper" && e.rash === "严重") f.push(t("严重尿布疹：涂药膏；如果破皮、起水泡或 3 天没好转，请联系儿科医生"));
   if (e.type === "food" && ["皮疹", "呕吐", "腹泻"].includes(e.reaction)) f.push(t("进食后{r}可能是食物过敏：记下吃了什么并咨询医生；如出现嘴唇或面部肿胀、呼吸困难、全身荨麻疹，请立即就医", { r: t(e.reaction) }));
   if (e.type === "vax" && ["发热", "其他"].includes(e.reaction)) f.push(t("接种后若出现高热、持续哭闹超过3小时、呼吸困难、面部肿胀或全身荨麻疹，请及时就医"));
   if (e.type === "mbody" && e.lochia === "1小时浸透1片") f.push(t("出血量大（约1小时浸透1片卫生巾）：属于紧急警示信号，请立即就医"));
