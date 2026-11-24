@@ -30,7 +30,7 @@ function momMedsHTML(){
   const names = [...by].sort((a, b) => b[1] - a[1]).map(([n, c]) => `<span class="ui-badge" data-tone="accent">${esc(t(n))} × ${c}</span>`).join(" ");
   const groups = []; for (const e of list) { const k = dayKey(e.ts), g = groups[groups.length - 1]; if (g && g.k === k) g.items.push(e); else groups.push({ k, items: [e] }); }
   return `<div class="btns" style="margin-top:0"><button class="btn primary" data-add="mmed">${t("补记用药")}</button></div>
-  <div class="chips" role="group" aria-label="${esc(t("时间范围"))}" style="margin:10px 0">${chips}</div>
+  <div class="chips mm-range" role="group" aria-label="${esc(t("时间范围"))}" style="margin:10px 0">${chips}</div>
   <div class="panel">${barsHTML(dayCounts(list, days))}
     <p class="small muted" style="margin:8px 0 0">${list.length ? t("共 {n} 次，平均每天 {a} 次", { n: list.length, a: (list.length / days).toFixed(1) }) : t("这段时间没有用药记录。")}</p>
     ${names ? `<div style="margin-top:8px">${names}</div>` : ""}</div>
