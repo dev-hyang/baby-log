@@ -182,6 +182,7 @@ document.addEventListener("click", async ev => {
     case "routine-reset": if (S.settings.routine) delete S.settings.routine[S.childId]; await saveSettings(); toast(t("已恢复默认清单")); break;
     case "cards-reset": resetCards(); await saveSettings(); toast(t("已恢复默认卡片")); break;
     case "print-meal": case "print-trend": case "print-timeline": case "print-medical": openPrint(t0.dataset.act.slice(6)); break;
+    case "mmdays": S.momMedDays = +t0.dataset.d; render(); break;
     case "addrule": readSettingsInputs(); S.settings.medIntervals.push({ name: "", hours: "" }); render(); break;
     case "addkid": readSettingsInputs(); S.settings.children.push({ id: newId(), name: "", birth: "" }); render(); break;
     case "archivekid": { // hide the child everywhere; id and records stay, so restoring brings everything back

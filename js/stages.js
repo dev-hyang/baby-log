@@ -1,5 +1,6 @@
 import { expectedDiapers, last, sleepMsIn } from "./derived.js";
 import { t } from "./i18n.js";
+import { heroOff } from "./med-advice.js";
 import { S, ageMonths, babyAgeDays, birthTs, faithOn, groupTone, routineGroups, routineSteps, stageOf, vis } from "./state.js";
 import { DIAPER_ICON, TYPES } from "./types.js";
 import { isUS, toDisp, trim, unitOf } from "./units.js";
@@ -97,7 +98,7 @@ const CLOCKS = {
   meal:      { label: "距上次吃饭", noun: "吃饭", empty: "点这张卡片记录今天第一顿", add: "food", find: () => last(e => e.type === "food") },
   companion: { label: "距上次陪伴", noun: "陪伴", empty: "点这张卡片记录一次陪伴", add: "companion", find: () => last(e => e.type === "companion") },
   outdoor:   { label: "距上次户外", noun: "户外", empty: "点这张卡片记录一次户外", add: "activity", preset: { kind: "户外" }, find: () => last(e => e.type === "activity" && e.kind === "户外") },
-  mmed:      { label: "距上次妈妈用药", noun: "用药", empty: "点这张卡片记录妈妈的第一次用药", add: "mmed", find: () => last(e => e.type === "mmed") },
+  mmed:      { label: "距上次妈妈用药", noun: "用药", empty: "点这张卡片记录妈妈的第一次用药", add: "mmed", find: () => last(e => e.type === "mmed" && !heroOff(e, S.settings.medIntervals)) },
   wake:      { label: "距上次睡醒", noun: "开始睡", empty: "还没有睡眠记录", act: "sleepnow",
                find: () => { const e = last(x => x.type === "sleep" && x.end); return e && { ...e, ts: e.end, slept: e.end - e.ts }; },
                sum: e => t("睡了 {d}", { d: dur(e.slept) }) }
@@ -118,7 +119,7 @@ const clockLabel = (k, cid) => k === "routine" ? "今天的习惯" : (clockOf(k,
 function heroKeys(cid = S.childId){
   const pick = (S.settings.heroPref || {})[cid], own = pick && pick.length;
   // Mom's meds is on the default list only while she has logged a medicine in the last 30 days (otherwise add it under 我的 → 顶部大计时)
-  const momOn = own || S.entries.some(e => e.type === "mmed" && e.ts > Date.now() - 30 * D);
+  const momOn = own || S.entries.some(e => e.type === "mmed" && e.ts > Date.now() - 30 * D && !heroOff(e, S.settings.medIntervals));
   const keys = (own ? pick : STAGE[stageOf(cid).key].heroes).filter(k => k === "routine" ? routineSteps(cid).length : k === "mmed" && !momOn ? false : !!clockOf(k, cid));
   return keys.length ? keys : ["meal"];
 }

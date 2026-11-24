@@ -1014,3 +1014,11 @@ div.rec-ai{margin:0 0 10px 12px}
   .pnav[data-n="3"] .pnav-card,.pnav[data-n="5"] .pnav-card,.pnav[data-n="6"] .pnav-card{flex-basis:calc(33.333% - 6px)}
 }
 @media print{.pnav{display:none!important}}
+/* 妈妈 → 用药历史与趋势 */
+.mm-bars{display:flex;align-items:flex-end;gap:3px;height:96px}
+.mm-col{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;height:100%}
+.mm-col i{display:block;width:100%;max-width:18px;border-radius:4px 4px 0 0;background:var(--rose)}
+.mm-col i.zero{background:var(--line)}
+.mm-col b{font-size:11px;font-weight:600;line-height:1;min-height:11px}
+.mm-col small{font-size:10.5px;color:var(--muted);line-height:1;min-height:11px}
+.mm-day{margin:14px 0 4px;font-size:15px}

@@ -2,6 +2,10 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-24.2", title: { zh: "妈妈用药：历史、趋势和补记", en: "Mom's meds: history, trends and back-fill" }, items: [
+    { k: "new", zh: "妈妈页新增「用药历史与趋势」：近 14 / 30 天每天吃了几次药（柱状图）、每种药各几次、按天排的每一次，点一条可以改或删，「补记用药」可以选过去的时间", en: "Mom has a new Medicine history & trends page: doses per day for 14 / 30 days, doses per medicine, every dose by day (tap to edit or delete), and Back-fill with a past time" },
+    { k: "new", zh: "「妈妈用药间隔」里每种药可以选「不显示在顶部卡片」，已康复或不吃了的药就不再占着顶部计时卡", en: "Each medicine in Mom's medication intervals can be hidden from the top card once you've recovered or stopped" },
+  ] },
   { v: "2026-11-24.1", title: { zh: "妈妈用药：记服药时机，顶部有用药计时卡", en: "Mom's meds: how-to-take notes and a top timer card" }, items: [
     { k: "new", zh: "用药记录和「妈妈用药间隔」设置里，每种药都能填服药时机（空腹 / 饭前 / 饭后 / 随餐 / 睡前，饭前饭后可填分钟）和医嘱备注", en: "Each medicine can now note when to take it (empty stomach / before / after meals / with meals / bedtime, with minutes) and a doctor's note" },
     { k: "new", zh: "今天页顶部新增「距上次妈妈用药」大卡片：显示多久没吃药、下次可服时间和服药时机；近 30 天记过妈妈用药就自动出现，也可在「我的 → 顶部大计时」里添加", en: "A new Since Mom's last medicine card on top of Today shows the time since the last dose, when the next is allowed, and how to take it; it appears automatically once Mom has logged a medicine in the last 30 days, or add it under Me → Top timers" },

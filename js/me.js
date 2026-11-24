@@ -104,6 +104,7 @@ function medRuleHTML(r, i){
   return `<div class="medrule">
     <div class="row2"><input type="text" ${f("name", "药名", `value="${esc(r.name)}" placeholder="${esc(t("药名"))}"`)}><input type="number" inputmode="decimal" ${f("hours", "间隔小时", `value="${esc(r.hours)}" placeholder="${esc(t("间隔（小时）"))}"`)}></div>
     <div class="row2"><select ${f("timing", "服药时机")}>${tm}</select><input type="number" inputmode="numeric" ${f("mins", "饭前 / 饭后多少分钟", `value="${esc(r.mins || "")}" placeholder="${esc(t("饭前 / 饭后几分钟"))}"`)}></div>
+    <select ${f("hero", "顶部卡片")}><option value="" ${r.hero === "off" ? "" : "selected"}>${esc(t("显示在顶部卡片"))}</option><option value="off" ${r.hero === "off" ? "selected" : ""}>${esc(t("不显示在顶部卡片（已康复 / 不吃了）"))}</option></select>
     <input type="text" ${f("note", "医嘱备注", `value="${esc(r.note || "")}" placeholder="${esc(t("医嘱备注，如：胃不舒服就停"))}"`)}>
   </div>`;
 }

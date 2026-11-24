@@ -8,6 +8,7 @@ import { releaseBadgeHTML, releasePageHTML } from "./releases-ui.js";
 import { loadReleases, releasesReady } from "./releases-lazy.js";
 import { byTime, last, medStatus, suggestSide, within } from "./derived.js";
 import { medInfo, timingText } from "./med-advice.js";
+import { momMedsHTML } from "./mom-meds.js";
 import { LANGS, lang, langPref, t } from "./i18n.js";
 import { cardsHTML, faithPageHTML, familyHubHTML, heroCfgHTML, kidsPageHTML, medsPageHTML, membersPageHTML, prefsHTML, routineCfgHTML, viewMe } from "./me.js";
 import { dayNavHTML, viewMeal } from "./meal.js";
@@ -82,13 +83,13 @@ const SUB = {
   cards: ["me", () => cardsHTML()], herocfg: ["today", () => heroCfgHTML()], routinecfg: ["today", () => routineCfgHTML()], learn: ["me", () => viewLearn()], about: ["me", () => aboutHTML()], releases: ["me", () => releasesPage()], ask: ["me", () => viewAsk()],
   "grow-milestones": ["grow", () => growNav("grow-milestones") + growMilestones()], "grow-foods": ["grow", () => growNav("grow-foods") + growFoods()], "grow-sleep": ["grow", () => growNav("grow-sleep") + growSleep()],
   "grow-body": ["grow", () => growNav("grow-body") + growBody()], "grow-checkups": ["grow", () => growNav("grow-checkups") + growCheckups()], "grow-vax": ["grow", () => growNav("grow-vax") + growVax()],
-  "mom-charts": ["mom", () => momCharts()], "mom-signs": ["mom", () => momSigns()]
+  "mom-meds": ["mom", () => momMedsHTML()], "mom-charts": ["mom", () => momCharts()], "mom-signs": ["mom", () => momSigns()]
 };
 const TAB_LABEL = { today: "今天", me: "我的", grow: "成长", mom: "妈妈" };
 // titles of the sub-pages, for the breadcrumb path
 const PAGE_LABEL = { family: "家庭", "family-members": "家庭协作", "family-kids": "孩子", "family-meds": "妈妈用药间隔", "family-faith": "信仰（可选）", sync: "同步、备份与恢复", prefs: "语言、单位和显示", settings: "家庭",
   cards: "卡片", herocfg: "顶部大计时", routinecfg: "习惯清单", learn: "问答", about: "介绍", releases: "发布日志", ask: "咩咩咩",
-  "grow-milestones": "发育里程碑", "grow-foods": "新食物与反应", "grow-sleep": "睡眠", "grow-body": "基本体征", "grow-checkups": "儿科体检与就诊", "grow-vax": "疫苗接种记录", "mom-charts": "体重、疼痛与心情", "mom-signs": "需要立即就医的警示信号" };
+  "grow-milestones": "发育里程碑", "grow-foods": "新食物与反应", "grow-sleep": "睡眠", "grow-body": "基本体征", "grow-checkups": "儿科体检与就诊", "grow-vax": "疫苗接种记录", "mom-meds": "用药历史与趋势", "mom-charts": "体重、疼痛与心情", "mom-signs": "需要立即就医的警示信号" };
 /* 「‹ 返回」= 回到你刚才来的那一页；直接打开或刷新后没有上一页时，退到上一层。面包屑负责按层级往上跳，两者分工（和 iOS / 安卓 / 网页的常见做法一致） */
 const NAV = { last: null, stack: [], back: false };
 function trackNav(tab){ if (NAV.last && NAV.last !== tab && !NAV.back) { NAV.stack.push(NAV.last); if (NAV.stack.length > 30) NAV.stack.shift(); } NAV.back = false; NAV.last = tab; }
@@ -457,6 +458,7 @@ function viewMom(){
   <div class="panel">${meds.length ? meds.map(medRow).join("") : `<p class="muted">${t("最近 48 小时没有用药记录。")}</p>`}
     <p class="small muted" style="margin-top:8px">${t("在“设置”里给每种药填上医生或说明书给的最短间隔，这里就会显示下次可以服用的时间。哺乳期用药请先确认医生的意见。")}</p></div>
   <div class="panel mlist" style="margin-top:14px">
+    ${mrow('data-tab="mom-meds"', t("用药历史与趋势"), t("近 14 天每天几次、每次吃了什么；补记用药"), "💊")}
     ${mrow('data-tab="mom-charts"', t("体重、疼痛与心情"), lastB ? t("最近一次 {date} · 共 {n} 次记录", { date: dayKey(lastB.ts), n: bodies.length }) : t("记录几次后显示曲线"), "📈")}
     ${mrow('data-tab="mom-signs"', t("需要立即就医的警示信号"), t("CDC「Hear Her」产后紧急警示信号"), "⚠")}
   </div>`;

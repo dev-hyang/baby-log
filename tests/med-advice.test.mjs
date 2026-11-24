@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { ruleFor, timingOf, timingText, nextDoseAt, medInfo } from "../js/med-advice.js";
+import { heroOff, ruleFor, timingOf, timingText, nextDoseAt, medInfo } from "../js/med-advice.js";
 
 const t = (k, v) => k.replace(/\{(\w+)\}/g, (_, n) => v[n]);
 const rules = [{ name: "布洛芬", hours: "6", timing: "饭后", mins: "30", note: "胃不舒服就停" }, { name: "铁剂", hours: "", timing: "空腹" }];
@@ -36,4 +36,13 @@ test("medInfo bundles it all", () => {
   assert.equal(i.note, "胃不舒服就停");
   assert.equal(i.tm.timing, "饭后");
   assert.ok(i.next > 5);
+});
+
+test("heroOff: a rule can switch a medicine off the top card", () => {
+  const rs = [{ name: "布洛芬", hero: "off" }, { name: "铁剂" }];
+  assert.equal(heroOff({ name: "布洛芬缓释片" }, rs), true);
+  assert.equal(heroOff({ name: "铁剂" }, rs), false);
+  assert.equal(heroOff({ name: "泰诺" }, rs), false);
+  assert.equal(heroOff({ cat: "维生素" }, rs), false);
+  assert.equal(heroOff({ name: "布洛芬" }, null), false);
 });

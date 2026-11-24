@@ -24,6 +24,9 @@ function timingText(tm, t){
   return t(tm.timing);
 }
 
+/** 设置里这种药是否关掉了顶部大卡片（规则里 hero = "off"）；没有规则就是没关 */
+const heroOff = (entry, rules) => { const r = ruleFor(rules, (entry && (entry.name || entry.cat)) || ""); return !!r && r.hero === "off"; };
+
 /** 下次可以再服的时间（毫秒）；规则里没填最短间隔就是 null */
 const nextDoseAt = (lastTs, rule) => rule && num(rule.hours) ? lastTs + num(rule.hours) * H : null;
 
@@ -33,4 +36,4 @@ function medInfo({ name, entry, rules, count24 }){
   return { name, at: entry.ts, next: nextDoseAt(entry.ts, rule), count24, tm: timingOf(entry, rule), note: (rule && rule.note) || "" };
 }
 
-export { TIMINGS, NEEDS_MINS, ruleFor, timingOf, timingText, nextDoseAt, medInfo };
+export { TIMINGS, NEEDS_MINS, heroOff, ruleFor, timingOf, timingText, nextDoseAt, medInfo };
