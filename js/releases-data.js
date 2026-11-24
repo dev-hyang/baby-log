@@ -2,6 +2,11 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-24.1", title: { zh: "妈妈用药：记服药时机，顶部有用药计时卡", en: "Mom's meds: how-to-take notes and a top timer card" }, items: [
+    { k: "new", zh: "用药记录和「妈妈用药间隔」设置里，每种药都能填服药时机（空腹 / 饭前 / 饭后 / 随餐 / 睡前，饭前饭后可填分钟）和医嘱备注", en: "Each medicine can now note when to take it (empty stomach / before / after meals / with meals / bedtime, with minutes) and a doctor's note" },
+    { k: "new", zh: "今天页顶部新增「距上次妈妈用药」大卡片：显示多久没吃药、下次可服时间和服药时机；近 30 天记过妈妈用药就自动出现，也可在「我的 → 顶部大计时」里添加", en: "A new Since Mom's last medicine card on top of Today shows the time since the last dose, when the next is allowed, and how to take it; it appears automatically once Mom has logged a medicine in the last 30 days, or add it under Me → Top timers" },
+    { k: "better", zh: "妈妈用药列表同样显示服药时机和医嘱", en: "The Mom's meds list shows the how-to-take note too" },
+  ] },
   { v: "2026-11-23.3", title: { zh: "换尿布可以记尿布疹，并提示要不要抹药", en: "Diaper changes can note diaper rash, with a cream reminder" }, items: [
     { k: "new", zh: "换尿布表单新增「尿布疹」（默认无，可选轻微 / 中等 / 严重），有疹子时还能勾「涂了药膏」", en: "The diaper form has a new Diaper rash field (none by default; mild, moderate or severe) and a Cream applied tick" },
     { k: "new", zh: "顶部换尿布卡片会根据上次记录的尿布疹程度，提示这次要不要抹药膏；严重时提醒必要时联系儿科医生；上次涂过药膏的，提示这次继续涂", en: "The diaper card now suggests whether to apply cream based on the last rash level, says when to call the pediatrician for severe rash, and reminds you to keep applying if cream was used last time" },

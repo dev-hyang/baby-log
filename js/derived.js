@@ -1,3 +1,4 @@
+import { medInfo } from "./med-advice.js";
 import { S, vis } from "./state.js";
 import { trim } from "./units.js";
 import { D, H, num } from "./util.js";
@@ -35,9 +36,8 @@ function medStatus(){
   const seen = new Set();
   for (const m of meds) {
     const name = (m.name || m.cat || "").trim(); if (!name || seen.has(name)) continue; seen.add(name);
-    const rule = (S.settings.medIntervals || []).find(r => r.name && name.includes(r.name) && num(r.hours));
-    const next = rule ? m.ts + num(rule.hours) * H : null;
-    out.push({ name, at: m.ts, next, count24: meds.filter(x => (x.name || x.cat || "").trim() === name && x.ts > Date.now() - D).length });
+    const count24 = meds.filter(x => (x.name || x.cat || "").trim() === name && x.ts > Date.now() - D).length;
+    out.push(medInfo({ name, entry: m, rules: S.settings.medIntervals, count24 }));
   }
   return out;
 }

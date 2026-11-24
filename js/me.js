@@ -2,6 +2,7 @@ import { APPS, THIS_APP } from "./apps.js";
 import { LANGS, lang, langPref, t } from "./i18n.js";
 import { ANOM_MATCH, HERO_BUILTIN, allCards, anomalyOff, clockLabel, faithOn, hasCardPrefs, heroCustom, heroKeys, pottyMin } from "./stages.js";
 import { TYPES, typeLabel } from "./types.js";
+import { TIMINGS } from "./med-advice.js";
 import { APP_VERSION, S, activeKids, kidCount, ageText, childName, groupTone, ROUTINE_TPL, isKidType, routineGroups, routineSteps, routineToText, stageOf } from "./state.js";
 import { SB, familyHTML, lapsed, memberNames } from "./sync.js";
 import { isUS, unitPref } from "./units.js";
@@ -96,12 +97,22 @@ function kidsPageHTML(){
     <p class="small muted">${t("“归档”不会删除任何记录：这个孩子只是不再出现在切换和记录选择里，随时可以恢复。")}</p>
     <div class="btns"><button class="btn primary" data-act="savesettings">${t("保存")}</button></div></div></div>`;
 }
+// one medicine: name + minimum gap, when to take it (empty stomach / before / after meals) with minutes, and the doctor's note
+function medRuleHTML(r, i){
+  const f = (k, label, extra = "") => `data-mr="${i}" data-mk="${k}" aria-label="${esc(t(label))}" ${extra}`;
+  const tm = TIMINGS.map(o => `<option value="${o}" ${(r.timing || "不限") === o ? "selected" : ""}>${esc(t(o))}</option>`).join("");
+  return `<div class="medrule">
+    <div class="row2"><input type="text" ${f("name", "药名", `value="${esc(r.name)}" placeholder="${esc(t("药名"))}"`)}><input type="number" inputmode="decimal" ${f("hours", "间隔小时", `value="${esc(r.hours)}" placeholder="${esc(t("间隔（小时）"))}"`)}></div>
+    <div class="row2"><select ${f("timing", "服药时机")}>${tm}</select><input type="number" inputmode="numeric" ${f("mins", "饭前 / 饭后多少分钟", `value="${esc(r.mins || "")}" placeholder="${esc(t("饭前 / 饭后几分钟"))}"`)}></div>
+    <input type="text" ${f("note", "医嘱备注", `value="${esc(r.note || "")}" placeholder="${esc(t("医嘱备注，如：胃不舒服就停"))}"`)}>
+  </div>`;
+}
 function medsPageHTML(){
   const st = S.settings;
   return `<div class="softform"><h2>${t("妈妈用药间隔")}</h2>
   <div class="panel"><p class="small muted" style="margin-top:0">${t("按医嘱或说明书填每种药的最短间隔。妈妈页的用药计时会据此显示下次可以服药的时间；没填的只显示距上次服药多久。")}</p>
-    <div class="lab">${t("药名 · 最短间隔（小时）")}</div>
-    <div id="medRules">${(st.medIntervals || []).map((r, i) => `<div class="row2" style="margin-bottom:6px"><input type="text" aria-label="${t("药名")}" data-mr="${i}" data-mk="name" value="${esc(r.name)}" placeholder="${t("药名")}"><input type="number" inputmode="decimal" aria-label="${t("间隔小时")}" data-mr="${i}" data-mk="hours" value="${esc(r.hours)}" placeholder="${t("间隔（小时）")}"></div>`).join("")}</div>
+    <div class="lab">${t("每种药：药名 · 最短间隔 · 服药时机 · 医嘱")}</div>
+    <div id="medRules">${(st.medIntervals || []).map(medRuleHTML).join("")}</div>
     <button class="chip" data-act="addrule">${t("＋ 添加一种药")}</button>
     <div class="btns"><button class="btn primary" data-act="savesettings">${t("保存")}</button></div></div></div>`;
 }

@@ -1,6 +1,7 @@
 import { t } from "./i18n.js";
 import { S, ageMonths, babyAgeDays, childOf, routineSteps, stageOf } from "./state.js";
 import { extraParts, placeText } from "./intake-lib.js";
+import { timingOf, timingText } from "./med-advice.js";
 import { fmtU } from "./units.js";
 import { $, D, dur, hm, num } from "./util.js";
 
@@ -160,6 +161,8 @@ const TYPES = {
     { k: "cat", label: "类别", type: "seg", opts: ["止疼药", "维生素", "铁剂", "其他"], def: "止疼药" },
     { k: "name", label: "药名", type: "text", list: "medlist", ph: "布洛芬 / 泰诺…" },
     { k: "dose", label: "剂量", type: "text", ph: "如 1片" },
+    { k: "timing", label: "服药时机（按医嘱 / 说明书）", type: "seg", opts: ["不限", "空腹", "饭前", "饭后", "随餐", "睡前"], def: "不限" },
+    { k: "mins", label: "饭前 / 饭后多少分钟", type: "num", show: m => m.timing === "饭前" || m.timing === "饭后" },
     { k: "note", label: "备注", type: "text" } ] },
   mbody: { label: "妈妈身体", icon: "♡", color: "#9B7BB8", fields: [
     { k: "weight", label: "体重", type: "num", dim: "wmom", step: .1, half: 1 },
@@ -188,7 +191,7 @@ function summary(e){
     case "sleep": p.push(e.end ? t("睡到 {t} · {d}", { t: hm(e.end), d: dur(e.end - e.ts) }) : t("正在睡")); if (e.where) p.push(t(e.where)); if (e.how) p.push(t(e.how)); break;
     case "baby": if (isVisit(e)) { p.push(t(e.src)); const w = placeText(e); if (w) p.push(w); } if (e.temp) p.push(`${t("体温")} ${fmtU("temp", e.temp)}`); if (e.weight) p.push(`${t("体重")} ${fmtU("wbaby", e.weight)}`); if (e.length) p.push(`${t("身长")} ${fmtU("len", e.length)}`); if (e.head) p.push(`${t("头围")} ${fmtU("len", e.head)}`); for (const [l, v] of extraParts(e)) p.push(`${t(l)} ${v}`); if (!p.length) p.push(t("健康记录")); break;
     case "bmed": p.push(v(e.cat), e.name || "", e.dose || ""); break;
-    case "mmed": p.push(v(e.cat), e.name || "", e.dose || ""); break;
+    case "mmed": p.push(v(e.cat), e.name || "", e.dose || "", timingText(timingOf(e, null), t)); break;
     case "vax": p.push(e.name || t("疫苗"), v(e.dose), v(e.site), e.reaction && e.reaction !== "无" ? t("反应：{r}", { r: t(e.reaction) }) : ""); break;
     case "mbody": if (e.weight) p.push(`${t("体重")} ${fmtU("wmom", e.weight)}`); if (e.lochia) p.push(`${t("恶露")} ${t(e.lochia)}`); if (e.pain != null) p.push(`${t("疼痛")} ${e.pain}`); if (e.mood != null) p.push(`${t("心情")} ${e.mood}/5`); if (e.sleepHrs) p.push(t("睡 {h}h", { h: e.sleepHrs })); break;
     case "food": p.push(v(e.meal), e.foods || "", v(e.amount), v(e.called), e.washed ? t("饭前洗手") : "", e.minutes ? t("{n}分钟", { n: e.minutes }) : "", v(e.focus), e.newFood ? t("新食物") : "", e.reaction && e.reaction !== "无" ? t("反应：{r}", { r: t(e.reaction) }) : ""); break;

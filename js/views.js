@@ -7,6 +7,7 @@ import { aboutHTML } from "./about.js";
 import { releaseBadgeHTML, releasePageHTML } from "./releases-ui.js";
 import { loadReleases, releasesReady } from "./releases-lazy.js";
 import { byTime, last, medStatus, suggestSide, within } from "./derived.js";
+import { medInfo, timingText } from "./med-advice.js";
 import { LANGS, lang, langPref, t } from "./i18n.js";
 import { cardsHTML, faithPageHTML, familyHubHTML, heroCfgHTML, kidsPageHTML, medsPageHTML, membersPageHTML, prefsHTML, routineCfgHTML, viewMe } from "./me.js";
 import { dayNavHTML, viewMeal } from "./meal.js";
@@ -272,9 +273,17 @@ function bigClock(k){
   const gap = Date.now() - e.ts, side = k === "feed" ? suggestSide(e) : null, every = pottyMin();
   const rash = k === "diaper" ? rashAdvice(e, t) : null;   // 上次有尿布疹：建议这次抹药膏（js/rash-advice.js）
   const rashPill = rash ? `<span class="rashadv lv-${rash.level}"><span aria-hidden="true">🧴</span> ${esc(rash.text)}</span>` : "";
-  const pill = k === "diaper" ? rashPill : k !== "potty" ? "" : gap >= every * 60e3 ? `<span class="side">${t("该去试试了")}</span>` : `<span>${t("{n} 分钟后提醒去试试", { n: Math.ceil(every - gap / 60e3) })}</span>`;
+  const pill = k === "diaper" ? rashPill : k === "mmed" ? medHeroPill(e) : k !== "potty" ? "" : gap >= every * 60e3 ? `<span class="side">${t("该去试试了")}</span>` : `<span>${t("{n} 分钟后提醒去试试", { n: Math.ceil(every - gap / 60e3) })}</span>`;
   return `<div class="lbl">${esc(t(c.label))}</div><div class="big num">${bigDur(gap)}</div>
     <div class="meta"><span>${hm(e.ts)} · ${esc(c.sum ? c.sum(e) : summary(e))}</span>${side ? `<span>${t("这次建议先喂 {side}", { side: `<span class="side">${t(side)}</span>` })}</span>` : ""}${pill}${rec}</div>`;
+}
+// the Mom's-meds card: when the next dose is allowed, plus how to take it (empty stomach / after meals …) and the doctor's note
+function medHeroPill(e){
+  const i = medInfo({ name: (e.name || e.cat || "").trim(), entry: e, rules: S.settings.medIntervals, count24: 0 }), out = [];
+  if (i.next) out.push(i.next > Date.now() ? `<span class="side">${t("{time} 后可再服", { time: hm(i.next) })}</span>` : `<span>${t("已过医嘱间隔")}</span>`);
+  const how = [timingText(i.tm, t), i.note].filter(Boolean).join(" · ");
+  if (how) out.push(`<span class="rashadv lv-mid"><span aria-hidden="true">💊</span> ${esc(how)}</span>`);
+  return out.join("");
 }
 function bigDur(ms){ const m = Math.max(0, Math.floor(ms / 60000)); const h = Math.floor(m / 60); return h ? `${h}<small>${t("小时")}</small>${m % 60}<small>${t("分")}</small>` : `${m}<small>${t("分钟")}</small>`; }
 
@@ -313,7 +322,8 @@ function viewToday(){
 function medRow(m){
   let pill = "";
   if (m.next) pill = m.next > Date.now() ? `<span class="ui-badge" data-tone="caution">${t("{time} 后可再服", { time: hm(m.next) })}</span>` : `<span class="ui-badge" data-tone="ok">${t("已过医嘱间隔")}</span>`;
-  return `<div class="medrow"><div><b>${esc(t(m.name))}</b><div class="small muted">${t("上次 {time} · {ago}前 · 24小时内 {n} 次", { time: hm(m.at), ago: dur(Date.now() - m.at), n: m.count24 })}</div></div>${pill}</div>`;
+  const how = [timingText(m.tm, t), m.note].filter(Boolean).map(esc).join(" · ");   // 空腹 / 饭后 30 分钟 + 医嘱备注
+  return `<div class="medrow"><div><b>${esc(t(m.name))}</b>${how ? ` <span class="ui-badge" data-tone="accent">${how}</span>` : ""}<div class="small muted">${t("上次 {time} · {ago}前 · 24小时内 {n} 次", { time: hm(m.at), ago: dur(Date.now() - m.at), n: m.count24 })}</div></div>${pill}</div>`;
 }
 // the "list | axis" switch, shared by the timeline on the Log page and the Today list
 const listStyleSwitch = () => `<div class="segmini" role="group" aria-label="${t("显示方式")}"><button data-liststyle="rows" aria-pressed="${S.listStyle !== "axis"}">${t("列表")}</button><button data-liststyle="axis" aria-pressed="${S.listStyle === "axis"}">${t("时间轴")}</button></div>`;

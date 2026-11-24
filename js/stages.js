@@ -46,7 +46,7 @@ const Q = {
 // heroes: the cards on top of Today, swipeable — each counts since the last record of something (see CLOCKS), or shows
 // the routine's progress; each child can change the list (see heroKeys)
 const STAGE = {
-  newborn:   { heroes: ["feed", "diaper", "wake"],
+  newborn:   { heroes: ["feed", "diaper", "wake", "mmed"],
                quick: ["nurse", "bottle", "formula", "diaper", "sleep", "mmed", "mbody", "health"],
                stats: ["hero", "feeds", "bottle", "nursing", "wetpoop", "sleep"],
                types: ["feed", "diaper", "sleep", "baby", "bmed", "vax"],
@@ -97,6 +97,7 @@ const CLOCKS = {
   meal:      { label: "距上次吃饭", noun: "吃饭", empty: "点这张卡片记录今天第一顿", add: "food", find: () => last(e => e.type === "food") },
   companion: { label: "距上次陪伴", noun: "陪伴", empty: "点这张卡片记录一次陪伴", add: "companion", find: () => last(e => e.type === "companion") },
   outdoor:   { label: "距上次户外", noun: "户外", empty: "点这张卡片记录一次户外", add: "activity", preset: { kind: "户外" }, find: () => last(e => e.type === "activity" && e.kind === "户外") },
+  mmed:      { label: "距上次妈妈用药", noun: "用药", empty: "点这张卡片记录妈妈的第一次用药", add: "mmed", find: () => last(e => e.type === "mmed") },
   wake:      { label: "距上次睡醒", noun: "开始睡", empty: "还没有睡眠记录", act: "sleepnow",
                find: () => { const e = last(x => x.type === "sleep" && x.end); return e && { ...e, ts: e.end, slept: e.end - e.ts }; },
                sum: e => t("睡了 {d}", { d: dur(e.slept) }) }
@@ -115,7 +116,10 @@ const clockLabel = (k, cid) => k === "routine" ? "今天的习惯" : (clockOf(k,
 // what the top of Today shows, in order. The child's own list (settings.heroPref) wins, otherwise the stage's default;
 // the routine only counts while it has steps.
 function heroKeys(cid = S.childId){
-  const pick = (S.settings.heroPref || {})[cid], keys = (pick && pick.length ? pick : STAGE[stageOf(cid).key].heroes).filter(k => k === "routine" ? routineSteps(cid).length : !!clockOf(k, cid));
+  const pick = (S.settings.heroPref || {})[cid], own = pick && pick.length;
+  // Mom's meds is on the default list only while she has logged a medicine in the last 30 days (otherwise add it under 我的 → 顶部大计时)
+  const momOn = own || S.entries.some(e => e.type === "mmed" && e.ts > Date.now() - 30 * D);
+  const keys = (own ? pick : STAGE[stageOf(cid).key].heroes).filter(k => k === "routine" ? routineSteps(cid).length : k === "mmed" && !momOn ? false : !!clockOf(k, cid));
   return keys.length ? keys : ["meal"];
 }
 const pottyMin = (cid = S.childId) => (S.settings.pottyMin || {})[cid] || POTTY_DEFAULT_MIN;
