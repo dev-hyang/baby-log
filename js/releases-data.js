@@ -2,6 +2,9 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-24.4", title: { zh: "共用样式表多了箭头、行、选项和数字框样式", en: "Shared stylesheet gains arrow, row, option and number-field styles" }, items: [
+    { k: "better", zh: "和爱家小助手同步共用样式：箭头、记录行、可选项、弹窗变量、数字框（本站暂未使用，界面不变）。", en: "Synced shared styles from Home Pantry: arrow, row, option, sheet variables, number field (not used here yet; nothing changes on screen)." },
+  ] },
   { v: "2026-11-24.3", title: { zh: "用药历史页的按钮加高", en: "Taller buttons on the medicine history page" }, items: [
     { k: "fix", zh: "「用药历史与趋势」里的 14 / 30 天按钮加高到 44px，手机上更好点", en: "The 14 / 30 day buttons on Medicine history & trends are 44 px tall, easier to tap on a phone" },
   ] },
