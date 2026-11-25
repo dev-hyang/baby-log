@@ -95,7 +95,7 @@ function kidsPageHTML(){
     ${archivedKidsHTML()}
     <p class="small muted" style="margin-top:6px">${t("每个孩子的记录分开保存，点页面顶部的名字可以切换。妈妈的记录属于整个家庭，不随孩子切换。")}</p>
     <p class="small muted">${t("“归档”不会删除任何记录：这个孩子只是不再出现在切换和记录选择里，随时可以恢复。")}</p>
-    <div class="btns"><button class="btn primary" data-act="savesettings">${t("保存")}</button></div></div></div>`;
+    <div class="btns"><button class="ui-btn" data-tone="primary" data-act="savesettings">${t("保存")}</button></div></div></div>`;
 }
 // one medicine: name + minimum gap, when to take it (empty stomach / before / after meals) with minutes, and the doctor's note
 function medRuleHTML(r, i){
@@ -115,7 +115,7 @@ function medsPageHTML(){
     <div class="lab">${t("每种药：药名 · 最短间隔 · 服药时机 · 医嘱")}</div>
     <div id="medRules">${(st.medIntervals || []).map(medRuleHTML).join("")}</div>
     <button class="chip" data-act="addrule">${t("＋ 添加一种药")}</button>
-    <div class="btns"><button class="btn primary" data-act="savesettings">${t("保存")}</button></div></div></div>`;
+    <div class="btns"><button class="ui-btn" data-tone="primary" data-act="savesettings">${t("保存")}</button></div></div></div>`;
 }
 function faithPageHTML(){
   return `<div class="softform"><h2>${t("信仰（可选）")}</h2><div class="panel">${faithHTML()}</div></div>`;
@@ -152,7 +152,7 @@ function cardsHTML(){
   </div>
   ${group("quick", t("快捷按钮"), t("今天页上方的一键记录按钮。"))}
   ${group("stats", t("最近 24 小时统计"), t("今天页的统计，和顶部的大计时。"))}
-  ${hasCardPrefs() ? `<div class="btns"><button class="btn" data-act="cards-reset">${t("恢复{stage}的默认卡片", { stage: t(stageOf().name) })}</button></div>` : ""}`;
+  ${hasCardPrefs() ? `<div class="btns"><button class="ui-btn" data-tone="ghost" data-act="cards-reset">${t("恢复{stage}的默认卡片", { stage: t(stageOf().name) })}</button></div>` : ""}`;
 }
 
 /* ---- the top cards of Today: which "since last" cards, in what order, the child's own cards, the potty nudge ---- */
@@ -173,7 +173,7 @@ function heroCfgHTML(){
   const form = d ? `<div class="panel" style="margin-top:10px"><div class="field"><label for="hcName">${t("卡片名称（留空自动命名）")}</label><input id="hcName" type="text" maxlength="30" value="${esc(d.name)}" placeholder="${esc(t("例如：距上次洗澡"))}"></div>
       <div class="lab">${t("数哪类记录")}</div><div class="chips">${types.map(k => `<button class="chip" data-hc="type:${k}" aria-pressed="${d.type === k}">${TYPES[k].icon} ${esc(typeLabel(k))}</button>`).join("")}</div>
       ${kinds.length ? `<div class="lab">${t("只数其中一种（可不选）")}</div><div class="chips">${kinds.map(o => `<button class="chip" data-hc="kind:${esc(o)}" aria-pressed="${d.kind === o}">${esc(t(o))}</button>`).join("")}</div>` : ""}
-      <div class="btns"><button class="btn primary" data-act="hc-save">${t("保存")}</button><button class="btn" data-hc="cancel">${t("取消")}</button>${d.id ? `<button class="btn danger" data-hc="rm:${esc(d.id)}">${t("删除")}</button>` : ""}</div></div>` : "";
+      <div class="btns"><button class="ui-btn" data-tone="primary" data-act="hc-save">${t("保存")}</button><button class="ui-btn" data-tone="ghost" data-hc="cancel">${t("取消")}</button>${d.id ? `<button class="ui-btn" data-tone="danger" data-hc="rm:${esc(d.id)}">${t("删除")}</button>` : ""}</div></div>` : "";
   return `<h2>${t("顶部大计时")} <span class="small muted" style="font-weight:400">${esc(childName())}</span></h2>
   <p class="small muted">${t("今天页最上面的卡片可以左右滑动，每张数一件事。下面可以改每张数什么、调顺序、增删，也能自己做一张。")}</p>
   <h2>${t("第 {n} 张卡数什么", { n: slot + 1 })}</h2><div class="panel"><div class="chips" role="group" aria-label="${t("第 {n} 张卡数什么", { n: slot + 1 })}">${avail.map(k => chip("set", k, keys[slot] === k)).join("")}</div></div>
@@ -181,7 +181,7 @@ function heroCfgHTML(){
   <h2>${t("添加")}</h2><div class="panel"><div class="chips">${avail.filter(k => !keys.includes(k)).map(k => chip("add", k, false)).join("")}<button class="chip" data-hc="new:">+ ${t("自定义卡片")}</button></div>${form}</div>
   ${keys.includes("potty") ? `<h2>${t("如厕提醒间隔（分钟）")}</h2><div class="panel"><div class="chips">${[60, 90, 120, 180].map(m => `<button class="chip" data-pottymin="${m}" aria-pressed="${pottyMin() === m}">${m}</button>`).join("")}</div></div>` : ""}
   ${alertCfg}
-  ${(S.settings.heroPref || {})[S.childId] ? `<div class="btns"><button class="btn" data-hc="reset:">${t("恢复默认")}</button></div>` : ""}`;
+  ${(S.settings.heroPref || {})[S.childId] ? `<div class="btns"><button class="ui-btn" data-tone="ghost" data-hc="reset:">${t("恢复默认")}</button></div>` : ""}`;
 }
 /* ---- the daily routine list: groups and steps ---- */
 function routineCfgHTML(){
@@ -190,7 +190,7 @@ function routineCfgHTML(){
     <div class="lab">${t("加入模板")}</div><div class="chips">${ROUTINE_TPL.map((g, i) => `<button class="chip" data-tpl="${i}">+ ${esc(t(g.name))}</button>`).join("")}</div>
     ${routineGroups().some(g => g.name) ? `<div class="lab">${t("当前分组颜色")}</div><div class="chips">${routineGroups().map(g => g.name ? `<span class="rgtag ${groupTone(g.name)}">${esc(t(g.name))}</span>` : "").join("")}</div>` : ""}
     <label class="lab" for="routineSteps">${t("每行一步；以 # 开头的一行是分组名")}</label><textarea id="routineSteps" rows="12">${esc(routineToText(routineGroups()))}</textarea>
-    <div class="btns"><button class="btn primary" data-act="routine-save">${t("保存清单")}</button><button class="btn" data-act="routine-reset">${t("恢复默认清单")}</button></div></div>`;
+    <div class="btns"><button class="ui-btn" data-tone="primary" data-act="routine-save">${t("保存清单")}</button><button class="ui-btn" data-tone="ghost" data-act="routine-reset">${t("恢复默认清单")}</button></div></div>`;
 }
 
 /* ---- faith module (opt-in): family statement, on / off, which children ---- */
@@ -207,7 +207,7 @@ function faithHTML(){
     ${kids.length > 1 ? `<div class="lab">${t("给哪些孩子显示")}</div>
       <div class="chips" role="group" aria-label="${t("给哪些孩子显示")}">${kids.map(c => `<button class="chip" data-faith-kid="${esc(c.id)}" aria-pressed="${!f.off.includes(c.id)}">${esc(c.name || t("宝宝"))}</button>`).join("")}</div>` : ""}
     <p class="small muted">${t("信仰记录和别的记录一样，可以设为“仅我”或“指定家人”可见；青少年阶段默认“仅我”。想关掉时，已记的内容仍保留在记录页。")}</p>
-    <div class="btns"><button class="btn primary" data-act="savesettings">${t("保存设置")}</button></div>` : ""}`;
+    <div class="btns"><button class="ui-btn" data-tone="primary" data-act="savesettings">${t("保存设置")}</button></div>` : ""}`;
 }
 
 /* ---- archived children: restore, or delete for good (the only path that removes their records) ---- */

@@ -202,7 +202,7 @@ function renderPass(){
   // 2 岁以上的孩子在家庭学堂里记：这里的今天 / 记录 / 成长 / 产后页不显示他们的内容，只放一个去家庭学堂的入口（「我的」和设置照常可用）
   if (goesToSchool(S.childId) && ["today", "log", "grow", "mom"].includes(cur)) {
     mainKey = "";
-    $("#main").innerHTML = `<section class="panel" style="margin-top:12px"><h2 style="margin:0 0 6px">${esc(childName())} · ${esc(ageText())}</h2><p class="muted" style="margin:0 0 12px">${t("2 岁以上的孩子在家庭学堂里记录（如厕、吃饭、户外、情绪等）。小月亮专注 0–2 岁。")}</p><button type="button" class="btn primary" data-kidsel="${esc(S.childId)}">${t("去家庭学堂记录")} ›</button></section>`;
+    $("#main").innerHTML = `<section class="panel" style="margin-top:12px"><h2 style="margin:0 0 6px">${esc(childName())} · ${esc(ageText())}</h2><p class="muted" style="margin:0 0 12px">${t("2 岁以上的孩子在家庭学堂里记录（如厕、吃饭、户外、情绪等）。小月亮专注 0–2 岁。")}</p><button type="button" class="ui-btn" data-tone="primary" data-kidsel="${esc(S.childId)}">${t("去家庭学堂记录")} ›</button></section>`;
     updateMiniBar($("#bname").textContent, "", t("回到顶部")); return;
   }
   $("#main").innerHTML = (sub ? crumbHTML(S.tab) : "") + v(); mainKey = pageKey();
@@ -318,7 +318,7 @@ function viewToday(){
 
   <div class="listbar todayhead"><h2 id="todaySec">${t("今天")}</h2>${today.length ? listStyleSwitch() : ""}</div>
   ${today.length ? (S.listStyle === "axis" ? axisHTML(today) : today.map(entryRow).join("")) : `<div class="empty">${t("今天还没有记录。")}</div>`}
-  ${!S.entries.length ? `<div class="empty">${t("想先看看效果？")}<br><button class="btn" data-act="demo">${t("载入演示数据")}</button></div>` : ""}`;
+  ${!S.entries.length ? `<div class="empty">${t("想先看看效果？")}<br><button class="ui-btn" data-tone="ghost" data-act="demo">${t("载入演示数据")}</button></div>` : ""}`;
 }
 function medRow(m){
   let pill = "";
@@ -452,7 +452,7 @@ function viewMom(){
   const lowMood = mpts.slice(-5).filter(v => v <= 2).length >= 3;
   const lastB = bodies[bodies.length - 1];
   return `<h2>${t("妈妈的恢复")}</h2>
-  <div class="btns" style="margin-top:0"><button class="btn primary" data-add="mbody">${t("记录今天的身体状况")}</button><button class="btn" data-add="mmed">${t("记录用药")}</button></div>
+  <div class="btns" style="margin-top:0"><button class="ui-btn" data-tone="primary" data-add="mbody">${t("记录今天的身体状况")}</button><button class="ui-btn" data-tone="ghost" data-add="mmed">${t("记录用药")}</button></div>
   ${lowMood ? `<div class="alert info">${t("最近几次心情记录偏低。产后情绪波动很常见，但如果低落持续超过两周，或影响到吃饭、睡觉、照顾宝宝，值得和医生聊聊产后抑郁筛查（如 EPDS 量表）。")}</div>` : ""}
   <h2>${t("用药计时")}</h2>
   <div class="panel">${meds.length ? meds.map(medRow).join("") : `<p class="muted">${t("最近 48 小时没有用药记录。")}</p>`}
@@ -472,7 +472,7 @@ function momCharts(){
   <h2>${t("疼痛与心情")}</h2>
   <div class="panel"><h3 class="small muted">${t("疼痛 0–10")}</h3>${lineChart(ppts, { color: "var(--rose)", unit: "", label: t("疼痛评分"), min: 0, max: 10 })}
     <h3 class="small muted" style="margin-top:10px">${t("心情 1–5")}</h3>${lineChart(mpts, { color: "var(--sage)", unit: "", label: t("心情评分"), min: 1, max: 5 })}</div>
-  <div class="btns"><button class="btn primary" data-add="mbody">${t("记录今天的身体状况")}</button></div>`;
+  <div class="btns"><button class="ui-btn" data-tone="primary" data-add="mbody">${t("记录今天的身体状况")}</button></div>`;
 }
 function momSigns(){
   return `<h2>${t("需要立即就医的警示信号")}</h2>
@@ -530,7 +530,7 @@ export const vtCtx = () => ({ t, val: (dim, v) => toDisp(VT_DIM[dim], v), unit: 
   months: ts => ageMonths(S.childId, ts), sex: (child(S.childId) || {}).sex || null, src: e => t(isVisit(e) ? e.src : "在家量") });
 function growBody(){
   const health = vis().filter(e => e.type === "baby"), newborn = stageOf().key === "newborn";
-  return `<div class="btns" style="margin-top:0"><button class="btn" data-act="ask-vitals">✦ ${t("问 AI 这些体征")}</button></div>
+  return `<div class="btns" style="margin-top:0"><button class="ui-btn" data-tone="ghost" data-act="ask-vitals">✦ ${t("问 AI 这些体征")}</button></div>
   ${newborn ? `<p class="small muted">${t("新生儿出生后几天体重下降常见；通常约 10–14 天回到出生体重。")}</p>` : ""}
   ${vitalsHTML(health, vtCtx())}
   ${growRecords("body", health.filter(e => VT_KEYS.some(k => num(e[k]) != null)), { subs: [["home", t("在家量的"), e => !isVisit(e)], ["clinic", t("体检 / 看病时量的"), e => isVisit(e)]] })}${fabMenu([{ label: t("量一次体征"), attrs: 'data-add="baby"' }, { label: t("AI 录入体检"), icon: "✦", attrs: 'data-ix="open" data-src="儿科体检"' }])}`;
@@ -544,7 +544,7 @@ function growCheckups(){
 function growVax(){ return vaxHTML(); }
 // the Bright Futures schedule, with the actual visit date next to any checkpoint that already has a clinic record
 function checkupPlanHTML(all, done){
-  if (!birthTs()) return `<div class="panel"><p class="muted">${t("在设置里填写宝宝生日后，会自动算出每次体检的大概日期。")}</p><button class="btn" data-act="settings">${t("去填写")}</button></div>`;
+  if (!birthTs()) return `<div class="panel"><p class="muted">${t("在设置里填写宝宝生日后，会自动算出每次体检的大概日期。")}</p><button class="ui-btn" data-tone="ghost" data-act="settings">${t("去填写")}</button></div>`;
   const visits = all.filter(e => isVisit(e) && e.src === "儿科体检");
   // the date cell is editable: clinics book the visit earlier or later than the schedule, and the Today reminder follows the real appointment
   return `<div class="panel scroll-x"><table class="ckplan"><thead><tr><th>${t("时间点")}</th><th>${t("约在")}</th><th>${t("完成")}</th></tr></thead><tbody>
@@ -594,7 +594,7 @@ function viewLearn(){
 
   <h2>${t("问一个问题")}</h2>
   <div class="panel"><p class="small muted" style="margin-top:0">${t("「咩咩咩」会把你的问题连同孩子最近记录的统计摘要一起交给 AI：喂奶、睡眠、辅食、情绪、陪伴、发育都能问。")}</p>
-    <div class="btns" style="margin-top:8px"><button class="btn primary" data-tab="ask">${aiIcon(18)} ${t("去问咩咩")}</button></div></div>
+    <div class="btns" style="margin-top:8px"><button class="ui-btn" data-tone="primary" data-tab="ask">${aiIcon(18)} ${t("去问咩咩")}</button></div></div>
 
   <h2>${t("权威资料")}</h2>
   <div class="panel"><ul class="plain">

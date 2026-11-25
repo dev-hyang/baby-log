@@ -111,7 +111,7 @@ function viewMeal(){
     <tfoot><tr><td class="t">${t("{n} 餐", { n: rows.length })}</td><td></td><td></td><td>${sum("left") || ""}</td><td>${sum("right") || ""}</td><td>${sum("ml") ? trim(toDisp("vol", sum("ml")), isUS() ? 1 : 0) : ""}</td><td>${peeN}</td><td>${poopN}</td><td>${sleepT ? (sleepT / H).toFixed(1) + "h" : ""}</td><td></td></tr></tfoot>
   </table></div>
   ${newborn ? `<p class="small muted" style="margin-top:8px">${t("距上餐 ≥ 4 小时标红，方便发现间隔偏长的时段。新生儿一般 24 小时喂 8–12 次，具体以医生建议为准。")}</p>` : ""}`
-  : `<div class="empty"><div class="eicon" aria-hidden="true">🍼</div>${t("这一天没有喂奶记录。")}${isToday ? `<br><button class="btn" data-add="feed" data-preset='{"method":"亲喂"}'>${t("记录一次喂奶")}</button>` : ""}</div>`}`;
+  : `<div class="empty"><div class="eicon" aria-hidden="true">🍼</div>${t("这一天没有喂奶记录。")}${isToday ? `<br><button class="ui-btn" data-tone="ghost" data-add="feed" data-preset='{"method":"亲喂"}'>${t("记录一次喂奶")}</button>` : ""}</div>`}`;
 }
 
 /* tap ○ to tick 尿/便 for this meal; tap ✓ to open that diaper record */

@@ -52,7 +52,7 @@ function draw(){
   const n = count();
   const read = `<div class="panel ix-read"><p class="small muted" style="margin:0 0 8px">${t("拍就诊小结、体检单或疫苗本（可多张），或者打 / 粘贴一段话：量了多少、打了什么针、医生说了什么。AI 读出来后在下面核对，一次保存成几条记录。")}</p>
     ${attachHTML(ATT, { t, esc, textLabel: t("或者打字 / 粘贴"), ph: t("例：体重 9.2 kg，身长 74 cm，打了百白破第3剂、乙肝第3剂（左大腿），医生说发育正常，继续每天维生素 D 400IU，下次 12 个月来") })}
-    <div class="btns" style="margin-top:0"><button type="button" class="btn primary" data-ix="read" ${X.busy ? "disabled" : ""}>${X.busy ? t("正在读取…") : `✦ ${t("让 AI 读出来")}`}</button>${X.read ? "" : `<button type="button" class="btn" data-ix="manual">${t("不用 AI，直接填")}</button>`}</div>
+    <div class="btns" style="margin-top:0"><button type="button" class="ui-btn" data-tone="primary" data-ix="read" ${X.busy ? "disabled" : ""}>${X.busy ? t("正在读取…") : `✦ ${t("让 AI 读出来")}`}</button>${X.read ? "" : `<button type="button" class="ui-btn" data-tone="ghost" data-ix="manual">${t("不用 AI，直接填")}</button>`}</div>
     <p class="small muted" style="margin:6px 0 0">${aiReady() ? t("照片只在浏览器里压缩后发给你自己设置的 AI，不保存；不发孩子的名字。读出来的内容请核对。") : t("还没填 API key，去 设置 → AI 助手")}</p></div>`;
   const form = !X.read ? "" : `
     <div class="field"><label for="ix_src">${t("记录来源")}</label><select id="ix_src" data-ixsrc>${["儿科体检", "看病/急诊"].map(o => `<option value="${o}"${X.src === o ? " selected" : ""}>${t(o)}</option>`).join("")}</select></div>
@@ -67,7 +67,7 @@ function draw(){
     <h3 class="ix-h">⭐ ${t("里程碑")} <button type="button" class="chip" data-ix="add-ms">＋ ${t("加一个")}</button></h3><div class="ix-list" data-ixlist="milestones">${ms || `<p class="small muted">${t("医生提到会翻身、会走、会说话了，可以顺手记下。")}</p>`}</div>
     ${X.rows.length ? `<h3 class="ix-h">📋 ${t("多次测量（表格里每个日期一条）")} <span class="small muted">${t("{n} 行", { n: X.rows.length })}</span></h3><div class="ix-list" data-ixlist="rows">${tbl}</div>` : ""}
     ${X.temp >= 38 ? `<div class="warnline" role="alert">${esc(t("发热：留意精神状态，按医生建议处理"))}</div>` : ""}
-    <div class="btns"><button type="button" class="btn primary" data-ix="save" ${n ? "" : "disabled"}>${n ? t("保存 {n} 条", { n }) : t("还没有要保存的")}</button><button type="button" class="btn" data-act="close">${t("取消")}</button></div>`;
+    <div class="btns"><button type="button" class="ui-btn" data-tone="primary" data-ix="save" ${n ? "" : "disabled"}>${n ? t("保存 {n} 条", { n }) : t("还没有要保存的")}</button><button type="button" class="ui-btn" data-tone="ghost" data-act="close">${t("取消")}</button></div>`;
   $("#sheetIn").innerHTML = `${head(`✦ ${t("AI 一次录入体检 / 就诊")}`)}
     <div class="field who"><span class="small muted">${t("记录给")}</span><b>${esc(childName(X.child))}</b></div>
     ${read}${form}<datalist id="ixvax">${VAX_NAMES.map(v => `<option value="${esc(t(v))}">`).join("")}</datalist>`;

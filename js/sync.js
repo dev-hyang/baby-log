@@ -418,7 +418,7 @@ function familyHTML(){
   const joinForm = `
     <div class="field"><label for="sb_display">${t("你在家里的称呼")}</label><input id="sb_display" type="text" placeholder="${t("妈妈 / 爸爸 / 外婆")}"></div>
     <div class="field"><label for="sb_code">${t("邀请码")}</label><input id="sb_code" type="text" autocapitalize="characters" autocomplete="off"></div>
-    <div class="btns"><button class="btn primary" data-act="sb-join">${t("用邀请码加入")}</button></div>`;
+    <div class="btns"><button class="ui-btn" data-tone="primary" data-act="sb-join">${t("用邀请码加入")}</button></div>`;
   if (!SB.user) return `
     ${lapsed() ? `<p class="small" style="color:var(--rose)">${t("这台设备之前加入过家庭，但登录已失效（可能是手机清理了网站数据，或登录过期）。再输一次邀请码就能回来，这期间记的内容会一并上传。")}</p>` : ""}
     <p class="small muted">${t("家人已经建好家庭？输入对方发给你的邀请码就能一起记录，不用注册。")}</p>
@@ -427,21 +427,21 @@ function familyHTML(){
       <p class="small muted" style="margin-top:8px">${t("第一位建立家庭的人用邮箱注册（只用来在新手机上找回家庭），成为家主；其他家人用邀请码加入即可。")}</p>
       <div class="field"><label for="sb_email">${t("邮箱")}</label><input id="sb_email" type="text" inputmode="email" autocomplete="email"></div>
       <div class="field"><label for="sb_pw">${t("密码（至少 6 位）")}</label><input id="sb_pw" type="password" autocomplete="current-password"></div>
-      <div class="btns"><button class="btn" data-act="sb-login">${t("登录")}</button><button class="btn" data-act="sb-signup">${t("注册新账号")}</button></div>
+      <div class="btns"><button class="ui-btn" data-tone="ghost" data-act="sb-login">${t("登录")}</button><button class="ui-btn" data-tone="ghost" data-act="sb-signup">${t("注册新账号")}</button></div>
     </details>`;
   if (!SB.family && SB.waiting) return `
     <div role="status"><p><b>${t("等家主批准")}</b></p>
     <p class="small muted">${t("你已用邀请码申请加入，家主批准后才能看到家里的记录。这个页面每 20 秒自动检查一次。")}</p></div>
-    <div class="btns"><button class="btn" data-act="sb-recheck">${t("再查一次")}</button><button class="btn" data-act="sb-cancel-join">${t("取消申请 / 退出")}</button></div>`;
+    <div class="btns"><button class="ui-btn" data-tone="ghost" data-act="sb-recheck">${t("再查一次")}</button><button class="ui-btn" data-tone="ghost" data-act="sb-cancel-join">${t("取消申请 / 退出")}</button></div>`;
   if (!SB.family) {
     if (isAnon()) return `<p class="small muted">${t("这台设备还没有加入家庭。输入家人发给你的邀请码。")}</p>${joinForm}
-      <div class="btns"><button class="btn" data-act="sb-logout">${t("退出登录")}</button></div>`;
+      <div class="btns"><button class="ui-btn" data-tone="ghost" data-act="sb-logout">${t("退出登录")}</button></div>`;
     return `
     <p class="small muted">${t("已登录 {email}。创建一个家庭，或者输入家人发给你的邀请码。", { email: esc(SB.user.email) })}</p>
     <div class="field"><label for="sb_display">${t("你在家里的称呼")}</label><input id="sb_display" type="text" placeholder="${t("妈妈 / 爸爸 / 外婆")}"></div>
-    <div class="btns"><button class="btn primary" data-act="sb-create">${t("创建家庭")}</button></div>
+    <div class="btns"><button class="ui-btn" data-tone="primary" data-act="sb-create">${t("创建家庭")}</button></div>
     <div class="field"><label for="sb_code">${t("或者输入邀请码")}</label><input id="sb_code" type="text" autocapitalize="characters" autocomplete="off"></div>
-    <div class="btns"><button class="btn" data-act="sb-join">${t("加入家庭")}</button><button class="btn" data-act="sb-logout">${t("退出登录")}</button></div>`;
+    <div class="btns"><button class="ui-btn" data-tone="ghost" data-act="sb-join">${t("加入家庭")}</button><button class="ui-btn" data-tone="ghost" data-act="sb-logout">${t("退出登录")}</button></div>`;
   }
   const owner = isOwner(), me = SB.user.id;
   const rows = Object.entries(SB.members).map(([uid, m]) => {
@@ -470,7 +470,7 @@ function familyHTML(){
     <p class="small muted">${t("把网址和邀请码发给家人：对方打开网页，在设置里输入邀请码就能一起记录，不需要注册。邀请码相当于家门钥匙，只发给信任的人。")}</p>
     ${isAnon() ? `<p class="small muted">${t("这台设备是用邀请码加入的，没有绑定邮箱。换手机或清理浏览器数据后，再输一次邀请码即可。")}</p>` : ""}
     ${owner ? `<p class="small muted">${t("你是家主：可以重置邀请码、修改家人的称呼、把家人设为家主或移出家庭（比如有人误加入）。")}</p>` : ""}
-    <div class="btns"><button class="btn" data-act="sb-sync">${t("立即同步")}</button><button class="btn" data-act="sb-logout">${t("退出登录")}</button></div>`;
+    <div class="btns"><button class="ui-btn" data-tone="ghost" data-act="sb-sync">${t("立即同步")}</button><button class="ui-btn" data-tone="ghost" data-act="sb-logout">${t("退出登录")}</button></div>`;
 }
 
 export { SB, SYNC_KEY, TOMB_KEY, loadJSON, saveJSON, loadTombs, saveTombs, isAnon, isOwner, lapsed, memberName, memberNames, visSupported, canEdit, otherMembers, reconcile, initSupabase, afterAuth, enterFamily, leaveFamily, loadMembers, toRow, applyRow, syncNow, setupRealtime, teardownRealtime, sbAuth, sbCreate, sbJoin, sbLogout, sbResetCode, sbMember, familyHTML, sbCloseInvite, sbPending, sbCancelJoin, checkWaiting, joinNoticeHTML };

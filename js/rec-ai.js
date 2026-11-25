@@ -20,7 +20,7 @@ export function recAiHTML(e){
   const b = busy === e.id;
   if (!e.ai) return `<div class="rec-ai"><button type="button" class="chip rec-ai-btn" data-recai="run" data-id="${esc(e.id)}" ${b ? "disabled" : ""}>${b ? t("分析中…") : `✦ ${t("AI 解读")}`}</button></div>`;
   return `<details class="rec-ai gb-ai"><summary>✦ ${t("AI 解读")} <span class="small muted">${esc(String(e.ai.at || "").slice(0, 10))}</span></summary><div class="gb-ai-in">${recAiBody(e.ai, t, esc)}
-    <div class="btns"><button type="button" class="btn" data-recai="run" data-id="${esc(e.id)}" ${b ? "disabled" : ""}>${b ? t("分析中…") : t("重新分析")}</button><button type="button" class="btn" data-recai="clear" data-id="${esc(e.id)}">${t("清除")}</button></div>
+    <div class="btns"><button type="button" class="ui-btn" data-tone="ghost" data-recai="run" data-id="${esc(e.id)}" ${b ? "disabled" : ""}>${b ? t("分析中…") : t("重新分析")}</button><button type="button" class="ui-btn" data-tone="ghost" data-recai="clear" data-id="${esc(e.id)}">${t("清除")}</button></div>
     <p class="small muted">${t("AI 不是医生：意见不同时以医生为准，把它当成复诊时要问的问题。")}</p></div></details>`;
 }
 
@@ -48,7 +48,7 @@ function inputOf(e){
 function drawSheet(working){
   if (!P) return;
   $("#sheetIn").innerHTML = `${head(`✦ ${esc(t("AI 解读"))}`)}<div class="panel gb-ai-in">${recAiBody(P.ai, t, esc)}</div>
-    <div class="btns"><button type="button" class="btn primary" data-recai="keep">${t("保留")}</button><button type="button" class="btn" data-recai="run" data-id="${esc(P.id)}" ${working ? "disabled" : ""}>${working ? t("分析中…") : t("重新分析")}</button><button type="button" class="btn" data-recai="drop">${t("不要")}</button></div>
+    <div class="btns"><button type="button" class="ui-btn" data-tone="primary" data-recai="keep">${t("保留")}</button><button type="button" class="ui-btn" data-tone="ghost" data-recai="run" data-id="${esc(P.id)}" ${working ? "disabled" : ""}>${working ? t("分析中…") : t("重新分析")}</button><button type="button" class="ui-btn" data-tone="ghost" data-recai="drop">${t("不要")}</button></div>
     <p class="small muted">${t("AI 不是医生：意见不同时以医生为准，把它当成复诊时要问的问题。保留后显示在这条记录下面，可以重新分析或清除。")}</p>`;
 }
 async function run(id){

@@ -136,7 +136,7 @@ function cfgHTML(){
     <label class="small muted" for="askKey">API key</label><input id="askKey" type="password" autocomplete="off" value="${esc(d.key || "")}" placeholder="${t("只存在这台设备的浏览器里")}">
     <label class="small muted" for="askModel">${t("模型（留空用默认 {m}）", { m: p.model || "" })}</label><input id="askModel" type="text" autocomplete="off" value="${esc(d.model || "")}">
     ${p.id === "custom" ? `<label class="small muted" for="askBase">${t("接口地址（到 /v1 为止）")}</label><input id="askBase" type="url" autocomplete="off" value="${esc(d.base || "")}" placeholder="https://…/v1">` : ""}
-    <div class="btns"><button class="btn primary" data-act="ask-save">${t("保存")}</button><button class="btn" data-act="ask-test">${t("测试连接")}</button><button class="btn" data-act="ask-cfg">${t("收起")}</button></div></div>`;
+    <div class="btns"><button class="ui-btn" data-tone="primary" data-act="ask-save">${t("保存")}</button><button class="ui-btn" data-tone="ghost" data-act="ask-test">${t("测试连接")}</button><button class="ui-btn" data-tone="ghost" data-act="ask-cfg">${t("收起")}</button></div></div>`;
 }
 function viewAsk(){
   const ready = aiReady(), stage = stageOf().key;
@@ -149,9 +149,9 @@ function viewAsk(){
     <div class="ask-att">${attachHTML(ATT_ASK, { t, esc, noText: true, hint: t("可以拍几张照片或选文件一起问（体检单、作业、孩子的画、药盒说明、冰箱里的菜…），也能选 PDF。照片不保存。") })}</div>
     ${A.extra ? `<p class="ask-extra small"><span>📎 ${t("已附上：{name}", { name: esc(A.extraName) })}</span><button type="button" class="chip" data-act="ask-unextra" aria-label="${esc(t("不附这段摘要"))}">✕</button></p>` : ""}
     <label class="chk"><input type="checkbox" id="askctx" ${A.ctx ? "checked" : ""}> <span class="small">${t("附带最近 7 天的记录摘要（只有统计数字，不含备注和姓名）")}</span></label>
-    <div class="btns">${ready ? `<button class="btn primary" data-act="ask-send" ${A.busy ? "disabled" : ""}>${A.busy ? t("思考中…") : t("发送")}</button>` : ""}
-      <button class="btn ${ready ? "" : "primary"}" data-act="ask-copy">${t("复制提示词")}</button>
-      <button class="btn" data-act="ask-cfg">${ready ? t("换模型") : t("填 API key")}</button></div>
+    <div class="btns">${ready ? `<button class="ui-btn" data-tone="primary" data-act="ask-send" ${A.busy ? "disabled" : ""}>${A.busy ? t("思考中…") : t("发送")}</button>` : ""}
+      <button class="ui-btn" data-tone="${ready ? "ghost" : "primary"}" data-act="ask-copy">${t("复制提示词")}</button>
+      <button class="ui-btn" data-tone="ghost" data-act="ask-cfg">${ready ? t("换模型") : t("填 API key")}</button></div>
     ${A.error ? `<p class="small" style="color:var(--rose);margin:8px 0 0" role="alert">${esc(A.error)}</p>` : ""}
     ${A.cfg ? cfgHTML() : ""}
   </div>

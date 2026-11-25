@@ -101,7 +101,7 @@ function drawForm(focusKey){
     ${fl.map(f => `<div class="warnline" role="alert">${esc(f)}</div>`).join("")}
     ${datalist("vaxlist", VAX_LIST.map(v => t(v)))}${datalist("medlist", MED_LIST.map(v => t(v)))}${datalist("foodlist", FOOD_LIST.map(v => t(v)))}${datalist("milestonelist", milestoneNames())}
     ${visHTML()}
-    <div class="btns"><button class="btn primary" data-act="save">${t("保存")}</button>${isNew ? "" : `<button class="btn danger" data-act="del">${t("删除")}</button>`}</div>`;
+    <div class="btns"><button class="ui-btn" data-tone="primary" data-act="save">${t("保存")}</button>${isNew ? "" : `<button class="ui-btn" data-tone="danger" data-act="del">${t("删除")}</button>`}</div>`;
   if (focusKey) { const el = $("#sheetIn").querySelector(`[data-segsel="${focusKey}"]`); el && el.focus(); }
 }
 /* Who can see the record (family mode with migration 012 only). New records start from the type's default
@@ -134,7 +134,7 @@ function drawReadOnly(e){
       <p class="small muted">${esc(dayKey(e.ts))} ${esc(hm(e.ts))}</p>
       ${e.note ? `<p>${esc(e.note)}</p>` : ""}
       <p class="small muted">${t("{name} 分享给你的记录，只有对方可以修改。", { name: esc(name) })}</p></div>
-    <div class="btns"><button class="btn" data-act="close">${t("关闭")}</button></div>`;
+    <div class="btns"><button class="ui-btn" data-tone="ghost" data-act="close">${t("关闭")}</button></div>`;
 }
 /* Which child the record belongs to. The form opens for the child shown on the page, so by default this is
    one quiet line; "换一个孩子" expands the choice. A new activity can be shared by several children (reading
