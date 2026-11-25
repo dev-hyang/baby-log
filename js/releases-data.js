@@ -2,6 +2,9 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-24.7", title: { zh: "共用样式表多了按钮变量", en: "Shared stylesheet gains button variables" }, items: [
+    { k: "better", zh: "同步共用按钮样式，并设置本站主按钮用墨色底（界面不变，下一版起按钮换成共用控件）。", en: "Synced the shared button style and set this app's primary button to the ink colour (no visible change; buttons move to the shared control next)." },
+  ] },
   { v: "2026-11-24.6", title: { zh: "共用样式表的按钮点按区域", en: "Shared stylesheet: button tap area" }, items: [
     { k: "better", zh: "和爱家小助手同步共用样式：默认号按钮在手机上的点按区域也不小于 44px（本站暂未使用，界面不变）。", en: "Synced shared styles from Home Pantry: default-size buttons also keep a 44 px tap area on phones (not used here yet; nothing changes on screen)." },
   ] },
