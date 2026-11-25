@@ -2,6 +2,9 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-25.2", title: { zh: "可输入的下拉框和爱家小助手统一", en: "Type-in dropdowns now match Pantry" }, items: [
+    { k: "better", zh: "疫苗名称、自填项这类「可以输入、也有以前的选择可点」的框，电脑上点进去就列出可选项，打字筛选，点一项填进去并收起；也可以填列表里没有的。手机上继续用手机自带的建议条。", en: "On laptop, type-in fields with suggestions list the options when you click in, filter as you type and close after you pick one; you can still type something new. Phones keep their built-in suggestions." },
+  ] },
   { v: "2026-11-25.1", title: { zh: "记录表单：取消 / 保存固定在底部，删除收进右上角 ⋯", en: "Record forms: Cancel / Save pinned at the bottom, Delete moved to the ⋯ menu" }, items: [
     { k: "better", zh: "记录和修改的表单：顶部不再有「关闭」，底部固定显示「取消」「保存」，往下滚动也一直在。", en: "Record and edit forms no longer have a Close button at the top; Cancel and Save stay pinned at the bottom while you scroll." },
     { k: "better", zh: "「删除」不常用，改放在表单右上角的 ⋯ 菜单里，不会再误点。", en: "Delete is rarely used, so it now lives in the ⋯ menu at the top right to avoid accidental taps." },
