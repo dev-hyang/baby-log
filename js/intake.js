@@ -3,6 +3,7 @@ import { t } from "./i18n.js";
 import { EXTRA, EXTRA_KEYS, INTAKE_SYSTEM, VAX_NAMES, extraParts, mergeInto, parseIntake, sameEntry, sameVisit, vaxForm } from "./intake-lib.js";
 import { attachHTML, attachHas, attachPayload, attachReset } from "./attach.js";
 import { closeSheet, head, showSheet } from "./sheet.js";
+import { formBar } from "./shared/ui-form.js";
 import { LS_KEY, S, ageMonths, childName, childOf, matchCheckup } from "./state.js";
 import { putEntry, saveSettings } from "./store.js";
 import { TYPES } from "./types.js";
@@ -67,7 +68,7 @@ function draw(){
     <h3 class="ix-h">⭐ ${t("里程碑")} <button type="button" class="chip" data-ix="add-ms">＋ ${t("加一个")}</button></h3><div class="ix-list" data-ixlist="milestones">${ms || `<p class="small muted">${t("医生提到会翻身、会走、会说话了，可以顺手记下。")}</p>`}</div>
     ${X.rows.length ? `<h3 class="ix-h">📋 ${t("多次测量（表格里每个日期一条）")} <span class="small muted">${t("{n} 行", { n: X.rows.length })}</span></h3><div class="ix-list" data-ixlist="rows">${tbl}</div>` : ""}
     ${X.temp >= 38 ? `<div class="warnline" role="alert">${esc(t("发热：留意精神状态，按医生建议处理"))}</div>` : ""}
-    <div class="ui-acts btns"><button type="button" class="ui-btn" data-tone="primary" data-ix="save" ${n ? "" : "disabled"}>${n ? t("保存 {n} 条", { n }) : t("还没有要保存的")}</button><button type="button" class="ui-btn" data-tone="ghost" data-act="close">${t("取消")}</button></div>`;
+    ${formBar("edit", [{ role: "cancel", label: t("取消"), attrs: 'data-act="close"' }, { role: "save", label: n ? t("保存 {n} 条", { n }) : t("还没有要保存的"), attrs: `data-ix="save"${n ? "" : " disabled"}` }])}`;
   $("#sheetIn").innerHTML = `${head(`✦ ${t("AI 一次录入体检 / 就诊")}`)}
     <div class="field who"><span class="small muted">${t("记录给")}</span><b>${esc(childName(X.child))}</b></div>
     ${read}${form}<datalist id="ixvax">${VAX_NAMES.map(v => `<option value="${esc(t(v))}">`).join("")}</datalist>`;

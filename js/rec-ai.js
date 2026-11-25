@@ -4,6 +4,7 @@ import { REC_AI_SYSTEM, parseRecAi, recAiBody } from "./record-ai.js";
 import { LS_KEY, S, ageMonths, birthTs, child, childOf } from "./state.js";
 import { putEntry } from "./store.js";
 import { closeSheet, head, showSheet } from "./sheet.js";
+import { formBar, formMenu } from "./shared/ui-form.js";
 import { bmiBand, bpLimit, flag, hrRange } from "./vitals.js";
 import { $, dayKey, esc, toast } from "./util.js";
 import { render } from "./views.js";
@@ -47,8 +48,8 @@ function inputOf(e){
 
 function drawSheet(working){
   if (!P) return;
-  $("#sheetIn").innerHTML = `${head(`✦ ${esc(t("AI 解读"))}`)}<div class="panel gb-ai-in">${recAiBody(P.ai, t, esc)}</div>
-    <div class="ui-acts btns"><button type="button" class="ui-btn" data-tone="primary" data-recai="keep">${t("保留")}</button><button type="button" class="ui-btn" data-tone="ghost" data-recai="run" data-id="${esc(P.id)}" ${working ? "disabled" : ""}>${working ? t("分析中…") : t("重新分析")}</button><button type="button" class="ui-btn" data-tone="ghost" data-recai="drop">${t("不要")}</button></div>
+  $("#sheetIn").innerHTML = `${head(`✦ ${esc(t("AI 解读"))}`, formMenu([{ label: t("不要"), attrs: 'data-recai="drop"', tone: "danger" }], { label: t("更多操作") }))}<div class="panel gb-ai-in">${recAiBody(P.ai, t, esc)}</div>
+    ${formBar("edit", [{ role: "cancel", label: t("关闭"), attrs: 'data-act="close"' }, { role: "extra", label: working ? t("分析中…") : t("重新分析"), attrs: `data-recai="run" data-id="${esc(P.id)}"${working ? " disabled" : ""}` }, { role: "save", label: t("保留"), attrs: 'data-recai="keep"' }])}
     <p class="small muted">${t("AI 不是医生：意见不同时以医生为准，把它当成复诊时要问的问题。保留后显示在这条记录下面，可以重新分析或清除。")}</p>`;
 }
 async function run(id){

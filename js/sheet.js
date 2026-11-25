@@ -5,6 +5,7 @@ import { SB, canEdit, memberName, otherMembers, visSupported } from "./sync.js";
 import { TYPES, flags, summary, typeLabel } from "./types.js";
 import { DISP_DEC, KG_LB, fromDisp, isUS, toDisp, trim, unitOf } from "./units.js";
 import { $, dayKey, esc, fromInput, hm, newId, num, toInput } from "./util.js";
+import { formBar, formMenu } from "./shared/ui-form.js";
 
 /* ============ sheet as a page ============
    The record form replaces the page content instead of floating over it, so nothing depends on how a given
@@ -38,7 +39,9 @@ $("#sheet").addEventListener("close", onSheetClosed);
 window.addEventListener("popstate", () => { if ($("#sheet").open) closeSheet(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#sheet").open) closeSheet(); });
 
-const head = title => `<div class="sheet-head"><h3 id="sheetTitle">${title}</h3><button class="iconbtn" data-act="close" aria-label="${t("关闭")}">${t("关闭")}</button></div>`;
+// 页头只有标题和（可选的）右上角 ⋯ 菜单；关闭靠底部的「取消」/「关闭」按钮（closeBar）或返回手势，不再有顶部关闭按钮
+const head = (title, menu = "") => `<div class="sheet-head"><h3 id="sheetTitle">${title}</h3>${menu}</div>`;
+const closeBar = (label = "取消") => formBar("edit", [{ role: "cancel", label: t(label), attrs: 'data-act="close"' }]);
 // suggestion lists for free-text fields, shown in the interface language
 const VAX_LIST = ["乙肝疫苗 HepB", "卡介苗 BCG", "脊灰疫苗 IPV/OPV", "百白破 DTaP", "Hib 疫苗", "肺炎球菌疫苗 PCV", "轮状病毒疫苗 RV", "麻腮风 MMR", "水痘疫苗 VAR", "甲肝疫苗 HepA", "乙脑疫苗 JE", "流脑疫苗 MenA/MenAC", "流感疫苗 Flu", "新冠疫苗 COVID-19", "RSV 单抗 nirsevimab"];
 const MED_LIST = ["布洛芬", "泰诺（对乙酰氨基酚）", "复合维生素", "铁剂", "钙片"];
@@ -93,7 +96,8 @@ function drawForm(focusKey){
     if (fieldsHTML[i].includes('data-half="1"') && fieldsHTML[i + 1]?.includes('data-half="1"')) { out.push(`<div class="row2">${fieldsHTML[i]}${fieldsHTML[i + 1]}</div>`); i++; } else out.push(fieldsHTML[i]);
   }
   const fl = flags(draft);
-  $("#sheetIn").innerHTML = `${head(`${T.icon} ${t(isNew ? "记录{type}" : "修改{type}", { type: typeLabel(draft.type) })}`)}
+  const menu = isNew ? "" : formMenu([{ label: t("删除"), attrs: 'data-act="del"', tone: "danger" }], { label: t("更多操作") });   // 删除不常用：放页头右上角 ⋯
+  $("#sheetIn").innerHTML = `${head(`${T.icon} ${t(isNew ? "记录{type}" : "修改{type}", { type: typeLabel(draft.type) })}`, menu)}
     ${draft.type === "faith" && S.settings.faith.statement ? `<p class="small muted" style="margin:0 0 10px">${esc(S.settings.faith.statement)}</p>` : ""}
     ${whoHTML(isNew)}
     <div class="field"><label for="f_ts">${draft.type === "sleep" ? t("入睡时间") : t("时间")}</label><input id="f_ts" type="datetime-local" data-f="ts" data-kind="dt" max="${nowMax}" value="${toInput(draft.ts)}"></div>
@@ -101,7 +105,7 @@ function drawForm(focusKey){
     ${fl.map(f => `<div class="warnline" role="alert">${esc(f)}</div>`).join("")}
     ${datalist("vaxlist", VAX_LIST.map(v => t(v)))}${datalist("medlist", MED_LIST.map(v => t(v)))}${datalist("foodlist", FOOD_LIST.map(v => t(v)))}${datalist("milestonelist", milestoneNames())}
     ${visHTML()}
-    <div class="ui-acts btns"><button class="ui-btn" data-tone="primary" data-act="save">${t("保存")}</button>${isNew ? "" : `<button class="ui-btn" data-tone="danger" data-act="del">${t("删除")}</button>`}</div>`;
+    ${formBar("edit", [{ role: "cancel", label: t("取消"), attrs: 'data-act="close"' }, { role: "save", label: t("保存"), attrs: 'data-act="save"' }])}`;
   if (focusKey) { const el = $("#sheetIn").querySelector(`[data-segsel="${focusKey}"]`); el && el.focus(); }
 }
 /* Who can see the record (family mode with migration 012 only). New records start from the type's default
@@ -134,7 +138,7 @@ function drawReadOnly(e){
       <p class="small muted">${esc(dayKey(e.ts))} ${esc(hm(e.ts))}</p>
       ${e.note ? `<p>${esc(e.note)}</p>` : ""}
       <p class="small muted">${t("{name} 分享给你的记录，只有对方可以修改。", { name: esc(name) })}</p></div>
-    <div class="ui-acts btns"><button class="ui-btn" data-tone="ghost" data-act="close">${t("关闭")}</button></div>`;
+    ${closeBar("关闭")}`;
 }
 /* Which child the record belongs to. The form opens for the child shown on the page, so by default this is
    one quiet line; "换一个孩子" expands the choice. A new activity can be shared by several children (reading
@@ -172,8 +176,8 @@ function pickType(){
   const grid = keys => `<div class="quick">${keys.map(k => `<button data-add="${k}"><i>${TYPES[k].icon}</i>${typeLabel(k)}</button>`).join("")}</div>`;
   $("#sheetIn").innerHTML = `${head(t("补记哪一类？"))}
   ${grid(first)}
-  ${rest.length ? `<h2>${t("其他")}</h2>${grid(rest)}` : ""}`;
+  ${rest.length ? `<h2>${t("其他")}</h2>${grid(rest)}` : ""}${closeBar()}`;
   showSheet("pick");
 }
 
-export { sheetScrollY, showSheet, closeSheet, head, draft, openForm, drawForm, readDraftInputs, pickType, rememberVis };
+export { sheetScrollY, showSheet, closeSheet, head, closeBar, draft, openForm, drawForm, readDraftInputs, pickType, rememberVis };

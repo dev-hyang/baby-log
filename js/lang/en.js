@@ -87,6 +87,7 @@ export default {
 "已打勾，点 ✓ 可补充大便颜色": "Checked. Tap ✓ to add the poop color",
 "已打勾": "Checked",
 "关闭": "Close",
+"更多操作": "More actions",
 "乙肝疫苗 HepB": "Hepatitis B (HepB)",
 "卡介苗 BCG": "BCG",
 "脊灰疫苗 IPV/OPV": "Polio (IPV/OPV)",
