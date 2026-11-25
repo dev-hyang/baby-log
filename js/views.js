@@ -70,7 +70,7 @@ function toggleKids(open = $("#kids").hidden){
   if (open) { const cur = $("#kids [aria-checked='true']"); cur && cur.focus(); }
 }
 // one entry row of a hub page (我的 / 成长 / 妈妈): icon, title, one-line description, ›
-const mrow = (attr, title, desc, icon) => `<button class="mrow" ${attr}><span class="mi" aria-hidden="true">${icon}</span><span class="mt"><b>${title}</b>${desc ? `<small>${desc}</small>` : ""}</span><span class="ui-chev" aria-hidden="true">›</span></button>`;
+const mrow = (attr, title, desc, icon) => `<button class="ui-row mrow" ${attr}><span class="mi" aria-hidden="true">${icon}</span><span class="mt"><b>${title}</b>${desc ? `<small>${desc}</small>` : ""}</span><span class="ui-chev" aria-hidden="true">›</span></button>`;
 // sub-pages reached from a hub: the hub's bottom tab stays highlighted and a "‹ hub" chip sits on top
 // 发布日志数据按需加载：没加载好时先显示「加载中…」，加载完（还停在这一页）再画一次
 function releasesPage(){

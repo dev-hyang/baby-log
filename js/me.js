@@ -29,7 +29,7 @@ function prefsSummary(){
 }
 function viewMe(){
   const row = mrow, kids = activeKids();
-  const link = a => `<a class="mrow" href="${a.url}"><span class="mi" aria-hidden="true">↗</span><span class="mt"><b>${esc(t(a.name))}</b><small>${esc(t(a.desc))}</small></span><span class="ui-chev" aria-hidden="true">›</span></a>`;
+  const link = a => `<a class="ui-row mrow" href="${a.url}"><span class="mi" aria-hidden="true">↗</span><span class="mt"><b>${esc(t(a.name))}</b><small>${esc(t(a.desc))}</small></span><span class="ui-chev" aria-hidden="true">›</span></a>`;
   const famDesc = inFamily() ? t("{name} · {m} 位成员 · {k} 个孩子", { name: esc(SB.family.name), m: memberNames().length || 1, k: kids.length }) : t("家庭协作、孩子、妈妈用药间隔、信仰（可选）");
   return `
   <h2>${t("我的")} <span class="small muted" style="font-weight:400">${esc(childName())} · ${esc(ageText())}</span></h2>
