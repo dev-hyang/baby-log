@@ -312,7 +312,7 @@ function syncHTML() {
     ${UI.result ? `<div class="bk-notice"><b>${esc(UI.result.title)}</b>${UI.result.detail ? `<p class="small muted">${esc(UI.result.detail)}</p>` : ""}</div>` : ""}
     <div class="panel">
       <div class="bkhead"><div><b>${s.last ? esc(t("上次备份 {d}", { d: when(s.last) })) : t("还没备份过")}</b><small class="muted">${s.last && s.lastInfo ? esc(s.lastInfo) + " · " : ""}${!intervalDays(s) ? t("定时备份已关") : due && due.getTime() <= Date.now() ? t("已到期：下次打开应用时自动备份") : esc(t("下次 {d}", { d: when(due.toISOString()) }))}</small></div>
-        <div class="btns" style="margin:0"><button class="ui-btn" data-tone="primary" data-act="bk-now">${t("现在备份")}</button><button class="ui-btn" data-tone="ghost" data-act="bk-download">${t("只下载一份")}</button></div></div>
+        <div class="ui-acts btns" style="margin:0"><button class="ui-btn" data-tone="primary" data-act="bk-now">${t("现在备份")}</button><button class="ui-btn" data-tone="ghost" data-act="bk-download">${t("只下载一份")}</button></div></div>
       <form id="backupForm" onsubmit="return false">
         ${fam ? `<p class="small" style="margin:0 0 8px">${isOwner() ? t("你是家主：备份的是全家的数据（含家人私有的记录、每位家人的牧羊人数据），家人不用各自再做。") : t("你不是家主：备份只含你自己的和全家可见的记录；全家的备份由家主做。")}</p>
         <label class="chk-inline" style="display:flex;gap:8px;align-items:center;margin:0 0 8px"><input type="checkbox" name="bundle" ${s.bundle ? "checked" : ""}> <span>${t("连同家庭学堂、牧羊人一起备份（推荐；它们的页面里不用再设）")}</span></label>` : ""}
@@ -338,14 +338,14 @@ function syncHTML() {
   const preview = !pv ? "" : pv.ok ? `<div class="bk-notice"><b>${t("备份来自 {h}，{d}，共 {n} 条记录", { h: esc(pv.scope || t("这台设备")), d: when(pv.exported_at), n: pv.rows })}</b>${pv.kids.length ? `<p class="small muted">${t("孩子：{k}", { k: esc(pv.kids.join("、")) })}</p>` : ""}${pv.bundle ? `<p class="small muted">${t("另含家庭学堂 / 牧羊人 {n} 行", { n: pv.bundle })}${pv.full ? ` · ${t("家主的全家备份")}` : ""}${!cloudReady() ? ` · ${t("（要进入家庭后才能导回这部分）")}` : !isOwner() && pv.full ? ` · ${t("（你不是家主，只会导回你自己的）")}` : ""}</p>` : ""}
       ${pv.same ? "" : `<p class="small muted">${t("这是另一个家庭的备份（换了项目或重建过家庭时正常）：会合并进现在这个家庭。")}</p>`}
       <p class="small">${t("恢复 = 把备份里的记录合并进来：已有同 id 的不动，缺的补上；设置（孩子、用药间隔等）合并。家庭模式下会同步给全家。")}</p>
-      <div class="btns"><button class="ui-btn" data-tone="primary" data-act="bk-restore">${t("合并进来")}</button><button class="ui-btn" data-tone="ghost" data-act="bk-cancel">${t("取消")}</button></div></div>`
+      <div class="ui-acts btns"><button class="ui-btn" data-tone="primary" data-act="bk-restore">${t("合并进来")}</button><button class="ui-btn" data-tone="ghost" data-act="bk-cancel">${t("取消")}</button></div></div>`
     : `<div class="bk-notice"><b>${t("不能恢复：{why}", { why: esc(pv.why) })}</b> <button class="chip" data-act="bk-cancel">${t("关闭")}</button></div>`;
   const restore = `<h2>${t("从文件恢复")}</h2><div class="panel"><p class="small muted" style="margin-top:0">${t("换了手机、数据库被删、或换了 Supabase 项目：先登录并建好 / 加入家庭（新项目要先在 SQL Editor 执行 supabase/schema.sql），再选备份文件合并进来。老版本「导出备份」的文件也行。")}</p>
-      <div class="btns" style="margin-top:8px"><label class="ui-btn" data-tone="ghost">${t("选文件")}<input id="backupFile" type="file" accept="application/json,.json" hidden></label></div>${preview}</div>`;
+      <div class="ui-acts btns" style="margin-top:8px"><label class="ui-btn" data-tone="ghost">${t("选文件")}<input id="backupFile" type="file" accept="application/json,.json" hidden></label></div>${preview}</div>`;
   // 5) 数据工具（折叠）
   const tools = `<details class="more"><summary>${t("数据工具")}<span class="small muted">${t("导出表格、演示数据、清空")}</span></summary>
-    <div class="panel"><div class="btns" style="margin-top:0"><button class="ui-btn" data-tone="ghost" data-act="csv">${t("导出表格（CSV）")}</button></div>
-    <div class="btns"><button class="ui-btn" data-tone="ghost" data-act="demo">${t("载入演示数据")}</button><button class="ui-btn" data-tone="ghost" data-act="cleardemo">${t("清除演示数据")}</button><button class="ui-btn" data-tone="danger" data-act="clearall">${t("清空全部记录")}</button></div></div></details>`;
+    <div class="panel"><div class="ui-acts btns" style="margin-top:0"><button class="ui-btn" data-tone="ghost" data-act="csv">${t("导出表格（CSV）")}</button></div>
+    <div class="ui-acts btns"><button class="ui-btn" data-tone="ghost" data-act="demo">${t("载入演示数据")}</button><button class="ui-btn" data-tone="ghost" data-act="cleardemo">${t("清除演示数据")}</button><button class="ui-btn" data-tone="danger" data-act="clearall">${t("清空全部记录")}</button></div></div></details>`;
   const usage = `<h2>${t("存储用量")}</h2><p class="small muted" style="margin-top:0">${t("看看数据占了 Supabase 免费空间的多少，快满之前会变黄、变红提醒你。")}</p>${usageHTML()}`;
   return `<h2>${t("同步、备份与恢复")}</h2>${status}${backup}${have}${restore}${usage}${tools}`;
 }

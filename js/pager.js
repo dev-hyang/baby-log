@@ -23,6 +23,6 @@ function shownOf(id, sig){
 function pagerNav(key){ if (key !== PG.nav) { PG.nav = key; PG.lists = {}; } }
 function loadMore(id){ const s = PG.lists[id]; if (s) s.n += pageSize(); }
 // the single "继续加载" button under a list, only while rows are still hidden
-const moreHTML = (id, total, n) => total > n ? `<div class="btns" style="justify-content:center;margin-top:12px"><button type="button" class="ui-btn" data-tone="ghost" data-more="${id}">${t("继续加载")}</button></div>` : "";
+const moreHTML = (id, total, n) => total > n ? `<div class="ui-acts btns" style="justify-content:center;margin-top:12px"><button type="button" class="ui-btn" data-tone="ghost" data-more="${id}">${t("继续加载")}</button></div>` : "";
 
 export { PAGE_SIZES, pageSize, setPageSize, shownOf, pagerNav, loadMore, moreHTML };

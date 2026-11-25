@@ -2,6 +2,9 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-24.9", title: { zh: "表单和对话框底部的按钮：取消靠左、保存靠右", en: "Form and dialog buttons: Cancel on the left, Save on the right" }, items: [
+    { k: "better", zh: "按钮条换成和爱家小助手同一个按钮条控件：一个按钮靠右（手机上占满一行）；两个按钮取消靠左、主按钮靠右，以前主按钮在前。", en: "Button rows now use the same control as Home Pantry: one button on the right (full width on phones); with two, Cancel is on the left and the main action on the right (the main action used to come first)." },
+  ] },
   { v: "2026-11-24.8", title: { zh: "所有按钮换成统一的按钮控件", en: "All buttons now use the shared button control" }, items: [
     { k: "better", zh: "全站按钮换成和爱家小助手同一个按钮控件：默认 40px、小号 34px，手机上点按区域仍不小于 44px（以前约 46px）。", en: "Every button now uses the same control as Home Pantry: 40 px default, 34 px small, with a tap area still at least 44 px on phones (it used to be about 46 px)." },
     { k: "fix", zh: "如果哪个页面的按钮看起来不对（颜色、大小、位置），请告诉我，这次是整体替换。", en: "If a button looks wrong on any page (colour, size, position), please tell me; this was a wholesale replacement." },

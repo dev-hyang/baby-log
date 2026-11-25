@@ -286,7 +286,7 @@ body.sheet-open .wrap,body.sheet-open nav.tabs{display:none}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .range{display:flex;align-items:center;gap:10px}
 .range input{flex:1}
-.btns{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.btns{margin-top:16px}
 .chip.danger{color:var(--rose);border-color:var(--rose)}
 /* settings page: soft, rounded fields. The kids and mother's-medicine rows used the browser's square default inputs;
    everything on this page now shares one pill-shaped input, a roomier card and pill choice buttons. */

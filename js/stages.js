@@ -168,7 +168,7 @@ function routineHTML(){
     ? `<button class="chip done" data-edit="${esc(e.id)}" aria-label="${esc(t("{step} 已完成，点一下修改", { step: t(s) }))}">✓ ${esc(t(s))} <small>${hm(e.ts)}${e.self ? "" : " · " + t("提醒后")}</small></button>`
     : `<button class="chip" data-step="${esc(s)}">${esc(t(s))}</button>`; };
   return `<div class="panel routine"><div class="phead"><h2>${t("今天的习惯")} <span class="small muted num" style="font-weight:400">${n}/${steps.length}</span></h2>
-    <span class="btns" style="margin:0;gap:6px"><button class="chip" data-add="routine">${t("＋ 补记")}</button><button class="gear" data-tab="routinecfg" aria-label="${t("编辑习惯清单")}">⚙</button></span></div>
+    <span class="ui-acts btns" style="margin:0;gap:6px"><button class="chip" data-add="routine">${t("＋ 补记")}</button><button class="gear" data-tab="routinecfg" aria-label="${t("编辑习惯清单")}">⚙</button></span></div>
   ${routineGroups().map(g => `<div class="rgroup ${groupTone(g.name)}">${g.name ? `<div class="lab"><span class="rgtag">${esc(t(g.name))}</span> <span class="num">${g.steps.filter(s => done.has(s)).length}/${g.steps.length}</span></div>` : ""}<div class="ms">${g.steps.map(chip).join("")}</div></div>`).join("")}
   <p class="small muted" style="margin:8px 0 0">${t("做到一步点一下，默认记为自己做到的；要提醒了才做的，点已完成的那一步改。")} ${t("忘了记的，点「＋ 补记」选步骤和当时的时间。")}</p></div>`;
 }
