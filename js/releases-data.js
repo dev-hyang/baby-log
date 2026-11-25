@@ -2,6 +2,9 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-24.10", title: { zh: "箭头统一成共用控件", en: "Arrows now use the shared arrow control" }, items: [
+    { k: "better", zh: "菜单行右边的箭头、顶部宝宝名字旁的小三角、发布日志的箭头，换成和爱家小助手同一个箭头控件（界面几乎不变）。", en: "The arrows on menu rows, the little caret next to the baby's name and the release-notes arrow now use the same control as Home Pantry (nearly no visible change)." },
+  ] },
   { v: "2026-11-24.9", title: { zh: "表单和对话框底部的按钮：取消靠左、保存靠右", en: "Form and dialog buttons: Cancel on the left, Save on the right" }, items: [
     { k: "better", zh: "按钮条换成和爱家小助手同一个按钮条控件：一个按钮靠右（手机上占满一行）；两个按钮取消靠左、主按钮靠右，以前主按钮在前。", en: "Button rows now use the same control as Home Pantry: one button on the right (full width on phones); with two, Cancel is on the left and the main action on the right (the main action used to come first)." },
   ] },

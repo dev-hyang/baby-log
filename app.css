@@ -42,8 +42,8 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .brand > span{font-size:13px;color:var(--muted)}
 /* child switcher: the name itself is the trigger, the menu drops down under it */
 .bname{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:20px;letter-spacing:.02em;min-height:28px}
-.bname .chev{display:inline-block;width:10px;height:10px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:translateY(-3px) rotate(45deg);transition:transform .15s}
-.bname[aria-expanded="true"] .chev{transform:translateY(2px) rotate(225deg)}
+.bname .ui-chev{margin-left:4px}
+.bname[aria-expanded="true"] .ui-chev{transform:rotate(180deg)}
 /* sister apps: ‹ previous / next › badges in the top-right corner, above the sync status */
 .apps{display:inline-flex;gap:4px}
 .badge{border:1px solid var(--line);background:var(--slate-soft);color:var(--slate);border-radius:999px;padding:2px 9px;font-size:12px;line-height:18px;cursor:pointer;min-height:24px}
@@ -167,7 +167,7 @@ p{margin:0 0 8px}
 .mrow .mt{flex:1;min-width:0;display:flex;flex-direction:column}
 .mrow .mt b{font-size:16px;font-weight:600}
 .mrow .mt small{font-size:12.5px;color:var(--muted);line-height:1.4}
-.mrow .mch{color:var(--muted);font-size:18px}
+.mrow .ui-chev{font-size:18px}
 .vtabs button{border:0;background:none;border-radius:999px;min-height:40px;cursor:pointer;font-size:15px;color:var(--muted)}
 .vtabs button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .daynav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:12px 0 8px}
@@ -612,7 +612,7 @@ details.more summary .small{font-weight:400}
 /* 今天页的咩咩咩入口：整行可点，小羊 + 标题 + 一句说明 */
 .askentry{display:flex;align-items:center;gap:12px;width:100%;text-align:left;margin-top:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);cursor:pointer;font:inherit;color:inherit}
 .askentry .at{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px} .askentry b{font-size:15px} .askentry small{color:var(--muted);font-size:12.5px;line-height:1.35}
-.askentry .chev{color:var(--muted);font-size:22px;line-height:1}
+.askentry .ui-chev{font-size:22px}
 .mrow .mi .ai-ico{vertical-align:middle}
 .ask .chk{margin:8px 0 0}
 .ask .btns{margin-top:12px}

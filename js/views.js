@@ -39,7 +39,7 @@ function renderStatus(){
     ? (pending ? `<span class="dot"></span>${t("{n} 条待同步", { n: pending })}` : `<span class="dot ok"></span>${t("家庭同步 · {n} 人", { n: memberNames().length || 1 })}`)
     : S.mode === "cloud" ? `<span class="dot ok"></span>${t("已同步到你的账号")}`
     : lapsed() ? `<span class="dot"></span>${t(SB.user ? "家庭连接失败，记录暂存本机" : "家庭登录已失效，记录暂存本机")}` : `<span class="dot"></span>${t("保存在本设备")}`;
-  $("#bname").innerHTML = `${esc(child().name ? t("{name}的记录", { name: child().name }) : t("小月亮"))}<span class="chev" aria-hidden="true"></span>`;
+  $("#bname").innerHTML = `${esc(child().name ? t("{name}的记录", { name: child().name }) : t("小月亮"))}<span class="ui-chev" data-dir="down" aria-hidden="true">▾</span>`;
   $("#bage").textContent = ageText();
   $("#appver").textContent = "v" + APP_VERSION;
   $("#kids").innerHTML = activeKids().map(c => `<button role="menuitemradio" aria-checked="${c.id === S.childId}" data-kidsel="${esc(c.id)}"><b>${esc(c.name || t("宝宝"))}</b><small>${esc(ageText(c.id))}${goesToSchool(c.id) ? ` · ${esc(t("去家庭学堂记录"))} ›` : ""}</small></button>`).join("")
@@ -70,7 +70,7 @@ function toggleKids(open = $("#kids").hidden){
   if (open) { const cur = $("#kids [aria-checked='true']"); cur && cur.focus(); }
 }
 // one entry row of a hub page (我的 / 成长 / 妈妈): icon, title, one-line description, ›
-const mrow = (attr, title, desc, icon) => `<button class="mrow" ${attr}><span class="mi" aria-hidden="true">${icon}</span><span class="mt"><b>${title}</b>${desc ? `<small>${desc}</small>` : ""}</span><span class="mch" aria-hidden="true">›</span></button>`;
+const mrow = (attr, title, desc, icon) => `<button class="mrow" ${attr}><span class="mi" aria-hidden="true">${icon}</span><span class="mt"><b>${title}</b>${desc ? `<small>${desc}</small>` : ""}</span><span class="ui-chev" aria-hidden="true">›</span></button>`;
 // sub-pages reached from a hub: the hub's bottom tab stays highlighted and a "‹ hub" chip sits on top
 // 发布日志数据按需加载：没加载好时先显示「加载中…」，加载完（还停在这一页）再画一次
 function releasesPage(){
@@ -309,7 +309,7 @@ function viewToday(){
   ${nc ? `<div class="alert info">${checkup}<button class="chip" data-tab="grow-checkups" style="margin-left:6px">${t("查看全部")}</button></div>` : ""}
   <div class="quick" role="group" aria-label="${t("快速记录")}">${quickHTML()}</div>
   ${joinNoticeHTML()}
-  <button class="askentry" data-tab="ask">${aiIcon(36)}<span class="at"><b>${t("咩咩咩")}</b><small>${t("问一问你的新 AI 助理吧：喂奶、睡眠、情绪、陪伴都能问")}</small></span><span class="chev" aria-hidden="true">›</span></button>
+  <button class="askentry" data-tab="ask">${aiIcon(36)}<span class="at"><b>${t("咩咩咩")}</b><small>${t("问一问你的新 AI 助理吧：喂奶、睡眠、情绪、陪伴都能问")}</small></span><span class="ui-chev" aria-hidden="true">›</span></button>
   <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="chip" data-tab="cards">${t("⚙ 管理卡片")}</button></div>
   ${stats ? `<h2>${t("最近 24 小时")}</h2><div class="stats">${stats}</div>${S.mode === "family" && SB.vis && memberNames().length > 1 ? `<p class="small muted" style="margin:6px 0 0">${t("统计只包含你能看到的记录。")}</p>` : ""}` : ""}
   ${routineHTML()}
