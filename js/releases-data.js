@@ -2,6 +2,9 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-27.4", title: { zh: "内部整理（界面和用法不变）", en: "Behind-the-scenes tidy-up (no change to how it looks or works)" }, items: [
+    { k: "better", zh: "更新了和牧羊人共用的进度横条样式（可带序号、‹ › 和 ⚙），以后用得上；你现在看到的界面和操作都和上一版一样。", en: "Updated the progress-dash styles shared with Shepherd (optional number, ‹ › and ⚙) for later; what you see and how it works are unchanged." }
+  ] },
   { v: "2026-11-27.3", title: { zh: "记录列表整理成统一控件（外观和用法不变）", en: "Record list tidied into a shared control (looks and works the same)" }, items: [
     { k: "better", zh: "「今天」和「记录」里的列表 / 时间轴换成和牧羊人共用的同一个控件；左滑删除、刚保存的那行闪一下、家人模式的作者和「仅我」标记都照旧。", en: "The list / timeline on Today and Log now uses the control shared with Shepherd; swipe to delete, the flash on a just-saved row, and the family author and Only-me marks all work as before." },
     { k: "better", zh: "点一行里的任何地方（包括时间）都能打开编辑。", en: "Tapping anywhere on a row, including the time, opens it for editing." },
