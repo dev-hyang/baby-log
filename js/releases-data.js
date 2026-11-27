@@ -2,6 +2,10 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-27.7", title: { zh: "筛选条换成统一的「筛选」按钮", en: "Filter bar now uses the shared Filter button" }, items: [
+    { k: "better", zh: "「记录」和成长各页的筛选条：一行搜索框 + 「筛选 (n)」按钮，点开面板里选类型、时间范围；已改动的个数显示在按钮上。手机和电脑都一样，和牧羊人、爱家小助手统一。", en: "The filter bar on Log and the Growth pages is now a search box plus a Filter (n) button; pick type and time range in the panel, and the count shows on the button. Same on phone and laptop, matching Shepherd and Home Pantry." },
+    { k: "better", zh: "在面板里选了以后面板不会自己收起，可以接着选别的。", en: "The panel stays open after you pick, so you can keep adjusting." }
+  ] },
   { v: "2026-11-27.6", title: { zh: "每页顶上加了「目录」按钮，大卡片去掉 ＋", en: "A Directory button on every page; the + is gone from the top card" }, items: [
     { k: "new", zh: "每一页顶上都有「目录」按钮：点开是整棵页面目录（今天、记录、成长、我的……和它们下面的子页面），当前页打勾，一步就能跳到任何页面。和牧羊人、爱家小助手用同一个控件。", en: "Every page now has a Directory button at the top: it lists all pages and sub-pages, marks the current one, and jumps anywhere in one tap. Same control as Shepherd and Home Pantry." },
     { k: "better", zh: "顶部大卡片右上角的 ＋ 去掉了（整张卡片照样可以点）。", en: "The + in the corner of the big top card is gone (the whole card is still tappable)." }

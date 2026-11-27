@@ -977,3 +977,30 @@ div.rec-ai{margin:0 0 10px 12px}
 .crumb .dirmenu{position:absolute;left:0;top:calc(100% + 6px);z-index:8;box-sizing:border-box;width:min(320px,calc(100vw - 32px));max-height:min(70vh,520px);overflow:auto;padding:8px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 12px 28px rgba(0,0,0,.16)}
 @media (max-width:480px){.crumb .crumb-menu::after{content:"";position:absolute;left:0;right:0;top:50%;height:44px;transform:translateY(-50%)}.crumb .crumb-menu{position:relative}}
 @media print{.crumb-dir{display:none}}
+
+/* ── 筛选条：搜索框 + 「筛选 (n)」按钮 + 面板（js/filterbar.js；和牧羊人 / 爱家小助手同一套外观）── */
+.fb-bar{position:relative;display:flex;align-items:center;gap:8px;margin:10px 0}
+.fb-bar input[type=search]{flex:1 1 auto;min-width:0;box-sizing:border-box;min-height:40px;padding:0 12px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);color:var(--ink);font:inherit;font-size:15px;-webkit-appearance:none;appearance:none}
+.fb-btn{position:relative;flex:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-sizing:border-box;min-height:40px;padding:0 14px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);color:var(--ink);font:inherit;font-size:15px;font-weight:600;white-space:nowrap}
+.fb-btn:hover,.fb-btn[aria-expanded="true"]{background:var(--slate-soft)}
+.fb-btn.on{border-color:var(--slate)}
+.fb-ico{flex:none;display:block}
+.fb-n{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:10px;background:var(--slate);color:#fff;font-size:12px;font-weight:700}
+:root[data-theme="dark"] .fb-n{color:#131921}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .fb-n{color:#131921}}
+.fb-bar input[type=search]:focus-visible,.fb-btn:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
+.fb-bar .clear-filters{flex:none;order:0}
+.fb-pop{position:absolute;right:0;top:calc(100% + 6px);z-index:9;box-sizing:border-box;width:min(420px,100%);padding:10px 12px 12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 12px 28px rgba(0,0,0,.16)}
+.fb-pop[hidden]{display:none}
+.fb-head{display:flex;align-items:center;min-height:36px;padding:0 2px 6px;margin-bottom:10px;border-bottom:1px solid var(--line)}
+.fb-head b{font-size:15px}
+.fb-field{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.fb-lab{flex:0 0 5.5em;font-size:14px;font-weight:600;color:var(--muted)}
+.fb-field select{flex:1 1 auto;min-width:0;width:auto;box-sizing:border-box;min-height:44px}
+.fb-foot{display:flex;justify-content:flex-end;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+@media (max-width:640px){
+  .fb-bar{position:sticky;top:calc(var(--eco-stick,0px) + env(safe-area-inset-top,0px));z-index:7;margin:0 -16px 8px;padding:8px 16px;background:var(--bg)}
+  .fb-bar input[type=search]{font-size:16px;min-height:44px}.fb-btn{min-height:44px}
+  .fb-pop{left:16px;right:16px;width:auto}
+}
+@media print{.fb-bar{display:none}}

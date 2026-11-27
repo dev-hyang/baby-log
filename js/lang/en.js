@@ -1846,4 +1846,5 @@ export default {
 "显示在顶部卡片": "Show on the top card",
 "不显示在顶部卡片（已康复 / 不吃了）": "Hide from the top card (recovered / stopped)",
 "目录": "Directory",
+"筛选": "Filter",
 };
