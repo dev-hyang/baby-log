@@ -2,6 +2,10 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-27.9", title: { zh: "表单里的下拉换成统一控件", en: "Form dropdowns moved to the shared controls" }, items: [
+    { k: "better", zh: "表单和设置里选项很多的下拉（里程碑分类等）现在可以直接打字筛选，选完就收起；多选的下拉也换成和牧羊人、爱家小助手一样的样子。", en: "Long dropdowns in forms and settings (milestone categories, etc.) can now be filtered by typing, and multi-select dropdowns look the same as in Shepherd and Home Pantry." },
+    { k: "better", zh: "输入框带历史建议的（如药名）点进去会列出以前填过的，电脑上是统一的建议面板。", en: "Inputs with suggestions (such as medicine names) list what you entered before, in the shared suggestion panel on laptop." }
+  ] },
   { v: "2026-11-27.8", title: { zh: "记录、成长、体检的切换换成统一的视图切换", en: "Log, Growth and Checkups switch views with the shared view switch" }, items: [
     { k: "better", zh: "「记录」页的三个视图（按餐表格 / 趋势对比 / 时间线）和成长各子页之间的跳转，换成靠右的「切换」下拉：只显示当前的，点开选别的。和牧羊人、爱家小助手统一，也少占一大块空间。", en: "The three Log views and the jumps between Growth pages are now a right-aligned Switch dropdown that shows only the current one. Same as Shepherd and Home Pantry, and it takes far less room." },
     { k: "better", zh: "「儿科体检与就诊」的 提醒 / 历史记录 换成两个并排的小药丸，放在标题右边。", en: "Reminders / History on Pediatric Checkups is now a two-way pill next to the title." }
