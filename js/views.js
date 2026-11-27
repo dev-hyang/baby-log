@@ -27,7 +27,7 @@ import { wakeAdvice } from "./sleep-advice.js";
 import { recAiHTML } from "./rec-ai.js";
 import { growRecords } from "./grow-records.js";
 import { fabMenu } from "./fab-menu.js";
-import { growNav, pnavHTML } from "./pnav.js";
+import { growNav, viewBarHTML } from "./pnav.js";
 import { fbarHTML, hit, onFbar } from "./filterbar.js";
 import { moreHTML, pagerNav, shownOf } from "./pager.js";
 import { viewTrend } from "./trend.js";
@@ -355,8 +355,7 @@ const axisHTML = (es, n = es.length) => recListHTML(es.map(recItem), { style: "a
 const entryRow = e => recListHTML([recItem(e)], { style: "rows" });
 
 function viewLog(){
-  const views = [["meal", "🍼", t("按餐表格")], ["trend", "📈", t("趋势对比")], ["list", "🗓", t("时间线")]];
-  const sw = pnavHTML(views.map(([k, icon, label]) => ({ icon, label, attrs: `data-logview="${k}"` })), Math.max(0, views.findIndex(v => v[0] === S.logView)), t("记录视图"));
+  const sw = viewBarHTML([["meal", t("按餐表格")], ["trend", t("趋势对比")], ["list", t("时间线")]], S.logView, "logview", t("记录视图"));
   if (S.logView === "meal") return sw + viewMeal();
   if (S.logView === "trend") return sw + viewTrend();
   return sw + viewList();
@@ -537,8 +536,7 @@ function growBody(){
 }
 function growCheckups(){
   const all = vis(), done = checkupsDone();
-  return `<h2>${t("儿科体检与就诊")}</h2>
-  ${pnavHTML([{ icon: "⏰", label: t("提醒"), attrs: 'data-ckview="plan"' }, { icon: "📋", label: t("历史记录"), attrs: 'data-ckview="history"' }], S.checkupView === "history" ? 1 : 0, t("体检视图"))}
+  return `<div class="listbar"><h2 style="margin:0">${t("儿科体检与就诊")}</h2>${viewToggleHTML([["plan", t("提醒")], ["history", t("历史记录")]], S.checkupView === "history" ? "history" : "plan", { attr: "ckview", label: "显示方式", t })}</div>
   ${S.checkupView === "history" ? checkupHistoryHTML(all) : checkupPlanHTML(all, done)}${fabMenu([{ label: t("记录体检 / 就诊"), attrs: `data-add="baby" data-preset='{"src":"儿科体检"}'` }, { label: t("AI 录入"), icon: "✦", attrs: 'data-ix="open" data-src="儿科体检"' }])}`;
 }
 function growVax(){ return vaxHTML(); }

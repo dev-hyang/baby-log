@@ -2,6 +2,10 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-27.8", title: { zh: "记录、成长、体检的切换换成统一的视图切换", en: "Log, Growth and Checkups switch views with the shared view switch" }, items: [
+    { k: "better", zh: "「记录」页的三个视图（按餐表格 / 趋势对比 / 时间线）和成长各子页之间的跳转，换成靠右的「切换」下拉：只显示当前的，点开选别的。和牧羊人、爱家小助手统一，也少占一大块空间。", en: "The three Log views and the jumps between Growth pages are now a right-aligned Switch dropdown that shows only the current one. Same as Shepherd and Home Pantry, and it takes far less room." },
+    { k: "better", zh: "「儿科体检与就诊」的 提醒 / 历史记录 换成两个并排的小药丸，放在标题右边。", en: "Reminders / History on Pediatric Checkups is now a two-way pill next to the title." }
+  ] },
   { v: "2026-11-27.7", title: { zh: "筛选条换成统一的「筛选」按钮", en: "Filter bar now uses the shared Filter button" }, items: [
     { k: "better", zh: "「记录」和成长各页的筛选条：一行搜索框 + 「筛选 (n)」按钮，点开面板里选类型、时间范围；已改动的个数显示在按钮上。手机和电脑都一样，和牧羊人、爱家小助手统一。", en: "The filter bar on Log and the Growth pages is now a search box plus a Filter (n) button; pick type and time range in the panel, and the count shows on the button. Same on phone and laptop, matching Shepherd and Home Pantry." },
     { k: "better", zh: "在面板里选了以后面板不会自己收起，可以接着选别的。", en: "The panel stays open after you pick, so you can keep adjusting." }
