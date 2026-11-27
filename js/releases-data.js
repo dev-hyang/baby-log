@@ -2,6 +2,9 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-27.5", title: { zh: "顶部卡片下面的进度条换成统一控件", en: "Top-card progress dashes moved to the shared control" }, items: [
+    { k: "better", zh: "卡片下面的 ‹ 进度短划线 › ⚙ 换成和牧羊人共用的同一个控件：短划线随时间慢慢变长，走满就换下一张；⚙ 的秒数设置、暂停和循环都照旧。", en: "The ‹ progress dashes › ⚙ under the cards now use the control shared with Shepherd: the dash fills gradually and the next card appears when full; the ⚙ time setting, pausing and looping work as before." }
+  ] },
   { v: "2026-11-27.4", title: { zh: "内部整理（界面和用法不变）", en: "Behind-the-scenes tidy-up (no change to how it looks or works)" }, items: [
     { k: "better", zh: "更新了和牧羊人共用的进度横条样式（可带序号、‹ › 和 ⚙），以后用得上；你现在看到的界面和操作都和上一版一样。", en: "Updated the progress-dash styles shared with Shepherd (optional number, ‹ › and ⚙) for later; what you see and how it works are unchanged." }
   ] },

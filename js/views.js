@@ -2,6 +2,7 @@ import { updateMiniBar } from "./minibar.js";
 import * as appSwitcherMod from "./shared/app-switcher.js";
 import * as langSwitcherMod from "./shared/lang-switcher.js";
 import { watchFormMenus } from "./shared/ui-form.js"; watchFormMenus();   // 表单页头 ⋯ 菜单：点外面 / Esc 关上
+import { dirHTML, dirNodes, watchDir } from "./nav-dir.js"; watchDir();   // 路径栏的「目录」按钮（整棵页面树）
 import { watchActs } from "./shared/ui-acts.js"; watchActs();   // 按钮条：取消靠前、主按钮靠后（shared/ui.css 的 ui-acts）
 import { initInputSuggest } from "./shared/ui-suggest.js"; initInputSuggest();   // 可输入的下拉（input + datalist）：电脑上换成统一的建议面板，触屏用原生（shared/ui-suggest.js）
 import { recListHTML, viewToggleHTML } from "./shared/ui-reclist.js";
@@ -103,7 +104,8 @@ const backBtn = parent => `<button type="button" class="crumb-link crumb-back" d
    on the way, the current page last in bold; every earlier part is a button back to that level. */
 function crumbHTML(tab, cls = ""){
   const chain = []; let k = tab; while (SUB[k]) { chain.unshift(k); k = SUB[k][0]; } chain.unshift(k);
-  return `<nav class="crumb ${cls}" aria-label="${t("位置")}">${backBtn(chain[chain.length - 2])}${chain.map((key, i) => { const label = t(i === 0 ? TAB_LABEL[key] || key : PAGE_LABEL[key] || key);
+  const dir = cls.includes("mini") ? "" : dirHTML(dirNodes(SUB, TAB_LABEL, PAGE_LABEL, tab));   // 目录 = 整棵页面树，每页一样；迷你栏不画
+  return `<nav class="crumb ${cls}" aria-label="${t("位置")}">${dir}${chain.length > 1 ? backBtn(chain[chain.length - 2]) : ""}${chain.map((key, i) => { const label = t(i === 0 ? TAB_LABEL[key] || key : PAGE_LABEL[key] || key);
     return i === chain.length - 1 ? `<b aria-current="page">${label}</b>` : `<button type="button" data-tab="${key}">${label}</button>`; }).join(`<span class="sep">/</span>`)}</nav>`;
 }
 /* 网址记住当前页（#/grow-body、#/log/trend、#/grow-checkups/history）：刷新、收藏后还停在这一页。四个姊妹应用同一套做法。
@@ -209,7 +211,7 @@ function renderPass(){
     $("#main").innerHTML = `<section class="panel" style="margin-top:12px"><h2 style="margin:0 0 6px">${esc(childName())} · ${esc(ageText())}</h2><p class="muted" style="margin:0 0 12px">${t("2 岁以上的孩子在家庭学堂里记录（如厕、吃饭、户外、情绪等）。小月亮专注 0–2 岁。")}</p><button type="button" class="ui-btn" data-tone="primary" data-kidsel="${esc(S.childId)}">${t("去家庭学堂记录")} ›</button></section>`;
     updateMiniBar($("#bname").textContent, "", t("回到顶部")); return;
   }
-  $("#main").innerHTML = (sub ? crumbHTML(S.tab) : "") + v(); mainKey = pageKey();
+  $("#main").innerHTML = crumbHTML(S.tab) + v(); mainKey = pageKey();
   updateMiniBar($("#bname").textContent, sub ? crumbHTML(S.tab, "mini") : "", t("回到顶部"));
   heroRestore();
 }
@@ -231,7 +233,7 @@ function heroHTML(){
     ${clone ? "" : musicMiniHTML()}</section>`;
   if (sl && S.heroSleepId !== sl.id) { S.heroSleepId = sl.id; S.heroIdx = 0; }   // 新的一觉：从睡眠卡开始
   if (!sl) S.heroSleepId = null;
-  if (!activeCards("stats").includes("hero")) return sl ? `<div class="herobox">${sleepSlide(false)}</div>` : ""; // the child's card settings turned the clock off
+  if (!activeCards("stats").includes("hero")) return sl ? `<div class="herobox" data-dash-host>${sleepSlide(false)}</div>` : ""; // the child's card settings turned the clock off
   // a card that has run well past the child's usual rhythm moves to the front (worst first) and changes colour; the saved order is untouched
   const own = heroKeys(), an = heroAnomalies(), bad = new Map(an.map(a => [a.k, a]));
   const order = [...an.map(a => own.indexOf(a.k)), ...own.map((_, i) => i).filter(i => !bad.has(own[i]))], keys = [...(sl ? ["asleep"] : []), ...order.map(i => own[i]), "music"], n = keys.length;   // 睡着时第一张是睡眠计时；最后一张是音乐卡（js/music.js）
@@ -241,11 +243,11 @@ function heroHTML(){
   const slide = (k, j, clone) => { if (k === "asleep") return sleepSlide(clone); if (k === "music") return `<section class="hero musichero" ${clone ? 'aria-hidden="true" inert' : `aria-label="${j + 1}/${n}"`}>${musicSlideInner(clone)}</section>`;
     const a = bad.get(k), c = k === "routine" ? null : clockOf(k), tap = c && c.add;   // 整张卡片可点：直接打开记录表单（js/events.js）；「开始睡」那张仍是按钮
     const tapAttrs = tap ? ` data-add="${c.add}"${c.preset ? ` data-preset="${esc(JSON.stringify(c.preset))}"` : ""}${clone ? "" : ` role="button" tabindex="0" aria-label="${esc(t("记录{x}", { x: t(c.noun) }))}"`}` : "";
-    return `<section class="hero${a ? " alert " + a.level : ""}${tap ? " tappable" : ""}" ${clone ? 'aria-hidden="true"' : tap ? "" : `aria-label="${j + 1}/${n}"`}${tapAttrs}><div class="moon"></div>${tap ? `<span class="tapadd" aria-hidden="true">＋</span>` : ""}${a ?`<div class="heroalert" ${clone ? "" : 'role="status"'}><i class="tri" aria-hidden="true">⚠️</i><span>${esc(anomalyText(a))}</span></div>` : ""}${bigClock(k)}</section>`; };
+    return `<section class="hero${a ? " alert " + a.level : ""}${tap ? " tappable" : ""}" ${clone ? 'aria-hidden="true"' : tap ? "" : `aria-label="${j + 1}/${n}"`}${tapAttrs}><div class="moon"></div>${a ?`<div class="heroalert" ${clone ? "" : 'role="status"'}><i class="tri" aria-hidden="true">⚠️</i><span>${esc(anomalyText(a))}</span></div>` : ""}${bigClock(k)}</section>`; };
   const loop = n > 1, COPIES = 5; // five copies of the list side by side; the middle one is the real one (see heroSettle in js/app.js)
   const slides = loop ? Array.from({ length: COPIES }, (_, c) => keys.map((k, j) => slide(k, j, c !== 2)).join("")).join("") : slide(keys[0], 0);
   // 卡片下面一行：‹ 进度短划线 › ⚙（js/herocycle.js，每 10 秒自动换，可调）
-  return `<div class="herobox"><div class="heroview"><div class="herotrack" ${loop ? 'data-loop="1"' : ""} tabindex="0" role="region" aria-roledescription="carousel" aria-label="${t("顶部大计时")}">${slides}</div></div>
+  return `<div class="herobox" data-dash-host><div class="heroview"><div class="herotrack" ${loop ? 'data-loop="1"' : ""} tabindex="0" role="region" aria-roledescription="carousel" aria-label="${t("顶部大计时")}">${slides}</div></div>
     ${loop ? heroCtrlHTML(n, cur, { asleep: !!sl }) : ""}</div>`;
 }
 // the cards sit side by side and snap; Today re-renders after every save, so put the track back on the card being looked at

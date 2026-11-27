@@ -81,15 +81,15 @@ document.addEventListener("click", async ev => {
     (S.settings.pottyMin ||= {})[S.childId] = +t0.dataset.pottymin;
     await saveSettings(); const again = document.querySelector(`[data-pottymin="${t0.dataset.pottymin}"]`); again && again.focus(); return;
   }
-  if (t0.dataset.heronav) { // arrows beside the top cards (mouse users): previous / next card, round and round
+  if (t0.dataset.herobar === "nav") { // arrows beside the top cards (shared ui-dashbar): previous / next card, round and round
     const tr = document.querySelector(".herotrack"); if (!tr) return;
     heroSettle(tr); // clicking fast can carry the track towards its end: bring it back to the middle first
-    const i = Math.max(0, Math.min(tr.children.length - 1, heroPage(tr) + +t0.dataset.heronav));
+    const i = Math.max(0, Math.min(tr.children.length - 1, heroPage(tr) + +t0.dataset.d));
     tr.scrollTo({ left: i * (tr.clientWidth + 10), behavior: "smooth" }); return;
   }
-  if (t0.dataset.heropage !== undefined) { // dots under the top cards: to that card, by the shortest way round
+  if (t0.dataset.herobar === "dot") { // dashes under the top cards: to that card, by the shortest way round
     const tr = document.querySelector(".herotrack"); if (!tr) return;
-    heroSettle(tr); const n = tr.dataset.loop ? tr.children.length / 5 : tr.children.length, p = heroPage(tr), i = +t0.dataset.heropage;
+    heroSettle(tr); const n = tr.dataset.loop ? tr.children.length / 5 : tr.children.length, p = heroPage(tr), i = +t0.dataset.i;
     const base = p - (((p % n) + n) % n) + i, to = [base - n, base, base + n].filter(x => x >= 0 && x < tr.children.length).sort((a, b) => Math.abs(a - p) - Math.abs(b - p))[0];
     tr.scrollTo({ left: to * (tr.clientWidth + 10), behavior: "smooth" }); return;
   }
