@@ -2,6 +2,9 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-27.2", title: { zh: "内部整理（界面和用法不变）", en: "Behind-the-scenes tidy-up (no change to how it looks or works)" }, items: [
+    { k: "better", zh: "准备了牧羊人用的记录列表样式（列表 / 时间轴），以后用得上；你现在看到的界面和操作都和上一版一样。", en: "Added the record-list styles (list / timeline) used by Shepherd for later; what you see and how it works are unchanged." }
+  ] },
   { v: "2026-11-27.1", title: { zh: "内部整理（界面和用法不变）", en: "Behind-the-scenes tidy-up (no change to how it looks or works)" }, items: [
     { k: "better", zh: "准备了牧羊人用的目录、视图切换和进度条样式，以后用得上；你现在看到的界面和操作都和上一版一样。", en: "Added the directory, view-switch and progress-bar styles used by Shepherd for later; what you see and how it works are unchanged." }
   ] },
