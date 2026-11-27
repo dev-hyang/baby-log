@@ -4,6 +4,7 @@ import * as langSwitcherMod from "./shared/lang-switcher.js";
 import { watchFormMenus } from "./shared/ui-form.js"; watchFormMenus();   // 表单页头 ⋯ 菜单：点外面 / Esc 关上
 import { watchActs } from "./shared/ui-acts.js"; watchActs();   // 按钮条：取消靠前、主按钮靠后（shared/ui.css 的 ui-acts）
 import { initInputSuggest } from "./shared/ui-suggest.js"; initInputSuggest();   // 可输入的下拉（input + datalist）：电脑上换成统一的建议面板，触屏用原生（shared/ui-suggest.js）
+import { recListHTML, viewToggleHTML } from "./shared/ui-reclist.js";
 import { heroCtrlHTML } from "./herocycle.js";
 import { musicMiniHTML, musicSlideInner } from "./music.js";
 import { aboutHTML } from "./about.js";
@@ -329,8 +330,8 @@ function medRow(m){
   const how = [timingText(m.tm, t), m.note].filter(Boolean).map(esc).join(" · ");   // 空腹 / 饭后 30 分钟 + 医嘱备注
   return `<div class="medrow"><div><b>${esc(t(m.name))}</b>${how ? ` <span class="ui-badge" data-tone="accent">${how}</span>` : ""}<div class="small muted">${t("上次 {time} · {ago}前 · 24小时内 {n} 次", { time: hm(m.at), ago: dur(Date.now() - m.at), n: m.count24 })}</div></div>${pill}</div>`;
 }
-// the "list | axis" switch, shared by the timeline on the Log page and the Today list
-const listStyleSwitch = () => `<div class="segmini" role="group" aria-label="${t("显示方式")}"><button data-liststyle="rows" aria-pressed="${S.listStyle !== "axis"}">${t("列表")}</button><button data-liststyle="axis" aria-pressed="${S.listStyle === "axis"}">${t("时间轴")}</button></div>`;
+// the "list | axis" switch (shared record-list control, shared/ui-reclist.js: two views = a small pill)
+const listStyleSwitch = () => viewToggleHTML([["rows", "列表"], ["axis", "时间轴"]], S.listStyle === "axis" ? "axis" : "rows", { attr: "liststyle", label: "显示方式", t });
 // what both timeline styles show about a record: its type colour, warnings, who wrote it (family mode), and who can see it
 function entryBits(e){
   const T = TYPES[e.type] || { color: "var(--muted)", icon: "•" };
@@ -340,22 +341,16 @@ function entryBits(e){
   const vb = e.vis === "private" ? `🔒 ${t("仅我")}` : e.vis === "shared" ? `👥 ${mine ? t("指定家人") : t("分享给你")}` : "";
   return { T, fl: flags(e), by, vb };
 }
+// one record → one row of the shared record list: type colour + icon, who wrote it (family mode), who can see it, warnings; swipe left deletes; the row just saved flashes
+function recItem(e){
+  const { T, fl, by, vb } = entryBits(e);
+  return { id: e.id, ts: e.ts, time: hm(e.ts), color: T.color, icon: T.icon || "", title: typeLabel(e.type), sub: summary(e), by: by || "", tags: vb ? [vb] : [], notes: [e.note, ...fl.map(text => ({ text, tone: "warn" }))].filter(Boolean),
+    attrs: `data-edit="${e.id}"`, rowAttrs: `data-edit="${e.id}"`, swipe: "entry", flash: e.id === S.flashId };
+}
 // the vertical-line timeline: newest at the top, a coloured dot per record on the line, the time beside it and what happened to the right;
 // between two records the line says how long it was. n: draw only the first n (the gap below the last one still counts the next, hidden record)
-function axisHTML(es, n = es.length){
-  return `<div class="axis">${es.slice(0, n).map((e, i) => {
-    const { T, fl, by, vb } = entryBits(e), older = es[i + 1], gap = older && e.ts - older.ts;
-    return `<button class="anode ${e.id === S.flashId ? "flash" : ""}" data-edit="${e.id}" style="--c:${T.color}" data-swipe-del="entry">
-      <span class="at">${hm(e.ts)}</span><span class="adot" aria-hidden="true">${T.icon || ""}</span>
-      <span class="abody"><span class="s"><b>${esc(typeLabel(e.type))}</b> · ${esc(summary(e))}</span>${by ? `<span class="n"> · ${esc(by)}</span>` : ""}${vb ? `<span class="n"> · ${vb}</span>` : ""}${e.note ? `<span class="n anote">${esc(e.note)}</span>` : ""}${fl.map(f => `<span class="n anote" style="color:var(--rose)">${esc(f)}</span>`).join("")}</span></button>${gap >= 60e3 ? `<div class="agap"><span>${dur(gap)}</span></div>` : ""}`;
-  }).join("")}</div>`;
-}
-function entryRow(e){
-  const { T, fl, by, vb } = entryBits(e);
-  return `<button class="entry ${e.id === S.flashId ? "flash" : ""}" data-edit="${e.id}" data-swipe-del="entry">
-    <span class="t">${hm(e.ts)}</span><span class="c" style="background:${T.color}" aria-hidden="true"></span>
-    <span><span class="s">${esc(typeLabel(e.type))} · ${esc(summary(e))}</span>${by ? `<span class="n"> · ${esc(by)}</span>` : ""}${vb ? `<span class="n"> · ${vb}</span>` : ""}${e.note ? `<br><span class="n">${esc(e.note)}</span>` : ""}${fl.map(f => `<br><span class="n" style="color:var(--rose)">${esc(f)}</span>`).join("")}</span></button>`;
-}
+const axisHTML = (es, n = es.length) => recListHTML(es.map(recItem), { style: "axis", limit: n, gapText: dur });
+const entryRow = e => recListHTML([recItem(e)], { style: "rows" });
 
 function viewLog(){
   const views = [["meal", "🍼", t("按餐表格")], ["trend", "📈", t("趋势对比")], ["list", "🗓", t("时间线")]];

@@ -358,7 +358,7 @@ export default {
 "类型": "Type",
 "回到顶部": "Back to top",
 "松手删除": "Release to delete",
-"显示方式": "View",
+"显示方式": "View", "切换": "Switch",
 "列表": "List",
 "时间轴": "Axis",
 "内容": "Details",
