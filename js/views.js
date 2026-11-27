@@ -90,7 +90,7 @@ const SUB = {
   "grow-body": ["grow", () => growNav("grow-body") + growBody()], "grow-checkups": ["grow", () => growNav("grow-checkups") + growCheckups()], "grow-vax": ["grow", () => growNav("grow-vax") + growVax()],
   "mom-meds": ["mom", () => momMedsHTML()], "mom-charts": ["mom", () => momCharts()], "mom-signs": ["mom", () => momSigns()]
 };
-const TAB_LABEL = { today: "今天", me: "我的", grow: "成长", mom: "妈妈" };
+const TAB_LABEL = { today: "今天", log: "记录", me: "我的", grow: "成长", mom: "妈妈" };
 // titles of the sub-pages, for the breadcrumb path
 const PAGE_LABEL = { family: "家庭", "family-members": "家庭协作", "family-kids": "孩子", "family-meds": "妈妈用药间隔", "family-faith": "信仰（可选）", sync: "同步、备份与恢复", prefs: "语言、单位和显示", settings: "家庭",
   cards: "卡片", herocfg: "顶部大计时", routinecfg: "习惯清单", learn: "问答", about: "介绍", releases: "发布日志", ask: "咩咩咩",

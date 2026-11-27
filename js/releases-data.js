@@ -2,6 +2,10 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-27.6", title: { zh: "每页顶上加了「目录」按钮，大卡片去掉 ＋", en: "A Directory button on every page; the + is gone from the top card" }, items: [
+    { k: "new", zh: "每一页顶上都有「目录」按钮：点开是整棵页面目录（今天、记录、成长、我的……和它们下面的子页面），当前页打勾，一步就能跳到任何页面。和牧羊人、爱家小助手用同一个控件。", en: "Every page now has a Directory button at the top: it lists all pages and sub-pages, marks the current one, and jumps anywhere in one tap. Same control as Shepherd and Home Pantry." },
+    { k: "better", zh: "顶部大卡片右上角的 ＋ 去掉了（整张卡片照样可以点）。", en: "The + in the corner of the big top card is gone (the whole card is still tappable)." }
+  ] },
   { v: "2026-11-27.5", title: { zh: "顶部卡片下面的进度条换成统一控件", en: "Top-card progress dashes moved to the shared control" }, items: [
     { k: "better", zh: "卡片下面的 ‹ 进度短划线 › ⚙ 换成和牧羊人共用的同一个控件：短划线随时间慢慢变长，走满就换下一张；⚙ 的秒数设置、暂停和循环都照旧。", en: "The ‹ progress dashes › ⚙ under the cards now use the control shared with Shepherd: the dash fills gradually and the next card appears when full; the ⚙ time setting, pausing and looping work as before." }
   ] },
