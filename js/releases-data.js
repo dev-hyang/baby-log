@@ -2,6 +2,9 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-27.12", title: { zh: "⚙ 菜单上方放不下时向下展开", en: "The ⚙ menu opens downward when there's no room above" }, items: [
+    { k: "fix", zh: "⚙ 菜单离屏幕顶部太近、上面放不下时，现在会改成向下展开，不再被顶部栏挡住或伸到屏幕外。", en: "When the ⚙ menu is too close to the top of the screen, it now opens downward instead of being hidden behind the top bar or running off screen." }
+  ] },
   { v: "2026-11-27.11", title: { zh: "⚙ 菜单展开时显示在最上面", en: "The ⚙ menu now opens on top" }, items: [
     { k: "fix", zh: "点开顶部卡片下面的 ⚙ 后，菜单现在显示在最上层，不会再被上方的目录行 / 顶部小条挡住。", en: "The ⚙ menu under the top cards now opens above everything, instead of being cut off by the breadcrumb row or the top bar." }
   ] },
