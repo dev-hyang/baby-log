@@ -2,6 +2,9 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-27.11", title: { zh: "⚙ 菜单展开时显示在最上面", en: "The ⚙ menu now opens on top" }, items: [
+    { k: "fix", zh: "点开顶部卡片下面的 ⚙ 后，菜单现在显示在最上层，不会再被上方的目录行 / 顶部小条挡住。", en: "The ⚙ menu under the top cards now opens above everything, instead of being cut off by the breadcrumb row or the top bar." }
+  ] },
   { v: "2026-11-27.10", title: { zh: "内部整理（界面和用法不变）", en: "Behind-the-scenes tidy-up (no change to how it looks or works)" }, items: [
     { k: "better", zh: "更新了和爱家小助手、牧羊人共用的「切换视图」按钮样式（加了「切换」小字、竖线和 ▾），这个应用里暂时用不到；你现在看到的界面和操作都和上一版一样。", en: "Updated the shared “switch view” button style (a “Switch” label, divider and ▾). This app does not use it yet; nothing you see or do has changed." },
   ] },
