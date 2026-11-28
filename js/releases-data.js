@@ -2,6 +2,9 @@
    v = APP_VERSION（js/state.js），日期取自版本号；title = 一句话简介；items = 要点，k: new 新功能 / better 改进 / fix 修复。
    写给家长看：短、口语，不用技术词。显示由 js/releases-ui.js 负责（我的 → 发布日志、今天页顶上的新版本提示）。 */
 export const RELEASES = [
+  { v: "2026-11-27.10", title: { zh: "内部整理（界面和用法不变）", en: "Behind-the-scenes tidy-up (no change to how it looks or works)" }, items: [
+    { k: "better", zh: "更新了和爱家小助手、牧羊人共用的「切换视图」按钮样式（加了「切换」小字、竖线和 ▾），这个应用里暂时用不到；你现在看到的界面和操作都和上一版一样。", en: "Updated the shared “switch view” button style (a “Switch” label, divider and ▾). This app does not use it yet; nothing you see or do has changed." },
+  ] },
   { v: "2026-11-27.9", title: { zh: "表单里的下拉换成统一控件", en: "Form dropdowns moved to the shared controls" }, items: [
     { k: "better", zh: "表单和设置里选项很多的下拉（里程碑分类等）现在可以直接打字筛选，选完就收起；多选的下拉也换成和牧羊人、爱家小助手一样的样子。", en: "Long dropdowns in forms and settings (milestone categories, etc.) can now be filtered by typing, and multi-select dropdowns look the same as in Shepherd and Home Pantry." },
     { k: "better", zh: "输入框带历史建议的（如药名）点进去会列出以前填过的，电脑上是统一的建议面板。", en: "Inputs with suggestions (such as medicine names) list what you entered before, in the shared suggestion panel on laptop." }
